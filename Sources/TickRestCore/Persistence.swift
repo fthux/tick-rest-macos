@@ -10,7 +10,8 @@ public struct SavedData: Codable {
 
 public final class DataStore {
     public let url: URL
-    public private(set) var loadError: String?
+    public private(set) var loadErrorKey: String?
+    public var loadError: String? { loadErrorKey.map { L10n.text($0) } }
     public init(url: URL? = nil) {
         let directory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         self.url = url ?? directory.appendingPathComponent(AppIdentity.dataDirectory, isDirectory: true).appendingPathComponent("state.json")
@@ -24,11 +25,11 @@ public final class DataStore {
             }
             return result
         } catch {
-            loadError = L10n.text("error.load")
+            loadErrorKey = "error.load"
             let backup = url.deletingLastPathComponent().appendingPathComponent("state-damaged-\(Int(Date().timeIntervalSince1970)).json")
             // If preserving the file fails, saving must not overwrite the only copy.
             do { try FileManager.default.copyItem(at: url, to: backup) }
-            catch { loadError = L10n.text("error.load_preserve"); canWrite = false }
+            catch { loadErrorKey = "error.load_preserve"; canWrite = false }
             return SavedData()
         }
     }

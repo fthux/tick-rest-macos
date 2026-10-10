@@ -93,7 +93,7 @@ final class WindowCoordinator {
         guard !model.engine.suppressed, !model.engine.away, model.engine.pause == nil, let screen = currentScreen else { return }
         warning?.close(); warningWork?.cancel()
         let panel = makePanel(frame: NSRect(x: screen.visibleFrame.maxX - 420, y: screen.visibleFrame.maxY - 130, width: 390, height: 105), overlay: false)
-        panel.contentView = NSHostingView(rootView: WarningView(kind: kind, settings: model.settings))
+        panel.contentView = NSHostingView(rootView: WarningView(model: model, kind: kind))
         warning = panel; panel.orderFrontRegardless()
         let task = DispatchWorkItem { [weak self] in self?.warning?.close(); self?.warning = nil }
         warningWork = task; DispatchQueue.main.asyncAfter(deadline: .now() + max(1, model.settings.prewarning), execute: task)

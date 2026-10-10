@@ -78,14 +78,17 @@ public struct Settings: Codable, Equatable {
         return minute < scheduleEnd && weekdays.contains(previousWeekday)
     }
     public var validationError: String? {
-        if !(60...3600).contains(idleTimeout) { return L10n.text("validation.idle_timeout") }
+        validationErrorKey.map { L10n.text($0) }
+    }
+    public var validationErrorKey: String? {
+        if !(60...3600).contains(idleTimeout) { return "validation.idle_timeout" }
         if !(60...7200).contains(shortInterval) || !(10...300).contains(shortDuration)
             || !(60...14400).contains(longInterval) || !(60...1800).contains(longDuration) {
-            return L10n.text("validation.range")
+            return "validation.range"
         }
-        if longEnabled && shortEnabled && longInterval < shortInterval { return L10n.text("validation.interval") }
-        if longEnabled && shortEnabled && longDuration < shortDuration { return L10n.text("validation.duration") }
-        if scheduleEnabled && (weekdays.isEmpty || scheduleStart == scheduleEnd) { return L10n.text("validation.schedule") }
+        if longEnabled && shortEnabled && longInterval < shortInterval { return "validation.interval" }
+        if longEnabled && shortEnabled && longDuration < shortDuration { return "validation.duration" }
+        if scheduleEnabled && (weekdays.isEmpty || scheduleStart == scheduleEnd) { return "validation.schedule" }
         return nil
     }
 }

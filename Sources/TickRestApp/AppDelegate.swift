@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private let settingsNavigation = SettingsNavigation()
     private var settingsPageSubscription: AnyCancellable?
     private var settingsVisibilitySubscription: AnyCancellable?
+    private var languageSubscription: AnyCancellable?
     private weak var settingsSplitController: NSSplitViewController?
     private let sidebarToolbarIdentifier = NSToolbarItem.Identifier(AppIdentity.identifier("sidebar"))
     private let separatorToolbarIdentifier = NSToolbarItem.Identifier(AppIdentity.identifier("sidebarSeparator"))
@@ -45,6 +46,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         status.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: L10n.text("app.name"))
         let menu = NSMenu(); menu.delegate = self; status.menu = menu
+        languageSubscription = model.$interfaceLanguage.removeDuplicates().dropFirst().sink { [weak self] _ in
+            self?.updateStatus()
+        }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(openSettings), name: NSNotification.Name(AppIdentity.identifier("showSettings")), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(previewRest), name: .previewRest, object: nil)
         model.begin(); updateStatus()
@@ -64,30 +68,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         let paused = engine.pause != nil || engine.away || engine.outsideSchedule
         let symbol = paused ? "pause.circle" : engine.isResting ? "leaf.fill" : "leaf"
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: L10n.text("app.name"))
-        let clock: String
-        if let r = engine.reminder, engine.isResting { clock = L10n.clock(r.target - r.elapsed) }
-        else if paused { clock = L10n.text("menu.paused_short") }
-        else if let kind = engine.nextKind { clock = L10n.clock(engine.remaining(kind)) }
-        else { clock = "" }
-        button.title = model.settings.showCountdown && !clock.isEmpty ? " " + clock : ""
+        let display = ReminderDisplay(engine: engine)
+        let title = display.menuBarText
+        button.title = model.settings.showCountdown && !title.isEmpty ? " " + title : ""
         button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         button.toolTip = L10n.text("app.name") + " — " + model.stateText
         button.setAccessibilityLabel(button.toolTip)
-        menuStateItem?.title = model.stateText
+        menuStateItem?.title = display.menuStateText
         for (kind, item) in menuCountdownItems {
-            item.title = L10n.text("menu.remaining", kind.title, L10n.clock(engine.remaining(kind)))
+            item.title = display.countdownText(for: kind)
         }
         settingsWindow?.title = settingsNavigation.page.title
         settingsTitleField.stringValue = settingsNavigation.page.title
+        updateSidebarToolbarLabel(settingsNavigation.columnVisibility)
+        welcomeWindow?.title = L10n.text("welcome.title")
         windows.refresh()
     }
     func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems()
         menuCountdownItems.removeAll()
-        menuStateItem = add(menu, model.stateText, nil)
+        let display = ReminderDisplay(engine: model.engine)
+        menuStateItem = add(menu, display.menuStateText, nil)
         if !model.engine.isResting {
             for kind in BreakKind.allCases where model.settings.enabled(kind) {
-                menuCountdownItems[kind] = add(menu, L10n.text("menu.remaining", kind.title, L10n.clock(model.engine.remaining(kind))), nil)
+                menuCountdownItems[kind] = add(menu, display.countdownText(for: kind), nil)
             }
         }
         menu.addItem(.separator())
@@ -140,7 +144,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             // A hosting controller lets NavigationSplitView install its native toolbar.
             settingsWindow?.contentViewController = NSHostingController(
                 rootView: SettingsView(model: model, navigation: settingsNavigation)
-                    .environment(\.locale, L10n.locale)
             )
         }
         model.refreshLogin(); model.refreshNotificationStatus(); show(settingsWindow!)

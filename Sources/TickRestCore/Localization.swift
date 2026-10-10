@@ -8,15 +8,37 @@ public enum L10n {
         resourceBundle.localizations.filter { $0 != "Base" }.sorted()
     }
     public static var resolvedLanguage: String {
-        if language != "system", let matched = availableLanguages.first(where: { $0.caseInsensitiveCompare(language) == .orderedSame }) { return matched }
-        return Bundle.preferredLocalizations(from: availableLanguages).first ?? "zh-Hans"
+        resolveLanguage(language, preferredLanguages: Locale.preferredLanguages, availableLanguages: availableLanguages)
+    }
+    /// Match preferences explicitly: Bundle's default can select an unrelated localization.
+    static func resolveLanguage(_ selection: String, preferredLanguages: [String], availableLanguages: [String]) -> String {
+        let fallback = availableLanguages.first { $0.caseInsensitiveCompare("en") == .orderedSame } ?? "en"
+        let preferences = selection == "system" ? preferredLanguages : [selection]
+        for preference in preferences {
+            let identifier = preference.replacingOccurrences(of: "_", with: "-")
+            if let exact = availableLanguages.first(where: { $0.caseInsensitiveCompare(identifier) == .orderedSame }) { return exact }
+            let components = Locale.Language.Components(identifier: identifier)
+            guard let code = components.languageCode?.identifier else { continue }
+            let candidate: String
+            if code == "zh" {
+                // Explicit scripts take priority over region; bare Chinese uses Simplified Chinese.
+                let script = components.script?.identifier
+                if let script, script != "Hans", script != "Hant" { continue }
+                let traditional = script == "Hant" || (script == nil && ["TW", "HK", "MO"].contains(components.region?.identifier ?? ""))
+                candidate = traditional ? "zh-Hant" : "zh-Hans"
+            } else {
+                candidate = code
+            }
+            if let matched = availableLanguages.first(where: { $0.caseInsensitiveCompare(candidate) == .orderedSame }) { return matched }
+        }
+        return fallback
     }
     public static var locale: Locale { Locale(identifier: resolvedLanguage) }
     public static func text(_ key: String, _ args: CVarArg...) -> String {
-        let path = resourceBundle.path(forResource: resolvedLanguage, ofType: "lproj")
-            ?? resourceBundle.path(forResource: "zh-Hans", ofType: "lproj")
-        let bundle = path.flatMap(Bundle.init(path:)) ?? resourceBundle
-        let format = bundle.localizedString(forKey: key, value: nil, table: "Localizable")
+        let english = resourceBundle.path(forResource: "en", ofType: "lproj").flatMap(Bundle.init(path:)) ?? resourceBundle
+        let bundle = resourceBundle.path(forResource: resolvedLanguage, ofType: "lproj").flatMap(Bundle.init(path:)) ?? english
+        let fallback = english.localizedString(forKey: key, value: key, table: "Localizable")
+        let format = bundle.localizedString(forKey: key, value: fallback, table: "Localizable")
             .replacingOccurrences(of: "{appName}", with: AppIdentity.name)
         return args.isEmpty ? format : String(format: format, locale: locale, arguments: args)
     }

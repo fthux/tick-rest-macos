@@ -13,7 +13,7 @@ let appTarget = "TickRestApp"
 
 let package = Package(
     name: appName,
-    defaultLocalization: "zh-Hans",
+    defaultLocalization: "en",
     platforms: [.macOS(.v13)],
     products: [.executable(name: appName, targets: [appTarget])],
     targets: [

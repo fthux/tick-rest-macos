@@ -7,8 +7,16 @@ import UserNotifications
 
 final class AppController: ObservableObject {
     @Published var settings: Settings
+    @Published private(set) var interfaceLanguage = "en"
     @Published var revision = 0
-    @Published var errorMessage: String?
+    @Published private var errorKey: String?
+    private var errorDetail: String?
+    var interfaceLocale: Locale { Locale(identifier: interfaceLanguage) }
+    var errorMessage: String? {
+        guard let errorKey else { return nil }
+        if let errorDetail { return L10n.text(errorKey, errorDetail) }
+        return L10n.text(errorKey)
+    }
     @Published var launchAtLogin = false
     @Published var notificationStatus = "permission.unknown"
     @Published var fullscreenUnavailable = false
@@ -32,8 +40,9 @@ final class AppController: ObservableObject {
         let disk = DataStore(), loaded = disk.load()
         store = disk; saved = loaded; settings = loaded.settings
         L10n.language = loaded.settings.language
+        interfaceLanguage = L10n.resolvedLanguage
         engine = Engine(settings: loaded.settings, snapshot: FileManager.default.fileExists(atPath: disk.url.path) ? loaded.snapshot : nil)
-        errorMessage = disk.loadError
+        errorKey = disk.loadErrorKey
         refreshLogin(); refreshNotificationStatus()
     }
     deinit { timer?.invalidate(); observers.forEach { NotificationCenter.default.removeObserver($0) } }
@@ -122,8 +131,9 @@ final class AppController: ObservableObject {
     }
     func update(_ mutate: (inout Settings) -> Void) {
         var candidate = settings; mutate(&candidate)
-        if let error = candidate.validationError { errorMessage = error; return }
-        settings = candidate; L10n.language = candidate.language; engine.updateSettings(candidate)
+        if let key = candidate.validationErrorKey { showError(key); return }
+        L10n.language = candidate.language; settings = candidate; engine.updateSettings(candidate)
+        interfaceLanguage = L10n.resolvedLanguage
         applyAppearance(); consume(); persist(); revision += 1
     }
     func applyAppearance() {
@@ -147,21 +157,7 @@ final class AppController: ObservableObject {
     }
     func resume() { action { $0.setPause(nil, now: Date()) } }
     var summary: TodaySummary { TodaySummary(records: saved.records) }
-    var stateText: String {
-        if let pause = engine.pause {
-            switch pause { case .until(let date): return L10n.text("state.pause_until", L10n.time(date))
-            case .indefinite: return L10n.text("state.paused") }
-        }
-        if engine.away { return L10n.text("state.away") }
-        if engine.outsideSchedule { return L10n.text("state.outside") }
-        if engine.suppressed { return L10n.text("state.fullscreen") }
-        switch engine.phase {
-        case .resting(let r): return L10n.text("state.resting", r.kind.title, L10n.clock(r.target - r.elapsed))
-        case .waiting(let r): return L10n.text("state.due", r.kind.title)
-        case .deferred(let r, let seconds): return L10n.text("state.deferred", r.kind.title, L10n.clock(seconds))
-        default: return L10n.text("state.running")
-        }
-    }
+    var stateText: String { ReminderDisplay(engine: engine).stateText }
     func consume() {
         let (effects, records) = engine.drain()
         DataStore.append(records, to: &saved.records, now: Date())
@@ -169,13 +165,13 @@ final class AppController: ObservableObject {
     }
     func persist() {
         saved.settings = settings; saved.snapshot = engine.snapshot(now: Date())
-        do { try store.save(saved) } catch { errorMessage = L10n.text("error.save") }
+        do { try store.save(saved) } catch { showError("error.save") }
     }
     func clearRecords() { saved.records = []; persist(); revision += 1 }
     func refreshLogin() { launchAtLogin = SMAppService.mainApp.status == .enabled }
     func setLogin(_ enabled: Bool) {
         do { if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
-        catch { errorMessage = L10n.text("error.login", error.localizedDescription) }
+        catch { showError("error.login", detail: error.localizedDescription) }
         refreshLogin()
     }
     func refreshNotificationStatus() {
@@ -194,7 +190,7 @@ final class AppController: ObservableObject {
     }
     func requestNotifications() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, error in
-            DispatchQueue.main.async { if error != nil { self?.errorMessage = L10n.text("error.notification") }; self?.refreshNotificationStatus() }
+            DispatchQueue.main.async { if error != nil { self?.showError("error.notification") }; self?.refreshNotificationStatus() }
         }
     }
     func notifyWarning(_ kind: BreakKind, fallback: @escaping () -> Void) {
@@ -210,4 +206,9 @@ final class AppController: ObservableObject {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [AppIdentity.identifier("prewarning")])
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [AppIdentity.identifier("prewarning")])
     }
+    private func showError(_ key: String, detail: String? = nil) {
+        errorDetail = detail
+        errorKey = key
+    }
+    func dismissError() { errorKey = nil; errorDetail = nil }
 }

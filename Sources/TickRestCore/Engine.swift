@@ -70,6 +70,7 @@ public final class Engine {
         }
     }
     public var isResting: Bool { if case .resting = phase { return true }; return false }
+    public var graceRemaining: Double { grace }
     public func remaining(_ kind: BreakKind) -> Double {
         let intervalRemaining = max(0, settings.interval(kind) - (kind == .short ? shortElapsed : longElapsed))
         let cooldown = kind == .short ? shortCooldown : longCooldown

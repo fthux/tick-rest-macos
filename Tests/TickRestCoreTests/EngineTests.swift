@@ -4,10 +4,90 @@ import Foundation
 
 @Suite(.serialized)
 struct EngineTests {
+    init() { L10n.language = "zh-Hans" }
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private func engine(_ style: ReminderStyle = .gentle) -> Engine {
         var settings = Settings(); settings.style = style; settings.prewarning = 0
         return Engine(settings: settings)
+    }
+    @Test func testDueMenuExplainsRestartGraceInsteadOfZeroCountdown() {
+        var snapshot = Snapshot(); snapshot.savedAt = now
+        snapshot.shortElapsed = 1200; snapshot.longElapsed = 3600; snapshot.longCooldown = 30
+        let e = Engine(settings: Settings(), snapshot: snapshot, now: now)
+        e.tick(seconds: 25, now: now.addingTimeInterval(25))
+        let display = ReminderDisplay(engine: e)
+        #expect(e.remaining(.short) == 0); #expect(e.remaining(.long) == 5)
+        #expect(e.reminder == nil)
+        #expect(display.menuBarText == "稍后提醒")
+        #expect(display.stateText == "护眼休息已到期 · 稍后提醒（00:05）")
+        #expect(display.menuStateText == "稍后提醒（00:05）")
+        #expect(display.countdownText(for: .short) == "护眼休息已到期")
+        #expect(display.countdownText(for: .long) == "起身活动还有 00:05")
+        e.tick(seconds: 5, now: now.addingTimeInterval(30))
+        #expect(display.menuBarText == "起身已到期")
+        #expect(display.stateText == "起身活动已到期")
+        #expect(display.menuStateText == "休息已到期")
+        e.tick(seconds: 1, now: now.addingTimeInterval(31))
+        #expect(display.stateText == "起身活动已到期 · 等待开始")
+        #expect(display.menuStateText == "等待开始休息")
+        e.start(now: now.addingTimeInterval(31))
+        #expect(display.menuBarText == "05:00")
+        e.tick(seconds: 10, now: now.addingTimeInterval(41))
+        #expect(display.menuBarText == "04:50")
+        #expect(display.menuStateText == display.stateText)
+
+        snapshot.longCooldown = 0
+        let bothDue = Engine(settings: Settings(), snapshot: snapshot, now: now)
+        bothDue.tick(seconds: 11, now: now.addingTimeInterval(11))
+        let menu = ReminderDisplay(engine: bothDue)
+        #expect([menu.menuStateText, menu.countdownText(for: .short), menu.countdownText(for: .long)] == [
+            "稍后提醒（00:19）", "护眼休息已到期", "起身活动已到期"
+        ])
+    }
+    @Test func testMenuChangesFromCountdownToDueThenRestAndNextInterval() {
+        let e = engine(); let display = ReminderDisplay(engine: e)
+        #expect(display.menuBarText == "20:00"); #expect(display.stateText == "正常提醒")
+        e.tick(seconds: 1200, now: now)
+        #expect(display.menuBarText == "护眼已到期")
+        #expect(display.stateText == "护眼休息已到期 · 等待开始")
+        #expect(display.menuStateText == "等待开始休息")
+        #expect(display.countdownText(for: .short) == "护眼休息已到期")
+        e.start(now: now); e.tick(seconds: 5, now: now.addingTimeInterval(5))
+        #expect(display.menuBarText == "00:15")
+        #expect(display.stateText == "护眼休息进行中 · 00:15")
+        e.tick(seconds: 15, now: now.addingTimeInterval(20))
+        #expect(display.menuBarText == "20:00"); #expect(display.stateText == "正常提醒")
+    }
+    @Test func testDeferredMenuDisplaysPostponementAndPause() {
+        let e = engine(); e.tick(seconds: 1200, now: now); e.postpone(now: now)
+        let display = ReminderDisplay(engine: e)
+        e.tick(seconds: 1, now: now.addingTimeInterval(1))
+        #expect(display.menuBarText == "稍后提醒")
+        #expect(display.stateText == "护眼休息已延期 · 还剩 01:59")
+        #expect(display.menuStateText == "稍后提醒（01:59）")
+        #expect(display.countdownText(for: .short) == display.stateText)
+        e.setPause(.indefinite, now: now.addingTimeInterval(1))
+        #expect(display.menuBarText == "暂停"); #expect(display.stateText == "已暂停 · 等待手动恢复")
+        e.tick(seconds: 300, now: now.addingTimeInterval(301))
+        #expect(display.countdownText(for: .short) == "护眼休息已延期 · 还剩 01:59")
+    }
+    @Test func testFullscreenDueMenuExplainsSuppressionAndRecovery() {
+        let e = engine(); e.setSuppressed(true); e.tick(seconds: 1200, now: now)
+        let display = ReminderDisplay(engine: e)
+        #expect(display.menuBarText == "稍后提醒")
+        #expect(display.stateText == "全屏使用中，稍后提醒")
+        #expect(display.menuStateText == display.stateText)
+        #expect(display.countdownText(for: .short) == "护眼休息已到期")
+        e.setSuppressed(false)
+        #expect(display.stateText == "护眼休息已到期 · 稍后提醒（00:30）")
+    }
+    @Test func testEarlyEndMenuStillCountsDownCooldown() {
+        let e = engine(.overlay); e.tick(seconds: 3600, now: now)
+        e.tick(seconds: 30, now: now.addingTimeInterval(30)); e.finish(now: now.addingTimeInterval(30))
+        e.tick(seconds: 1, now: now.addingTimeInterval(31))
+        let display = ReminderDisplay(engine: e)
+        #expect(display.menuBarText == "04:59")
+        #expect(display.countdownText(for: .long) == "起身活动还有 04:59")
     }
     @Test func testWaitingCardDoesNotCountRest() {
         let e = engine(); e.tick(seconds: 1200, now: now)
@@ -226,13 +306,64 @@ struct EngineTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path).contains { $0.hasPrefix("state-damaged-") })
     }
     @Test func testLocalizationFallbackAndFormats() {
-        L10n.language = "fr"; #expect(L10n.resolvedLanguage.lowercased() == "zh-hans")
+        defer { L10n.language = "zh-Hans" }
+        L10n.language = "unsupported-test-locale"; #expect(L10n.resolvedLanguage.lowercased() == "en")
+        #expect(L10n.text("welcome.title") == "Welcome to \(AppIdentity.name)")
+        L10n.language = "zh-Hans"
         #expect(L10n.text("app.name") == AppIdentity.name)
         #expect(L10n.text("welcome.title") == "欢迎使用\(AppIdentity.name)")
         #expect(L10n.text("general.login_help").contains(AppIdentity.name))
         #expect(!L10n.text("welcome.menu_help").contains("{appName}"))
         #expect(L10n.text("menu.remaining", "护眼休息", "12:34") == "护眼休息还有 12:34")
-        #expect(L10n.availableLanguages.contains { $0.lowercased() == "zh-hans" }); L10n.language = "system"
+        #expect(Set(L10n.availableLanguages.map { $0.lowercased() }) == ["en", "ja", "ko", "zh-hans", "zh-hant"])
+    }
+    @Test func testSystemLanguageMatching() {
+        #expect(Settings().language == "system")
+        let cases: [([String], String)] = [
+            (["en-US"], "en"), (["en-GB"], "en"), (["ja-JP"], "ja"), (["ko-KR"], "ko"),
+            (["zh-CN"], "zh-hans"), (["zh-SG"], "zh-hans"), (["zh"], "zh-hans"),
+            (["zh-TW"], "zh-hant"), (["zh-HK"], "zh-hant"), (["zh-MO"], "zh-hant"),
+            (["zh-Hant-CN"], "zh-hant"), (["zh-Hans-TW"], "zh-hans"), (["ZH_hAnT_TW"], "zh-hant"),
+            (["fr-FR", "ja-JP", "en-US"], "ja"), (["ko-KR", "ja-JP"], "ko"),
+            (["de-DE", "fr-FR"], "en"), (["zh-Latn"], "en"), ([], "en")
+        ]
+        for (preferences, expected) in cases {
+            #expect(L10n.resolveLanguage("system", preferredLanguages: preferences, availableLanguages: L10n.availableLanguages).lowercased() == expected)
+        }
+        #expect(L10n.resolveLanguage("ja", preferredLanguages: ["zh-CN"], availableLanguages: L10n.availableLanguages) == "ja")
+        #expect(L10n.resolveLanguage("fr", preferredLanguages: ["zh-CN"], availableLanguages: L10n.availableLanguages) == "en")
+    }
+    @Test func testAllTranslationsAndFormattedText() throws {
+        defer { L10n.language = "zh-Hans" }
+        let welcomes = ["en": "Welcome to \(AppIdentity.name)", "ja": "\(AppIdentity.name)へようこそ", "ko": "\(AppIdentity.name)에 오신 것을 환영합니다", "zh-Hans": "欢迎使用\(AppIdentity.name)", "zh-Hant": "歡迎使用\(AppIdentity.name)"]
+        let englishPath = try #require(L10n.resourceBundle.path(forResource: "en", ofType: "lproj"))
+        let englishData = try Data(contentsOf: URL(fileURLWithPath: englishPath).appendingPathComponent("Localizable.strings"))
+        let english = try #require(PropertyListSerialization.propertyList(from: englishData, format: nil) as? [String: String])
+        for (language, welcome) in welcomes {
+            L10n.language = language
+            #expect(L10n.text("welcome.title") == welcome)
+            for key in english.keys {
+                #expect(!L10n.text(key).isEmpty)
+                #expect(L10n.text(key) != key)
+                #expect(!L10n.text(key).contains("{appName}"))
+            }
+            #expect(L10n.text("duration.hours_minutes", 2, 3).contains("2"))
+            #expect(L10n.text("duration.minutes_seconds", 4, 5).contains("5"))
+            #expect(L10n.text("menu.remaining", "BREAK", "12:34").contains("12:34"))
+            let warning = L10n.text("warning.body", 10, "BREAK", "DURATION")
+            #expect(warning.contains("10") && warning.contains("BREAK") && warning.contains("DURATION"))
+            #expect(L10n.text("unknown.key") == "unknown.key")
+        }
+    }
+    @Test func testLanguagePreferenceSurvivesRestart() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DataStore(url: directory.appendingPathComponent("state.json"))
+        for language in ["system", "en", "ja", "ko", "zh-Hans", "zh-Hant"] {
+            var data = SavedData(); data.settings.language = language
+            try store.save(data)
+            #expect(DataStore(url: store.url).load().settings.language == language)
+        }
     }
     @Test func testLegacyStateAddsIdleTimeoutWithoutLosingData() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)

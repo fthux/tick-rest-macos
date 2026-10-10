@@ -58,6 +58,7 @@ struct RestCard: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
             .overlay(RoundedRectangle(cornerRadius: 18).stroke(.secondary.opacity(0.2)))
             .padding(1).tint(restColor)
+            .environment(\.locale, L10n.locale)
     }
     private func close() { if preview { previewEnd() } else { model.action { $0.skip(now: Date()) } } }
 }
@@ -91,12 +92,14 @@ struct OverlayView: View {
             .foregroundStyle(Color(red: 0.91, green: 0.95, blue: 0.84))
             .background(Color(red: 0.10, green: 0.18, blue: 0.15))
             .preferredColorScheme(.dark)
+            .environment(\.locale, L10n.locale)
     }
 }
 
 struct WarningView: View {
+    @ObservedObject var model: AppController
     let kind: BreakKind
-    let settings: TickRestCore.Settings
+    private var settings: TickRestCore.Settings { model.settings }
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "leaf").font(.title2).foregroundStyle(restColor)
@@ -106,6 +109,7 @@ struct WarningView: View {
             }
             Spacer(minLength: 0)
         }.padding(17).frame(maxWidth: .infinity, maxHeight: .infinity).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14)).padding(1)
+            .environment(\.locale, L10n.locale)
     }
 }
 
@@ -175,6 +179,7 @@ struct WelcomeView: View {
         }.padding(28).frame(width: 580)
             .fixedSize(horizontal: false, vertical: true)
             .tint(.orange)
+            .environment(\.locale, L10n.locale)
             .onChange(of: step) { _ in
                 DispatchQueue.main.async(execute: layoutChanged)
             }

@@ -42,6 +42,8 @@ struct SettingsView: View {
             }
             .listStyle(.sidebar)
             .navigationSplitViewColumnWidth(min: 180, ideal: 206, max: 260)
+            // Native List rows can retain labels when their stable IDs do not change.
+            .id(model.interfaceLanguage)
         } detail: {
             Form {
                 if let error = model.errorMessage {
@@ -50,7 +52,7 @@ struct SettingsView: View {
                             Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
                             Text(error).font(.callout)
                             Spacer()
-                            Button { model.errorMessage = nil } label: { Image(systemName: "xmark") }
+                            Button { model.dismissError() } label: { Image(systemName: "xmark") }
                                 .buttonStyle(.plain).accessibilityLabel(L10n.text("common.dismiss"))
                         }
                     }
@@ -67,9 +69,11 @@ struct SettingsView: View {
                 }
             }
             .formStyle(.grouped)
+            // Recreate cached Picker options as well as the visible form labels.
+            .id(model.interfaceLanguage)
         }
         .toggleStyle(.switch)
-        .environment(\.locale, L10n.locale)
+        .environment(\.locale, model.interfaceLocale)
         .confirmationDialog(L10n.text("data.clear_title"), isPresented: $confirmClear) {
             Button(L10n.text("data.clear"), role: .destructive) { model.clearRecords() }
             Button(L10n.text("common.cancel"), role: .cancel) {}
@@ -112,7 +116,10 @@ struct SettingsView: View {
                     }.labelsHidden()
                 }
                 row("general.language", "general.language_help") {
-                    Picker(L10n.text("general.language"), selection: binding(\.language)) {
+                    Picker(L10n.text("general.language"), selection: Binding(
+                        get: { model.settings.language == "system" ? "system" : L10n.resolvedLanguage },
+                        set: { language in model.update { $0.language = language } }
+                    )) {
                         Text(L10n.text("language.system")).tag("system")
                         ForEach(L10n.availableLanguages, id: \.self) { language in
                             Text(L10n.locale.localizedString(forIdentifier: language) ?? language).tag(language)
