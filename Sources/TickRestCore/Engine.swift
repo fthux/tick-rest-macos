@@ -1,0 +1,262 @@
+import Foundation
+
+public enum EngineEffect: Equatable {
+    case warning(BreakKind), show(Reminder), hide, completed(BreakKind)
+}
+
+/// Deterministic scheduler: the adapter supplies elapsed active seconds and wall time.
+/// No system APIs or UI objects are used here, so sleep/idle transitions are testable.
+public final class Engine {
+    public private(set) var settings: Settings
+    public private(set) var phase: Phase = .working
+    public private(set) var shortElapsed: Double = 0
+    public private(set) var longElapsed: Double = 0
+    public private(set) var pause: PauseMode?
+    public private(set) var records: [Record] = []
+    public private(set) var effects: [EngineEffect] = []
+    public private(set) var away = false
+    public private(set) var suppressed = false
+    public private(set) var outsideSchedule = false
+    private var grace: Double = 0
+    private var shortCooldown: Double = 0
+    private var longCooldown: Double = 0
+    private var priorWorkingTime: Bool?
+    private var awayStarted: Date?
+    private var interruptedReminder: Reminder?
+    private var warnedKind: BreakKind?
+    private var lastIdea: [BreakKind: Int] = [:]
+    public init(settings: Settings, snapshot: Snapshot? = nil, now: Date = Date()) {
+        self.settings = settings
+        if let saved = snapshot {
+            let sameSession = !settings.scheduleEnabled || Self.sessionStart(settings, saved.savedAt) == Self.sessionStart(settings, now)
+            shortElapsed = sameSession ? saved.shortElapsed : 0
+            longElapsed = sameSession ? saved.longElapsed : 0
+            shortCooldown = sameSession ? saved.shortCooldown : 0
+            longCooldown = sameSession ? saved.longCooldown : 0
+            pause = saved.pause
+            if let active = saved.activeReminder {
+                records.append(Record(date: now, kind: active.kind, outcome: .interrupted, seconds: active.elapsed, reminderID: active.id))
+                if active.elapsed >= settings.shortDuration { shortElapsed = 0 }
+            }
+            if sameSession, let deferred = saved.deferredReminder, let remaining = saved.deferredRemaining {
+                phase = .deferred(deferred, remaining)
+            }
+            grace = 30
+        }
+        if case .until(let end) = pause, end <= now { pause = nil }
+    }
+    private static func sessionStart(_ settings: Settings, _ date: Date) -> Date? {
+        guard settings.isWorkingTime(date) else { return nil }
+        let calendar = Calendar.current
+        var startDay = calendar.startOfDay(for: date)
+        let minute = calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
+        if settings.scheduleStart > settings.scheduleEnd && minute < settings.scheduleEnd {
+            startDay = calendar.date(byAdding: .day, value: -1, to: startDay) ?? startDay
+        }
+        return calendar.date(byAdding: .minute, value: settings.scheduleStart, to: startDay)
+    }
+    public func updateSettings(_ value: Settings) {
+        if !settings.shortEnabled && value.shortEnabled { shortElapsed = 0 }
+        if !settings.longEnabled && value.longEnabled { longElapsed = 0 }
+        let active = reminder
+        settings = value
+        if let active, !value.enabled(active.kind) { phase = .working; effects.append(.hide) }
+        grace = 30; warnedKind = nil
+    }
+    public var reminder: Reminder? {
+        switch phase {
+        case .waiting(let reminder), .resting(let reminder), .deferred(let reminder, _): return reminder
+        default: return nil
+        }
+    }
+    public var isResting: Bool { if case .resting = phase { return true }; return false }
+    public func remaining(_ kind: BreakKind) -> Double {
+        let intervalRemaining = max(0, settings.interval(kind) - (kind == .short ? shortElapsed : longElapsed))
+        let cooldown = kind == .short ? shortCooldown : longCooldown
+        // Both the usage interval and early-end cooldown must expire before a reminder is due.
+        return max(intervalRemaining, cooldown)
+    }
+    public var nextKind: BreakKind? {
+        let enabled = BreakKind.allCases.filter(settings.enabled)
+        return enabled.min { remaining($0) < remaining($1) || (remaining($0) == remaining($1) && $0 == .long) }
+    }
+    private func isDue(_ kind: BreakKind) -> Bool {
+        settings.enabled(kind) && remaining(kind) == 0
+    }
+    public func tick(seconds: Double, now: Date) {
+        let delta = max(0, seconds)
+        if case .until(let date) = pause, now >= date { pause = nil; grace = 30; warnedKind = nil }
+        let workingTime = settings.isWorkingTime(now)
+        outsideSchedule = !workingTime
+        if priorWorkingTime == false && workingTime { reset(.long); phase = .working; warnedKind = nil; grace = 30 }
+        if priorWorkingTime == true && !workingTime {
+            if case .resting(let r) = phase { record(r, .interrupted, now) }
+            phase = .working; effects.append(.hide); warnedKind = nil
+        }
+        priorWorkingTime = workingTime
+        guard pause == nil, !away else { return }
+        if case .resting(var r) = phase {
+            let used = min(delta, max(0, r.target - r.elapsed))
+            recordDurationSplit(seconds: used, ending: now, kind: r.kind, outcome: .usage, reminderID: r.id, rest: true)
+            r.elapsed += used
+            if r.elapsed >= r.target {
+                record(r, .completed, now, includeDuration: false); reset(r.kind)
+                phase = .working; warnedKind = nil; effects += [.hide, .completed(r.kind)]
+            } else { phase = .resting(r) }
+            return
+        }
+        guard workingTime else { return }
+        shortElapsed = min(settings.shortInterval, shortElapsed + delta)
+        longElapsed = min(settings.longInterval, longElapsed + delta)
+        recordDurationSplit(seconds: delta, ending: now, kind: nil, outcome: .usage, reminderID: nil, rest: false)
+        shortCooldown = max(0, shortCooldown - delta); longCooldown = max(0, longCooldown - delta)
+        if case .deferred(let r, let remaining) = phase {
+            if r.kind == .short && isDue(.long) {
+                phase = .working; effects.append(.hide); warnedKind = nil
+            } else if remaining > delta { phase = .deferred(r, remaining - delta); return }
+            else {
+                if suppressed { phase = .deferred(r, 0); return }
+                if grace > 0 { tickGrace(delta, kind: r.kind); phase = .deferred(r, 0); return }
+                present(r); return
+            }
+        }
+        guard !suppressed else { return }
+        if grace > 0 { tickGrace(delta, kind: nextKind); return }
+        if case .waiting(let r) = phase {
+            if r.kind == .short && isDue(.long) {
+                effects.append(.hide); present(makeReminder(.long))
+            }
+            return
+        }
+        let due: BreakKind?
+        if isDue(.long) { due = .long }
+        else if isDue(.short) { due = .short }
+        else { due = nil }
+        if let due { present(makeReminder(due)); return }
+        if let next = nextKind, settings.prewarning > 0, remaining(next) <= settings.prewarning, warnedKind != next {
+            warnedKind = next; phase = .warning(next); effects.append(.warning(next))
+        }
+    }
+    private func present(_ value: Reminder) {
+        if settings.style == .overlay { phase = .resting(value) }
+        else { phase = .waiting(value) }
+        effects.append(.show(value))
+    }
+    private func makeReminder(_ kind: BreakKind) -> Reminder {
+        var reminder = Reminder(kind: kind, target: settings.duration(kind))
+        reminder.ideaIndex = ((lastIdea[kind] ?? -1) + 1) % 5
+        lastIdea[kind] = reminder.ideaIndex
+        return reminder
+    }
+    private func tickGrace(_ delta: Double, kind: BreakKind?) {
+        grace = max(0, grace - delta)
+        if let kind, remaining(kind) == 0, settings.prewarning > 0,
+           grace <= settings.prewarning, warnedKind != kind {
+            warnedKind = kind; effects.append(.warning(kind))
+        }
+    }
+    public func start(now: Date) {
+        guard case .waiting(let r) = phase else { return }
+        phase = .resting(r)
+    }
+    public func startNow(_ kind: BreakKind, now: Date) {
+        guard !away else { return }
+        // Manual start explicitly overrides manual pause but not the session/sleep boundary.
+        pause = nil
+        if case .resting = phase { finish(now: now) }
+        phase = .resting(makeReminder(kind))
+        effects.append(.show(reminder!))
+    }
+    public func postpone(now: Date) {
+        guard var r = reminder, r.postponements < 2 else { return }
+        if isResting && r.elapsed > 5 { return }
+        if r.elapsed > 0 {
+            // Per-segment duration has already been recorded; only emit the outcome here.
+            record(r, .postponed, now, includeDuration: false)
+        } else { records.append(Record(date: now, kind: r.kind, outcome: .postponed, reminderID: r.id)) }
+        r.postponements += 1; r.elapsed = 0
+        phase = .deferred(r, r.kind.postponement); effects.append(.hide)
+    }
+    public func skip(now: Date) {
+        guard let r = reminder else { return }
+        if isResting { finish(now: now); return }
+        record(r, .skipped, now, includeDuration: false); reset(r.kind)
+        phase = .working; warnedKind = nil; effects.append(.hide)
+    }
+    public func finish(now: Date) {
+        guard case .resting(let r) = phase else { return }
+        record(r, .ended, now, includeDuration: false)
+        if r.elapsed >= settings.shortDuration { shortElapsed = 0 }
+        if r.kind == .long && r.elapsed >= r.target { longElapsed = 0 }
+        if r.kind == .short { shortCooldown = r.kind.postponement } else { longCooldown = r.kind.postponement }
+        phase = .working; warnedKind = nil; effects.append(.hide)
+    }
+    public func setPause(_ mode: PauseMode?, now: Date) {
+        if case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false); phase = .working }
+        if case .waiting(let r) = phase { phase = .deferred(r, 0) }
+        if case .warning = phase { phase = .working }
+        pause = mode; grace = 30; warnedKind = nil; effects.append(.hide)
+    }
+    public func setSuppressed(_ value: Bool) {
+        guard value != suppressed else { return }
+        suppressed = value
+        if value {
+            if case .waiting(let r) = phase { phase = .deferred(r, 0); effects.append(.hide) }
+        } else {
+            grace = 30; warnedKind = nil
+            if case .waiting = phase { phase = .working }
+        }
+    }
+    public func beginAway(at start: Date) {
+        guard !away else { return }
+        away = true; awayStarted = start
+        if case .resting(let r) = phase { interruptedReminder = r }
+        effects.append(.hide)
+    }
+    public func endAway(now: Date, minimumShort: Double) {
+        guard away else { return }
+        let seconds = max(0, now.timeIntervalSince(awayStarted ?? now))
+        let combined = seconds + (interruptedReminder?.elapsed ?? 0)
+        away = false; awayStarted = nil
+        if let r = interruptedReminder { record(r, .interrupted, now, includeDuration: false) }
+        interruptedReminder = nil
+        let qualifiesLong = combined >= settings.longDuration
+        let qualifiesShort = combined >= minimumShort
+        records.append(Record(date: now, kind: nil, outcome: .natural, seconds: seconds))
+        if qualifiesLong { reset(.long) }
+        else if qualifiesShort { reset(.short) }
+        if qualifiesShort || qualifiesLong || isResting { phase = .working }
+        else if case .waiting(let r) = phase { phase = .deferred(r, 0) }
+        grace = 30; warnedKind = nil
+    }
+    private func reset(_ kind: BreakKind) {
+        shortElapsed = 0; shortCooldown = 0
+        if kind == .long { longElapsed = 0; longCooldown = 0 }
+    }
+    private func record(_ r: Reminder, _ outcome: Outcome, _ now: Date, includeDuration: Bool = true) {
+        records.append(Record(date: now, kind: r.kind, outcome: outcome, seconds: includeDuration ? r.elapsed : 0, reminderID: r.id))
+    }
+    private func recordDurationSplit(seconds: Double, ending: Date, kind: BreakKind?, outcome: Outcome, reminderID: UUID?, rest: Bool) {
+        guard seconds > 0 else { return }
+        let start = ending.addingTimeInterval(-seconds)
+        let midnight = Calendar.current.startOfDay(for: ending)
+        let segments: [(Date, Double)] = start < midnight && midnight < ending
+            ? [(midnight.addingTimeInterval(-0.001), midnight.timeIntervalSince(start)), (ending, ending.timeIntervalSince(midnight))]
+            : [(ending, seconds)]
+        for (date, duration) in segments {
+            // usage records with a reminderID represent measured rest segments.
+            records.append(Record(date: date, kind: kind, outcome: outcome, seconds: duration, reminderID: rest ? reminderID : nil))
+        }
+    }
+    public func drain() -> ([EngineEffect], [Record]) {
+        let result = (effects, records); effects.removeAll(); records.removeAll(); return result
+    }
+    public func snapshot(now: Date) -> Snapshot {
+        var result = Snapshot(); result.shortElapsed = shortElapsed; result.longElapsed = longElapsed
+        result.pause = pause; result.savedAt = now
+        if case .resting(let r) = phase { result.activeReminder = r }
+        if case .deferred(let r, let remaining) = phase { result.deferredReminder = r; result.deferredRemaining = remaining }
+        result.shortCooldown = shortCooldown; result.longCooldown = longCooldown
+        return result
+    }
+}

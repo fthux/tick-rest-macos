@@ -1,0 +1,5 @@
+{
+  "name": "TickRest",
+  "bundleIdentifier": "app.restly.desktop",
+  "dataDirectory": "Restly"
+}
