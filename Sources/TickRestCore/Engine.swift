@@ -146,7 +146,12 @@ public final class Engine {
         if case .until(let date) = pause, now >= date { pause = nil; grace = 30; warnedKind = nil }
         let workingTime = settings.isWorkingTime(now)
         outsideSchedule = !workingTime
-        if priorWorkingTime == false && workingTime { reset(.long); completedRounds = 0; roundRestKind = nil; phase = .working; warnedKind = nil; grace = 30; applyPending(now: now) }
+        // A manual break can span the start of a scheduled work session.
+        // Retain its progress and any pending plan until the break settles.
+        if priorWorkingTime == false && workingTime && reminder == nil {
+            reset(.long); completedRounds = 0; roundRestKind = nil
+            phase = .working; warnedKind = nil; grace = 30; applyPending(now: now)
+        }
         if priorWorkingTime == true && !workingTime {
             // Away transitions retain the reminder and settle it once on return.
             if !away, case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false) }

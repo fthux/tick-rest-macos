@@ -178,6 +178,24 @@ struct FunctionalAuditTests {
         } else { #expect(engine.reminder?.id == id && engine.reminder?.elapsed == 20) }
     }
 
+    @Test(arguments: [RestPlanID.tickrest, .eye202020, .fiftyTen, .pomodoro], [false, true])
+    func scheduleOpeningPreservesManualBreakAndPendingPlan(_ plan: RestPlanID, _ paused: Bool) throws {
+        var s = settings(plan); s.scheduleEnabled = true; s.weekdays = [2]
+        var time = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 12, hour: 8, minute: 59, second: 58))!
+        let engine = Engine(settings: s); engine.tick(seconds: 0, now: time)
+        engine.startNow(.short, now: time); step(engine, 1, &time)
+        engine.applyPlan(.preset(.fiftyTen), now: time)
+        let before = try #require(engine.reminder)
+        if paused { engine.setPause(.indefinite, now: time) }
+        _ = engine.drain(); step(engine, 1, &time)
+        #expect(engine.reminder?.id == before.id)
+        #expect(engine.reminder?.elapsed == (paused ? 1 : 2))
+        #expect(engine.pendingPlan == .preset(.fiftyTen))
+        #expect(engine.settings.restPlan == s.restPlan)
+        #expect(!engine.effects.contains(.hide))
+        #expect(engine.records.allSatisfy { $0.outcome == .usage })
+    }
+
     // AUDIT-02: startup/wake grace is 30 seconds from return, and runs concurrently
     // with a longer postponement. The menu already displays max(delay, grace).
     @Test(arguments: ["restart", "away", "pause"])
