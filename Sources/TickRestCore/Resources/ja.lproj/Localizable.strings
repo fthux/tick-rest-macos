@@ -119,7 +119,6 @@
 "schedule.idle" = "離席を自動検出";
 "schedule.idle_help" = "キーやマウスの入力が下記の時間ない場合に停止します（初期設定は5分）。長い離席は周期をリセットします。読書、動画、コントローラ操作を離席と誤判定する場合は無効にできます。";
 "schedule.idle_minutes" = "離席とみなす時間：%d分";
-"schedule.meeting_help" = "会議やプレゼンの前に通知を停止し、終了後に再開できます。";
 "schedule.overnight" = "日付をまたぐ時間帯は開始日の設定に従います。例：月曜22:00～02:00には火曜の早朝を含みます。";
 "schedule.start" = "開始";
 "settings.about" = "このアプリについて";
@@ -187,3 +186,9 @@
 "reminder.start_mode_help" = "自動開始では時間になると計測を開始します。手動確認では「休憩を開始」を押すまで待機します。両方の表示形式に対応し、次の通知から適用されます。";
 "start_mode.automatic" = "時間になると自動開始";
 "start_mode.manual" = "手動確認後に開始";
+"reminder.size" = "カードのサイズ";
+"reminder.size_help" = "次の穏やかな通知またはプレビューから適用されます。";
+"reminder.size.normal" = "標準（normal）";
+"reminder.size.small" = "小（small）";
+"reminder.size.mini" = "ミニ（mini）";
+"rest.idea" = "休憩のヒント";

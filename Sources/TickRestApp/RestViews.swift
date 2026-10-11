@@ -3,17 +3,28 @@ import TickRestCore
 
 private let restColor = Color(red: 0.12, green: 0.28, blue: 0.21)
 
+struct GentleCardLayout {
+    let size: GentleReminderSize
+    var width: CGFloat { size == .normal ? 420 : size == .small ? 340 : 280 }
+    var padding: CGFloat { size == .normal ? 24 : size == .small ? 18 : 14 }
+    var spacing: CGFloat { size == .normal ? 15 : size == .small ? 10 : 8 }
+    var clockFont: CGFloat { size == .normal ? 52 : size == .small ? 40 : 24 }
+    var radius: CGFloat { size == .normal ? 18 : size == .small ? 16 : 14 }
+    var compact: Bool { size != .normal }
+}
+
 // Nonactivating panels need explicit colors for every action, independent of window focus.
 private struct RestCardButtonStyle: ButtonStyle {
     var prominent = false
+    var compact = false
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.body.weight(.medium))
+            .font((compact ? Font.callout : Font.body).weight(.medium))
             .foregroundStyle(prominent ? Color.white : Color.primary)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
+            .padding(.horizontal, compact ? 10 : 16)
+            .padding(.vertical, compact ? 6 : 8)
             .background(prominent ? restColor : Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
             .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.5)
             .contentShape(RoundedRectangle(cornerRadius: 8))
@@ -22,47 +33,82 @@ private struct RestCardButtonStyle: ButtonStyle {
 
 struct RestCard: View {
     @ObservedObject var model: AppController
+    let size: GentleReminderSize
     let preview: Bool
     let previewEnd: () -> Void
+    @State private var showingIdea = false
+    private var layout: GentleCardLayout { GentleCardLayout(size: size) }
     private var r: Reminder { model.engine.reminder ?? Reminder(kind: .short, target: 5) }
     var body: some View {
-        VStack(spacing: 15) {
-            HStack {
+        VStack(spacing: layout.spacing) {
+            HStack(spacing: 8) {
                 Label(r.kind.title, systemImage: r.kind == .short ? "eye" : "figure.walk")
-                Spacer()
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if size == .mini { clock }
                 Button { close() } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel(L10n.text("common.close"))
-            }.font(.callout.bold())
-            Text(preview ? "00:05" : L10n.clock(r.target - r.elapsed)).font(.system(size: 52, weight: .regular, design: .rounded)).monospacedDigit()
-                .accessibilityLabel(L10n.text("rest.remaining", L10n.duration(r.target - r.elapsed)))
-            Text(L10n.text(preview ? "rest.preview" : model.engine.isResting ? "rest.running" : "rest.waiting"))
-                .font(.caption).foregroundStyle(.secondary)
-            Text(r.idea)
-                .font(.callout).multilineTextAlignment(.center).frame(maxWidth: .infinity).fixedSize(horizontal: false, vertical: true)
-            HStack {
-                if preview {
-                    Button(L10n.text("common.close"), action: previewEnd)
-                } else if model.engine.isResting {
-                    Button(L10n.text("rest.end")) { model.action { $0.finish(now: Date()) } }
-                        .buttonStyle(RestCardButtonStyle(prominent: true))
-                    if r.elapsed <= 5 && r.postponements < 2 {
-                        Button(L10n.text("rest.defer", Int(r.kind.postponement / 60))) { model.action { $0.postpone(now: Date()) } }
-                    }
-                    Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
-                } else {
-                    Button(L10n.text("rest.start")) { model.action { $0.start(now: Date()) } }
-                        .buttonStyle(RestCardButtonStyle(prominent: true))
-                    if r.postponements < 2 {
-                        Button(L10n.text("rest.defer", Int(r.kind.postponement / 60))) { model.action { $0.postpone(now: Date()) } }
-                    }
-                    Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
+            }.font((size == .mini ? Font.caption : Font.callout).bold())
+            if size != .mini { clock }
+            HStack(spacing: 8) {
+                Text(L10n.text(preview ? "rest.preview" : model.engine.isResting ? "rest.running" : "rest.waiting"))
+                    .font(.caption).foregroundStyle(.secondary)
+                    .multilineTextAlignment(size == .mini ? .leading : .center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if size == .mini {
+                    Spacer(minLength: 0)
+                    Button { showingIdea.toggle() } label: { Image(systemName: "info.circle") }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(L10n.text("rest.idea"))
+                        .help(L10n.text("rest.idea"))
+                        .popover(isPresented: $showingIdea) {
+                            Text(r.idea).font(.callout).padding(16).frame(width: 260)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                 }
-            }.buttonStyle(RestCardButtonStyle())
-        }.padding(24).frame(maxWidth: .infinity)
+            }
+            if size != .mini {
+                Text(r.idea)
+                    .font(.callout).multilineTextAlignment(.center).frame(maxWidth: .infinity).fixedSize(horizontal: false, vertical: true)
+            }
+            ViewThatFits(in: .horizontal) {
+                HStack { primaryAction; secondaryActions }
+                VStack(spacing: 8) {
+                    primaryAction
+                    ViewThatFits(in: .horizontal) {
+                        HStack { secondaryActions }
+                        VStack(spacing: 8) { secondaryActions }
+                    }
+                }
+            }.buttonStyle(RestCardButtonStyle(compact: layout.compact))
+        }.padding(layout.padding).frame(maxWidth: .infinity)
             .fixedSize(horizontal: false, vertical: true)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
-            .overlay(RoundedRectangle(cornerRadius: 18).stroke(.secondary.opacity(0.2)))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: layout.radius))
+            .overlay(RoundedRectangle(cornerRadius: layout.radius).stroke(.secondary.opacity(0.2)))
             .padding(1).tint(restColor)
             .environment(\.locale, L10n.locale)
+    }
+    private var clock: some View {
+        Text(preview ? "00:05" : L10n.clock(r.target - r.elapsed))
+            .font(.system(size: layout.clockFont, weight: .regular, design: .rounded)).monospacedDigit()
+            .fixedSize()
+            .accessibilityLabel(L10n.text("rest.remaining", L10n.duration(preview ? 5 : r.target - r.elapsed)))
+    }
+    @ViewBuilder private var primaryAction: some View {
+        if preview {
+            Button(L10n.text("common.close"), action: previewEnd)
+        } else {
+            Button(L10n.text(model.engine.isResting ? "rest.end" : "rest.start")) {
+                model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.start(now: Date()) } }
+            }.buttonStyle(RestCardButtonStyle(prominent: true, compact: layout.compact))
+        }
+    }
+    @ViewBuilder private var secondaryActions: some View {
+        if !preview {
+            if r.postponements < 2 && (!model.engine.isResting || r.elapsed <= 5) {
+                Button(L10n.text("rest.defer", Int(r.kind.postponement / 60))) { model.action { $0.postpone(now: Date()) } }
+            }
+            Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
+        }
     }
     private func close() {
         if preview { previewEnd() }

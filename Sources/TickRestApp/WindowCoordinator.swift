@@ -38,6 +38,18 @@ final class WindowCoordinator {
         }
     }
     func refresh() {
+        // State changes can wrap translated buttons onto a new row. Keep the card's
+        // top edge anchored while fitting its content, without reopening the reminder.
+        if shownStyle == .gentle, let panel = panels.first, let hosting = panel.contentView {
+            let height = ceil(hosting.fittingSize.height)
+            if height > 0, abs(panel.frame.height - height) > 0.5 {
+                var frame = panel.frame
+                frame.origin.y = frame.maxY - height
+                frame.size.height = height
+                if let screen = panel.screen { frame.origin.y = max(screen.visibleFrame.minY, frame.origin.y) }
+                panel.setFrame(frame, display: true)
+            }
+        }
         if !isPreview, shownStyle == .overlay, model.engine.isResting, let reminder = model.engine.reminder {
             panels.forEach { $0.title = L10n.text("state.resting", reminder.kind.title, L10n.clock(reminder.target - reminder.elapsed)) }
         }
@@ -56,10 +68,13 @@ final class WindowCoordinator {
         priorApplication = previous ?? NSWorkspace.shared.frontmostApplication
         guard let screen = currentScreen else { return }
         if model.settings.style == .gentle {
-            let hosting = NSHostingView(rootView: RestCard(model: model, preview: preview, previewEnd: { [weak self] in self?.hide() }).frame(width: 420))
+            // Capture the size for this presentation; settings apply to the next card.
+            let cardSize = model.settings.gentleReminderSize
+            let width = GentleCardLayout(size: cardSize).width
+            let hosting = NSHostingView(rootView: RestCard(model: model, size: cardSize, preview: preview, previewEnd: { [weak self] in self?.hide() }).frame(width: width))
             hosting.sizingOptions = [.intrinsicContentSize]
-            let size = NSSize(width: 420, height: ceil(hosting.fittingSize.height))
-            let rect = NSRect(x: screen.visibleFrame.maxX - size.width - 32, y: screen.visibleFrame.maxY - size.height - 30, width: size.width, height: size.height)
+            let size = NSSize(width: width, height: ceil(hosting.fittingSize.height))
+            let rect = NSRect(x: max(screen.visibleFrame.minX, screen.visibleFrame.maxX - size.width - 32), y: max(screen.visibleFrame.minY, screen.visibleFrame.maxY - size.height - 30), width: size.width, height: size.height)
             let panel = makePanel(frame: rect, overlay: false)
             panel.contentView = hosting
             panel.setContentSize(size)

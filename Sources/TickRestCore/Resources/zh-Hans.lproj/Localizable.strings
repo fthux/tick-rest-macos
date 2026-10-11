@@ -119,7 +119,6 @@
 "schedule.idle" = "自动识别离席";
 "schedule.idle_help" = "无键鼠输入达到下方设定时间后暂停，默认 5 分钟。离席足够长会重置周期；阅读、视频或控制器操作可能误判，可关闭此项。";
 "schedule.idle_minutes" = "自动离席时间：%d 分钟";
-"schedule.meeting_help" = "会议或演示前，可手动暂停提醒，结束后恢复。";
 "schedule.overnight" = "支持跨午夜时段，按开始日归属。例如周一 22:00–02:00 包含周二凌晨。";
 "schedule.start" = "开始";
 "settings.about" = "关于";
@@ -187,3 +186,9 @@
 "reminder.start_mode_help" = "自动开始：到期后直接倒计时；手动确认：点击“开始休息”后计时。适用于两种样式，从下次提醒生效。";
 "start_mode.automatic" = "到期自动开始";
 "start_mode.manual" = "手动确认后开始";
+"reminder.size" = "弹窗尺寸";
+"reminder.size_help" = "从下次温和提醒或预览生效。";
+"reminder.size.normal" = "标准（normal）";
+"reminder.size.small" = "小号（small）";
+"reminder.size.mini" = "迷你（mini）";
+"rest.idea" = "休息建议";

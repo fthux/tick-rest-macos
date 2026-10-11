@@ -119,7 +119,6 @@
 "schedule.idle" = "자리 비움 자동 감지";
 "schedule.idle_help" = "키보드나 마우스 입력이 아래 시간 동안 없으면 일시 정지합니다(기본 5분). 오래 자리를 비우면 주기가 초기화됩니다. 독서, 영상 시청, 컨트롤러 사용을 자리 비움으로 잘못 판단할 수 있으며 이 기능을 끌 수 있습니다.";
 "schedule.idle_minutes" = "자리 비움 감지 시간: %d분";
-"schedule.meeting_help" = "회의나 발표 전에 알림을 일시 정지하고 끝난 후 재개할 수 있습니다.";
 "schedule.overnight" = "자정을 넘는 시간은 시작한 날짜에 속합니다. 예를 들어 월요일 22:00~02:00에는 화요일 새벽이 포함됩니다.";
 "schedule.start" = "시작";
 "settings.about" = "앱 정보";
@@ -187,3 +186,9 @@
 "reminder.start_mode_help" = "자동 시작은 시간이 되면 바로 타이머를 시작합니다. 수동 확인은 휴식 시작을 누를 때까지 기다립니다. 두 스타일 모두에 적용되며 다음 알림부터 반영됩니다.";
 "start_mode.automatic" = "시간이 되면 자동 시작";
 "start_mode.manual" = "수동 확인 후 시작";
+"reminder.size" = "카드 크기";
+"reminder.size_help" = "다음 부드러운 알림 또는 미리보기부터 적용됩니다.";
+"reminder.size.normal" = "기본 (normal)";
+"reminder.size.small" = "작게 (small)";
+"reminder.size.mini" = "미니 (mini)";
+"rest.idea" = "휴식 제안";

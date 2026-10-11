@@ -119,7 +119,6 @@
 "schedule.idle" = "Detect time away automatically";
 "schedule.idle_help" = "Pauses after the time below without keyboard or mouse input (5 minutes by default). A long absence resets the cycles. Reading, videos, or controllers may be mistaken for time away; you can turn this off.";
 "schedule.idle_minutes" = "Time away threshold: %d min";
-"schedule.meeting_help" = "Pause reminders before a meeting or presentation and resume afterward.";
 "schedule.overnight" = "Hours can cross midnight and belong to the starting day. For example, Monday 22:00–02:00 includes early Tuesday.";
 "schedule.start" = "Start";
 "settings.about" = "About";
@@ -187,3 +186,9 @@
 "reminder.start_mode_help" = "Automatically starts the timer when due. Manual confirmation waits for Start break. Applies to both styles, from the next reminder.";
 "start_mode.automatic" = "Automatically when due";
 "start_mode.manual" = "After manual confirmation";
+"reminder.size" = "Card size";
+"reminder.size_help" = "Applies to the next gentle card or preview.";
+"reminder.size.normal" = "Normal";
+"reminder.size.small" = "Small";
+"reminder.size.mini" = "Mini";
+"rest.idea" = "Break suggestion";

@@ -172,6 +172,15 @@ struct SettingsView: View {
                     }.labelsHidden()
                 }
                 Text(L10n.text("reminder.style_help")).font(.caption).foregroundStyle(.secondary)
+                if model.settings.style == .gentle {
+                    row("reminder.size", "reminder.size_help") {
+                        Picker(L10n.text("reminder.size"), selection: binding(\.gentleReminderSize)) {
+                            ForEach(GentleReminderSize.allCases, id: \.self) {
+                                Text(L10n.text("reminder.size.\($0.rawValue)")).tag($0)
+                            }
+                        }.labelsHidden()
+                    }
+                }
                 row("reminder.start_mode", "reminder.start_mode_help") {
                     Picker(L10n.text("reminder.start_mode"), selection: binding(\.breakStartMode)) {
                         ForEach(BreakStartMode.allCases, id: \.self) { Text(L10n.text("start_mode.\($0.rawValue)")).tag($0) }
@@ -233,14 +242,6 @@ struct SettingsView: View {
                 .disabled(!model.settings.detectIdle)
                 row("schedule.fullscreen", "schedule.fullscreen_help") { toggle("schedule.fullscreen", \.avoidFullscreen) }
                 if model.fullscreenUnavailable { Text(L10n.text("schedule.fullscreen_unavailable")).font(.caption).foregroundStyle(.orange) }
-            }
-            Section {
-                Text(model.stateText).font(.callout)
-                HStack {
-                    Button(L10n.text("menu.pause_15")) { model.pauseMinutes(15) }
-                    Button(L10n.text("menu.resume")) { model.resume() }.disabled(model.engine.pause == nil)
-                }
-                Text(L10n.text("schedule.meeting_help")).font(.caption).foregroundStyle(.secondary)
             }
         }
     }

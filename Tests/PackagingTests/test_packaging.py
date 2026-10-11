@@ -57,8 +57,10 @@ class PackagingTests(unittest.TestCase):
                 self.assertTrue(translation.is_file())
                 output = subprocess.check_output(["plutil", "-convert", "json", "-o", "-", str(translation)])
                 values = json.loads(output)
-                self.assertEqual(len(values), 188)
+                self.assertEqual(len(values), 194)
                 for key in ("reminder.start_mode", "reminder.start_mode_help", "start_mode.automatic", "start_mode.manual"):
+                    self.assertIn(key, values)
+                for key in ("reminder.size", "reminder.size_help", "reminder.size.normal", "reminder.size.small", "reminder.size.mini", "rest.idea"):
                     self.assertIn(key, values)
                 self.assertTrue(all(values.values()))
                 self.assertIn("{appName}", values["welcome.title"])

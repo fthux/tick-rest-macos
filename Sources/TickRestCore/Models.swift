@@ -6,6 +6,7 @@ public enum BreakKind: String, Codable, CaseIterable {
     public var postponement: Double { self == .short ? 120 : 300 }
 }
 public enum ReminderStyle: String, Codable, CaseIterable { case gentle, overlay }
+public enum GentleReminderSize: String, Codable, CaseIterable { case normal, small, mini }
 public enum BreakStartMode: String, Codable, CaseIterable { case automatic, manual }
 public enum DisplayScope: String, Codable, CaseIterable { case all, current }
 public enum AppTheme: String, Codable, CaseIterable { case system, light, dark }
@@ -23,6 +24,7 @@ public struct Settings: Codable, Equatable {
     public var longDuration: Double = 300
     public var prewarning: Double = 10
     public var style: ReminderStyle = .gentle
+    public var gentleReminderSize: GentleReminderSize = .normal
     public var breakStartMode: BreakStartMode = .automatic
     public var displayScope: DisplayScope = .all
     public var sound = false
@@ -41,7 +43,7 @@ public struct Settings: Codable, Equatable {
     public init() {}
     private enum CodingKeys: String, CodingKey {
         case shortEnabled, longEnabled, shortInterval, shortDuration, longInterval, longDuration
-        case prewarning, style, breakStartMode, displayScope, sound, reminderSound, detectIdle, idleTimeout, avoidFullscreen
+        case prewarning, style, gentleReminderSize, breakStartMode, displayScope, sound, reminderSound, detectIdle, idleTimeout, avoidFullscreen
         case scheduleEnabled, weekdays, scheduleStart, scheduleEnd, showCountdown, theme, language, onboardingComplete
     }
     public init(from decoder: Decoder) throws {
@@ -54,6 +56,7 @@ public struct Settings: Codable, Equatable {
         longDuration = try values.decode(Double.self, forKey: .longDuration)
         prewarning = try values.decode(Double.self, forKey: .prewarning)
         style = try values.decode(ReminderStyle.self, forKey: .style)
+        gentleReminderSize = try values.decodeIfPresent(GentleReminderSize.self, forKey: .gentleReminderSize) ?? .normal
         // Existing configurations adopt automatic starts without losing other preferences.
         breakStartMode = try values.decodeIfPresent(BreakStartMode.self, forKey: .breakStartMode) ?? .automatic
         displayScope = try values.decode(DisplayScope.self, forKey: .displayScope)

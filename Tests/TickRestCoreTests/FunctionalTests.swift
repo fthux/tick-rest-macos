@@ -461,13 +461,18 @@ extension EngineTests {
         let bundlePath = try #require(L10n.resourceBundle.path(forResource: identifier, ofType: "lproj"))
         let data = try Data(contentsOf: URL(fileURLWithPath: bundlePath).appendingPathComponent("Localizable.strings"))
         let values = try #require(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String])
-        #expect(values.count == 188)
+        #expect(values.count == 194)
         #expect(values.values.allSatisfy { !$0.isEmpty })
         #expect(values["welcome.title"]?.contains("{appName}") == true)
         #expect(values["menu.remaining"]?.components(separatedBy: "%@").count == 3)
         #expect(values["break.short"] != nil && values["break.long"] != nil)
         #expect(values["reminder.sound_type"] != nil)
         #expect(values["reminder.start_mode"] != nil && values["reminder.start_mode_help"] != nil)
+        #expect(values["reminder.size"] != nil && values["reminder.size_help"] != nil)
+        #expect(values["rest.idea"] != nil)
+        for size in GentleReminderSize.allCases {
+            #expect(values["reminder.size.\(size.rawValue)"] != nil)
+        }
         for mode in BreakStartMode.allCases {
             #expect(values["start_mode.\(mode.rawValue)"] != nil)
         }
