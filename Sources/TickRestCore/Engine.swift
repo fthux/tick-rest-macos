@@ -256,6 +256,9 @@ public final class Engine {
         var result = Snapshot(); result.shortElapsed = shortElapsed; result.longElapsed = longElapsed
         result.pause = pause; result.savedAt = now
         if case .resting(let r) = phase { result.activeReminder = r }
+        // Restore waiting cards as due deferred reminders so startup grace still
+        // applies without losing the logical reminder or its postponement budget.
+        if case .waiting(let r) = phase { result.deferredReminder = r; result.deferredRemaining = 0 }
         if case .deferred(let r, let remaining) = phase { result.deferredReminder = r; result.deferredRemaining = remaining }
         result.shortCooldown = shortCooldown; result.longCooldown = longCooldown
         return result

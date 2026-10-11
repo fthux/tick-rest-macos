@@ -15,10 +15,14 @@ extension EngineTests {
         #expect(e.reminder?.postponements == 2)
         let snapshot = try JSONDecoder().decode(Snapshot.self, from: JSONEncoder().encode(e.snapshot(now: now.addingTimeInterval(240))))
         let restored = Engine(settings: s, snapshot: snapshot, now: now.addingTimeInterval(300))
+        #expect(!restored.isResting && restored.effects.isEmpty)
         restored.tick(seconds: 30, now: now.addingTimeInterval(330))
+        #expect(restored.effects.isEmpty)
         restored.tick(seconds: 1, now: now.addingTimeInterval(331))
         #expect(restored.reminder?.id == id)
         #expect(restored.reminder?.postponements == 2)
+        restored.postpone(now: now.addingTimeInterval(331))
+        if case .waiting = restored.phase {} else { Issue.record("Restart must not grant a third postponement") }
     }
 
     @Test func regressionShortenThenLengthenIntervalPreservesAccumulatedUsage() {
