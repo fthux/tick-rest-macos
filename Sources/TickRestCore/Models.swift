@@ -45,6 +45,8 @@ public struct Settings: Codable, Equatable {
     public var scheduleStart = 9 * 60
     public var scheduleEnd = 18 * 60
     public var showCountdown = true
+    public var showStatusDot = true
+    public var statusDotPalette = StatusDotPalette()
     public var theme: AppTheme = .system
     public var language = "system"
     public var onboardingComplete = false
@@ -54,6 +56,7 @@ public struct Settings: Codable, Equatable {
         case shortEnabled, longEnabled, shortInterval, shortDuration, longInterval, longDuration
         case prewarning, style, gentleReminderSize, breakStartMode, displayScope, sound, reminderSound, detectIdle, idleTimeout, avoidFullscreen
         case scheduleEnabled, weekdays, scheduleStart, scheduleEnd, showCountdown, theme, language, onboardingComplete
+        case showStatusDot, statusDotPalette
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -81,6 +84,8 @@ public struct Settings: Codable, Equatable {
         scheduleStart = try values.decode(Int.self, forKey: .scheduleStart)
         scheduleEnd = try values.decode(Int.self, forKey: .scheduleEnd)
         showCountdown = try values.decode(Bool.self, forKey: .showCountdown)
+        showStatusDot = try values.decodeIfPresent(Bool.self, forKey: .showStatusDot) ?? true
+        statusDotPalette = (try? values.decode(StatusDotPalette.self, forKey: .statusDotPalette)) ?? StatusDotPalette()
         theme = try values.decode(AppTheme.self, forKey: .theme)
         language = try values.decode(String.self, forKey: .language)
         onboardingComplete = try values.decode(Bool.self, forKey: .onboardingComplete)

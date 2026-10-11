@@ -36,7 +36,7 @@
 "error.notification" = "Could not request notification permission. You can still use in-app reminders.";
 "error.save" = "Could not save data. Check that the app data folder is writable.";
 "general.countdown" = "Show menu bar countdown";
-"general.countdown_help" = "When off, only the icon is shown. Open the menu to see the remaining time.";
+"general.countdown_help" = "Hide the countdown. You can still check the remaining time in the menu.";
 "general.language" = "Language";
 "general.language_help" = "Uses your system language by default, or English if that language is not supported. You can also choose a language here.";
 "general.login" = "Launch at login";
@@ -261,3 +261,17 @@
 "plan.break_duration" = "Break duration: %@";
 "plan.reference" = "About this preset";
 "plan.learn_more" = "Read about this method";
+
+/* Menu bar status indicator. */
+"general.menu_bar" = "Menu Bar";
+"general.status_dot" = "Show status dot";
+"general.status_dot_help" = "Show the current state beside the menu bar icon, independently of the countdown.";
+"general.status_dot_colors" = "Status colors";
+"general.status_dot_reset" = "Restore default colors";
+"status_dot.working" = "Running / Focusing";
+"status_dot.resting" = "Resting";
+"status_dot.attention" = "Break soon / Waiting to start";
+"status_dot.deferred" = "Reminder deferred";
+"status_dot.inactive" = "Paused / Away / Outside schedule";
+"state.reminders_off" = "Break reminders are off";
+"state.break_soon" = "%@ starts soon · %@ remaining";

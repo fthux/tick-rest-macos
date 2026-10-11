@@ -5,6 +5,22 @@ public struct ReminderDisplay {
     private let engine: Engine
     public init(engine: Engine) { self.engine = engine }
 
+    public var statusDotState: StatusDotState {
+        if engine.pause != nil || engine.away || engine.outsideSchedule { return .inactive }
+        if engine.isResting { return .resting }
+        guard let kind = engine.nextKind else { return .inactive }
+        if engine.suppressed { return .deferred }
+        if case .deferred = engine.phase { return .deferred }
+        if case .waiting = engine.phase { return .attention }
+        if engine.remaining(kind) == 0 {
+            return engine.graceRemaining > 0 ? .deferred : .attention
+        }
+        if engine.settings.prewarning > 0, engine.remaining(kind) <= engine.settings.prewarning {
+            return .attention
+        }
+        return .working
+    }
+
     public var menuBarText: String {
         if let r = engine.reminder, engine.isResting { return L10n.clock(r.target - r.elapsed) }
         if engine.pause != nil || engine.away || engine.outsideSchedule { return L10n.text("menu.paused_short") }
@@ -25,7 +41,8 @@ public struct ReminderDisplay {
         }
         if engine.away { return L10n.text("state.away") }
         if engine.outsideSchedule { return L10n.text("state.outside") }
-        if engine.suppressed { return L10n.text("state.fullscreen") }
+        if engine.nextKind == nil && !engine.isResting { return L10n.text("state.reminders_off") }
+        if engine.suppressed && !engine.isResting { return L10n.text("state.fullscreen") }
         switch engine.phase {
         case .resting(let r): return L10n.text("state.resting", r.title, L10n.clock(r.target - r.elapsed))
         case .waiting(let r): return L10n.text("state.waiting", r.title)
@@ -34,6 +51,9 @@ public struct ReminderDisplay {
             return dueText(r.kind)
         default:
             if let kind = engine.nextKind, engine.remaining(kind) == 0 { return dueText(kind) }
+            if statusDotState == .attention, let kind = engine.nextKind {
+                return L10n.text("state.break_soon", engine.settings.breakTitle(kind), L10n.clock(engine.remaining(kind)))
+            }
             if engine.settings.timingModel == .rounds { return L10n.text("plan.focus_state", engine.focusRound, engine.settings.rounds) }
             return L10n.text("state.running")
         }

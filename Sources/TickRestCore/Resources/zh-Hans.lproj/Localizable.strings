@@ -36,7 +36,7 @@
 "error.notification" = "暂时无法请求通知权限，应用内提醒仍可正常使用。";
 "error.save" = "数据保存失败。请检查应用数据目录是否可写。";
 "general.countdown" = "显示菜单栏倒计时";
-"general.countdown_help" = "关闭后只显示图标，点击菜单仍可查看剩余时间。";
+"general.countdown_help" = "关闭后隐藏倒计时，点击菜单仍可查看剩余时间。";
 "general.language" = "语言";
 "general.language_help" = "默认跟随系统语言；没有匹配的语言时使用英文，也可手动选择。";
 "general.login" = "登录时启动";
@@ -261,3 +261,17 @@
 "plan.break_duration" = "休息时长：%@";
 "plan.reference" = "原方案说明";
 "plan.learn_more" = "了解方法来源";
+
+/* Menu bar status indicator. */
+"general.menu_bar" = "菜单栏";
+"general.status_dot" = "显示状态圆点";
+"general.status_dot_help" = "在菜单栏图标右侧显示当前状态，与倒计时独立控制。";
+"general.status_dot_colors" = "状态颜色";
+"general.status_dot_reset" = "恢复默认颜色";
+"status_dot.working" = "正常运行／专注中";
+"status_dot.resting" = "正在休息";
+"status_dot.attention" = "即将休息／等待开始";
+"status_dot.deferred" = "提醒暂缓";
+"status_dot.inactive" = "暂停／离开／非工作时段";
+"state.reminders_off" = "休息提醒已关闭";
+"state.break_soon" = "%@即将开始 · 还有 %@";

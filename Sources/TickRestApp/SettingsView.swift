@@ -109,8 +109,23 @@ struct SettingsView: View {
                         .labelsHidden().fixedSize()
                 }
             }
-            Section {
+            Section(L10n.text("general.menu_bar")) {
                 row("general.countdown", "general.countdown_help") { toggle("general.countdown", \.showCountdown) }
+                row("general.status_dot", "general.status_dot_help") { toggle("general.status_dot", \.showStatusDot) }
+                Group {
+                    Text(L10n.text("general.status_dot_colors")).font(.caption).foregroundStyle(.secondary)
+                    ForEach(StatusDotState.allCases, id: \.self) { state in
+                        LabeledContent(state.title) {
+                            AnchoredColorPicker(selection: statusDotColor(state), label: state.title)
+                                .frame(width: 44, height: 22)
+                        }
+                    }
+                    Button(L10n.text("general.status_dot_reset")) {
+                        model.update { $0.statusDotPalette = StatusDotPalette() }
+                    }
+                }.disabled(!model.settings.showStatusDot)
+            }
+            Section {
                 row("general.theme") {
                     Picker(L10n.text("general.theme"), selection: binding(\.theme)) {
                         ForEach(AppTheme.allCases, id: \.self) { Text(L10n.text("theme.\($0.rawValue)")).tag($0) }
@@ -135,6 +150,17 @@ struct SettingsView: View {
                 Button(L10n.text("general.request_notifications")) { model.requestNotifications() }
             }
         }
+    }
+    private func statusDotColor(_ state: StatusDotState) -> Binding<Color> {
+        Binding(get: {
+            let color = model.settings.statusDotPalette[state]
+            return Color(.sRGB, red: color.red, green: color.green, blue: color.blue, opacity: 1)
+        }, set: { value in
+            guard let color = NSColor(value).usingColorSpace(.sRGB) else { return }
+            model.update {
+                $0.statusDotPalette[state] = StatusDotColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent)
+            }
+        })
     }
     private var rhythm: some View { PlanEditor(model: model) }
     private var appearance: some View {

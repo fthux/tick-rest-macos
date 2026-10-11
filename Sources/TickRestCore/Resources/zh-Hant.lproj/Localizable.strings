@@ -36,7 +36,7 @@
 "error.notification" = "目前無法要求通知權限，應用程式內的提醒仍可使用。";
 "error.save" = "無法儲存資料。請確認應用程式資料夾是否有寫入權限。";
 "general.countdown" = "在選單列顯示倒數";
-"general.countdown_help" = "關閉後只顯示圖示，打開選單仍可查看剩餘時間。";
+"general.countdown_help" = "關閉後隱藏倒數計時，點選選單仍可查看剩餘時間。";
 "general.language" = "語言";
 "general.language_help" = "預設使用系統語言；若不支援該語言，則使用英文。你也可以自行選擇。";
 "general.login" = "登入時啟動";
@@ -261,3 +261,17 @@
 "plan.break_duration" = "休息時間：%@";
 "plan.reference" = "原方案說明";
 "plan.learn_more" = "了解方法來源";
+
+/* Menu bar status indicator. */
+"general.menu_bar" = "選單列";
+"general.status_dot" = "顯示狀態圓點";
+"general.status_dot_help" = "在選單列圖示右側顯示目前狀態，與倒數計時分別控制。";
+"general.status_dot_colors" = "狀態顏色";
+"general.status_dot_reset" = "恢復預設顏色";
+"status_dot.working" = "正常運行／專注中";
+"status_dot.resting" = "正在休息";
+"status_dot.attention" = "即將休息／等待開始";
+"status_dot.deferred" = "提醒暫緩";
+"status_dot.inactive" = "暫停／離席／非工作時段";
+"state.reminders_off" = "休息提醒已關閉";
+"state.break_soon" = "%@即將開始 · 還有 %@";

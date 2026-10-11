@@ -36,7 +36,7 @@
 "error.notification" = "通知の許可を求めることができませんでした。アプリ内の通知は引き続き利用できます。";
 "error.save" = "データを保存できませんでした。データフォルダへの書き込み権限を確認してください。";
 "general.countdown" = "メニューバーに残り時間を表示";
-"general.countdown_help" = "オフの場合はアイコンのみ表示します。メニューを開くと残り時間を確認できます。";
+"general.countdown_help" = "カウントダウンを非表示にします。残り時間はメニューで確認できます。";
 "general.language" = "言語";
 "general.language_help" = "初期設定ではシステムの言語を使用し、対応する言語がない場合は英語を使用します。手動でも選択できます。";
 "general.login" = "ログイン時に起動";
@@ -261,3 +261,17 @@
 "plan.break_duration" = "休憩時間：%@";
 "plan.reference" = "元のプランについて";
 "plan.learn_more" = "この方法について詳しく見る";
+
+/* Menu bar status indicator. */
+"general.menu_bar" = "メニューバー";
+"general.status_dot" = "状態ドットを表示";
+"general.status_dot_help" = "メニューバーのアイコンの右側に現在の状態を表示します。カウントダウンとは個別に設定できます。";
+"general.status_dot_colors" = "状態の色";
+"general.status_dot_reset" = "標準の色に戻す";
+"status_dot.working" = "動作中／集中中";
+"status_dot.resting" = "休憩中";
+"status_dot.attention" = "まもなく休憩／開始待ち";
+"status_dot.deferred" = "リマインダーを延期";
+"status_dot.inactive" = "一時停止／離席／設定時間外";
+"state.reminders_off" = "休憩リマインダーはオフです";
+"state.break_soon" = "%@がまもなく始まります · あと %@";

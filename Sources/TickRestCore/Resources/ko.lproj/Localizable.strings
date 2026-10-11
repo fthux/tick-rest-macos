@@ -36,7 +36,7 @@
 "error.notification" = "알림 권한을 요청하지 못했습니다. 앱 내 알림은 계속 사용할 수 있습니다.";
 "error.save" = "데이터를 저장하지 못했습니다. 앱 데이터 폴더에 쓰기 권한이 있는지 확인하세요.";
 "general.countdown" = "메뉴 막대에 남은 시간 표시";
-"general.countdown_help" = "끄면 아이콘만 표시됩니다. 메뉴를 열어 남은 시간을 확인할 수 있습니다.";
+"general.countdown_help" = "카운트다운을 숨깁니다. 남은 시간은 메뉴에서 확인할 수 있습니다.";
 "general.language" = "언어";
 "general.language_help" = "기본적으로 시스템 언어를 사용합니다. 지원하지 않는 언어이면 영어로 표시하며, 여기서 직접 선택할 수도 있습니다.";
 "general.login" = "로그인 시 실행";
@@ -261,3 +261,17 @@
 "plan.break_duration" = "휴식 시간: %@";
 "plan.reference" = "기본 방식 안내";
 "plan.learn_more" = "방법 자세히 알아보기";
+
+/* Menu bar status indicator. */
+"general.menu_bar" = "메뉴 막대";
+"general.status_dot" = "상태 점 표시";
+"general.status_dot_help" = "메뉴 막대 아이콘 오른쪽에 현재 상태를 표시합니다. 카운트다운과 별도로 설정할 수 있습니다.";
+"general.status_dot_colors" = "상태 색상";
+"general.status_dot_reset" = "기본 색상 복원";
+"status_dot.working" = "실행 중 / 집중 중";
+"status_dot.resting" = "휴식 중";
+"status_dot.attention" = "곧 휴식 / 시작 대기";
+"status_dot.deferred" = "알림 연기";
+"status_dot.inactive" = "일시 정지 / 자리 비움 / 설정 시간 외";
+"state.reminders_off" = "휴식 알림이 꺼져 있습니다";
+"state.break_soon" = "%@이 곧 시작됩니다 · %@ 남음";

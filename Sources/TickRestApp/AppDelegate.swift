@@ -7,7 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var status: NSStatusItem!
     private var model: AppController!
     private var windows: WindowCoordinator!
-    private var uiTimer: Timer?
+    private var statusSubscription: AnyCancellable?
+    private let statusDotRenderer = StatusDotRenderer()
     private var menuPlan: RestPlan?
     private var menuKinds: [BreakKind] = []
     private var menuResting = false
@@ -56,14 +57,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(openSettings), name: NSNotification.Name(AppIdentity.identifier("showSettings")), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(previewRest), name: .previewRest, object: nil)
         model.begin(); updateStatus()
-        uiTimer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.updateStatus() }
-        RunLoop.main.add(uiTimer!, forMode: .common)
-        RunLoop.main.add(uiTimer!, forMode: .eventTracking)
+        // Published emits before mutation; refresh on the main queue after the engine/settings commit.
+        // Revisions include each scheduler tick and explicit actions, so no second UI timer is needed.
+        statusSubscription = model.$revision.dropFirst().receive(on: DispatchQueue.main).sink { [weak self] _ in
+            self?.updateStatus()
+        }
         if !model.settings.onboardingComplete { openWelcome() }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { openSettings(); return false }
     func applicationWillTerminate(_ notification: Notification) {
-        uiTimer?.invalidate(); model?.consume(); model?.persist(); model?.removeNotifications()
+        statusSubscription?.cancel(); model?.consume(); model?.persist(); model?.removeNotifications()
         if lockFD >= 0 { flock(lockFD, LOCK_UN); close(lockFD) }
     }
     private func updateStatus() {
@@ -74,8 +77,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: L10n.text("app.name"))
         let display = ReminderDisplay(engine: engine)
         let title = display.menuBarText
-        button.title = model.settings.showCountdown && !title.isEmpty ? " " + title : ""
         button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        button.attributedTitle = statusDotRenderer.title(
+            text: model.settings.showCountdown ? title : "",
+            color: model.settings.showStatusDot ? model.settings.statusDotPalette[display.statusDotState] : nil,
+            appearance: button.effectiveAppearance, font: button.font!
+        )
         button.toolTip = L10n.text("app.name") + " — " + model.stateText
         button.setAccessibilityLabel(button.toolTip)
         if menuStateItem != nil, let menu = status.menu,

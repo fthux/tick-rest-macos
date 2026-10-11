@@ -63,6 +63,11 @@ public final class Engine {
         return calendar.date(byAdding: .minute, value: settings.scheduleStart, to: startDay)
     }
     public func updateSettings(_ value: Settings) {
+        // Changing the indicator must not postpone a due reminder or repeat a warning.
+        var appearanceOnly = settings
+        appearanceOnly.showStatusDot = value.showStatusDot
+        appearanceOnly.statusDotPalette = value.statusDotPalette
+        if appearanceOnly == value { settings = value; return }
         if let pending = pendingPlan {
             var future = value; future.restPlan = pending
             guard future.validationErrorKey == nil else { return }
