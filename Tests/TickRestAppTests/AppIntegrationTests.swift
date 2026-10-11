@@ -52,6 +52,7 @@ final class AppIntegrationTests: XCTestCase {
         case "accessibilityLabel": attribute = .description
         case "accessibilityTitle": attribute = .title
         case "accessibilityChildren": attribute = .children
+        case "accessibilityValue": attribute = .value
         default: return nil
         }
         return object.accessibilityAttributeValue(attribute) as AnyObject?
@@ -72,10 +73,33 @@ final class AppIntegrationTests: XCTestCase {
         return nil
     }
 
+    @MainActor private func containsText(_ text: String, in root: NSObject) -> Bool {
+        var pending: [NSObject] = [root]
+        var visited: Set<ObjectIdentifier> = []
+        while let element = pending.popLast() {
+            guard visited.insert(ObjectIdentifier(element)).inserted else { continue }
+            for selector in ["accessibilityLabel", "accessibilityTitle", "accessibilityValue"] {
+                if accessibilityValue(element, selector) as? String == text { return true }
+            }
+            pending += (accessibilityValue(element, "accessibilityChildren") as? [NSObject]) ?? []
+        }
+        return false
+    }
+
     @MainActor private func button(named title: String, in root: NSObject) throws -> NSObject {
         if let found = findButton(named: title, in: root) { return found }
         XCTFail("Native accessibility tree has no button named \(title)")
         throw NSError(domain: "TickRestNativeTest", code: 1)
+    }
+
+    @MainActor private func isEnabled(_ object: NSObject) -> Bool? {
+        let selector = NSSelectorFromString("isAccessibilityEnabled")
+        if object.responds(to: selector) {
+            typealias EnabledValue = @convention(c) (AnyObject, Selector) -> Bool
+            let value = unsafeBitCast(object.method(for: selector), to: EnabledValue.self)
+            return value(object, selector)
+        }
+        return object.accessibilityAttributeValue(.enabled) as? Bool
     }
 
     @MainActor private func press(_ object: NSObject) -> Bool {
@@ -193,6 +217,84 @@ final class AppIntegrationTests: XCTestCase {
                 try await Task.sleep(nanoseconds: 150_000_000)
                 XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.skip"), in: waitingPanel)))
                 XCTAssertFalse(waitingPanel.isVisible)
+            }
+        }
+    }
+
+    func testPostponeStaysAvailableDuringRestAndShowsWhyItIsDisabled() async throws {
+        for style in [ReminderStyle.gentle, .overlay] {
+            let sizes: [GentleReminderSize] = style == .gentle ? GentleReminderSize.allCases : [.normal]
+            for size in sizes {
+                try await withFixture { model, _, _ in
+                    model.update { $0.style = style; $0.gentleReminderSize = size; $0.postponeLimit = 2 }
+                    model.engine.tick(seconds: 30, now: Date()); model.consume()
+                    model.action { $0.startNow(.short, now: Date()) }
+                    let reminderID = try XCTUnwrap(model.engine.reminder?.id)
+                    let title = L10n.text("rest.defer", 2)
+                    for count in 1...2 {
+                        model.engine.tick(seconds: 10, now: Date()); model.consume()
+                        let panel = try XCTUnwrap(self.panels.first)
+                        try await Task.sleep(nanoseconds: 100_000_000)
+                        let postpone = try self.button(named: title, in: panel)
+                        XCTAssertEqual(self.isEnabled(postpone), true)
+                        XCTAssertTrue(self.press(postpone))
+                        XCTAssertFalse(panel.isVisible)
+                        XCTAssertEqual(model.engine.reminder?.postponements, count)
+                        XCTAssertEqual(model.engine.reminder?.id, reminderID)
+                        model.engine.tick(seconds: 120, now: Date()); model.consume()
+                        XCTAssertTrue(model.engine.isResting)
+                        XCTAssertEqual(model.engine.reminder?.elapsed, 0)
+                    }
+                    model.engine.tick(seconds: 10, now: Date()); model.consume()
+                    let panel = try XCTUnwrap(self.panels.first)
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    let disabled = try self.button(named: title, in: panel)
+                    XCTAssertEqual(self.isEnabled(disabled), false)
+                    XCTAssertTrue(self.containsText(L10n.text("rest.defer_limit"), in: panel))
+                    let before = model.saved.records.map(\.id)
+                    _ = self.press(disabled)
+                    XCTAssertTrue(panel.isVisible)
+                    XCTAssertTrue(model.engine.isResting)
+                    XCTAssertEqual(model.saved.records.map(\.id), before)
+                    XCTAssertEqual(TodaySummary(records: model.saved.records, now: Date()).rest, 30)
+                    model.action { $0.skip(now: Date()) }
+
+                    model.update { $0.postponeLimit = 0 }
+                    model.action { $0.startNow(.short, now: Date()) }
+                    let noPostponePanel = try XCTUnwrap(self.panels.first)
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    let noPostpone = try self.button(named: title, in: noPostponePanel)
+                    XCTAssertEqual(self.isEnabled(noPostpone), false)
+                    XCTAssertTrue(self.containsText(L10n.text("rest.defer_disabled"), in: noPostponePanel))
+                }
+            }
+        }
+    }
+
+    func testDisabledPostponeMessagesFitMiniCardsAndRenderInAllLanguages() async throws {
+        try await withFixture { model, _, _ in
+            model.engine.tick(seconds: 30, now: Date()); model.consume()
+            model.update { $0.postponeLimit = 1 }
+            model.action { $0.startNow(.short, now: Date()) }
+            model.action { $0.postpone(now: Date()) }
+            model.engine.tick(seconds: 120, now: Date()); model.consume()
+            XCTAssertEqual(model.engine.reminder?.postponements, 1)
+            for limit in [1, 0] {
+                model.update { $0.postponeLimit = limit }
+                for language in ["en", "zh-Hans", "zh-Hant", "ja", "ko"] {
+                    model.update { $0.language = language }
+                    let card = RestCard(model: model, size: .mini, preview: false, previewEnd: {})
+                    let width = GentleCardLayout(size: .mini).width
+                    let hosting = NSHostingView(rootView: card.frame(width: width))
+                    hosting.sizingOptions = [.intrinsicContentSize]
+                    let height = ceil(hosting.fittingSize.height)
+                    XCTAssertLessThan(height, NSScreen.main!.visibleFrame.height)
+                    try self.writeSnapshot(card, name: "postpone-mini-\(language)-limit\(limit)",
+                                           size: NSSize(width: width, height: height))
+                    try self.writeSnapshot(OverlayView(model: model, preview: false, primary: true, previewEnd: {}),
+                                           name: "postpone-overlay-\(language)-limit\(limit)",
+                                           size: NSSize(width: 1000, height: 700))
+                }
             }
         }
     }

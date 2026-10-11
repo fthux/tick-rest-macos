@@ -137,12 +137,12 @@ extension EngineTests {
         #expect(e.effects.count == 2 && e.effects.first == .hide)
     }
 
-    @Test(arguments: [5.0, 5.001])
-    func functionalOverlayPostponementFiveSecondBoundary(_ elapsed: Double) {
+    @Test(arguments: [5.0, 5.001, 19.0])
+    func functionalOverlayPostponementPreservesPartialRest(_ elapsed: Double) {
         let e = Engine(settings: FunctionalFixture.settings(.overlay)); let now = FunctionalFixture.now
         e.startNow(.short, now: now); e.tick(seconds: elapsed, now: now.addingTimeInterval(elapsed))
         e.postpone(now: now.addingTimeInterval(elapsed))
-        #expect(e.isResting == (elapsed > 5))
+        #expect(!e.isResting && e.reminder?.postponements == 1 && e.reminder?.elapsed == 0)
         let summary = TodaySummary(records: e.records, now: now)
         #expect(summary.rest == elapsed && summary.completed == 0)
     }

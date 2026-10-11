@@ -51,7 +51,7 @@ extension EngineTests {
         e.tick(seconds: s.interval(kind), now: now)
         let id = try #require(e.reminder?.id)
         for count in 1...2 {
-            now = now.addingTimeInterval(3); e.tick(seconds: 3, now: now)
+            now = now.addingTimeInterval(10); e.tick(seconds: 10, now: now)
             e.postpone(now: now)
             #expect(!e.isResting && e.reminder?.postponements == count)
             now = now.addingTimeInterval(kind.postponement)
@@ -62,18 +62,19 @@ extension EngineTests {
         #expect(e.isResting && e.reminder?.postponements == 2)
         e.tick(seconds: s.duration(kind), now: now.addingTimeInterval(s.duration(kind)))
         let summary = TodaySummary(records: e.records, now: now)
-        #expect(summary.rest == 6 + s.duration(kind) && summary.completed == 1)
+        #expect(summary.rest == 20 + s.duration(kind) && summary.completed == 1)
         #expect(e.records.filter { $0.outcome == .postponed }.count == 2)
     }
 
-    @Test(arguments: ReminderStyle.allCases, [5.0, 5.001])
-    func automaticRestPostponementHasSameFiveSecondBoundary(_ style: ReminderStyle, _ seconds: Double) {
+    @Test(arguments: ReminderStyle.allCases, [5.0, 5.001, 19.0])
+    func automaticRestCanBePostponedThroughoutItsDuration(_ style: ReminderStyle, _ seconds: Double) {
         var s = Settings(); s.style = style
         let now = Date(); let e = Engine(settings: s)
         e.tick(seconds: 1200, now: now)
         e.tick(seconds: seconds, now: now.addingTimeInterval(seconds))
         e.postpone(now: now.addingTimeInterval(seconds))
-        #expect(e.isResting == (seconds > 5))
+        #expect(!e.isResting && e.reminder?.postponements == 1 && e.reminder?.elapsed == 0)
+        #expect(e.records.filter { $0.outcome == .postponed }.count == 1)
         #expect(TodaySummary(records: e.records, now: now).rest == seconds)
     }
 

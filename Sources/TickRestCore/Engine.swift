@@ -245,7 +245,6 @@ public final class Engine {
     }
     public func postpone(now: Date) {
         guard var r = reminder, r.postponements < settings.postponeLimit else { return }
-        if isResting && r.elapsed > 5 { return }
         if r.elapsed > 0 {
             // Per-segment duration has already been recorded; only emit the outcome here.
             record(r, .postponed, now, includeDuration: false)

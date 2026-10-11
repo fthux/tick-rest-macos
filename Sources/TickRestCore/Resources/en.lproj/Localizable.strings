@@ -75,7 +75,7 @@
 "permission.unknown" = "Permission not requested";
 "quit.body" = "Quitting will interrupt this timer. Break time already recorded will be kept.";
 "quit.title" = "Your break is still in progress";
-"reminder.defer_help" = "You can postpone an eye break by 2 minutes or a movement break by 5 minutes, up to twice per reminder. Once a break starts, you have 5 seconds to postpone it. Skipping resets the cycle; ending early brings back the reminder later.";
+"reminder.defer_help" = "You can postpone an eye break by 2 minutes or a movement break by 5 minutes, up to twice per reminder. You can postpone before or during a break. At the limit, the button stays visible but is disabled. Skipping resets the cycle; ending early brings back the reminder later.";
 "reminder.preview" = "Preview for 5 seconds";
 "reminder.prewarning" = "Notify before a break";
 "reminder.sound" = "Reminder sound";
@@ -91,6 +91,8 @@
 "sound.hero" = "Hero";
 "reminder.test_sound" = "Test sound";
 "rest.defer" = "Remind in %d min";
+"rest.defer_disabled" = "Postponement is disabled for this plan";
+"rest.defer_limit" = "Postponement limit reached";
 "rest.end" = "End early";
 "rest.long_idea" = "Stand up, take a few steps, and relax your shoulders. You do not need to watch the countdown.";
 "rest.preview" = "Reminder preview. Closes after 5 seconds and is not included in break statistics.";
@@ -231,7 +233,7 @@
 "plan.long_minutes" = "Long break: %d min";
 "plan.rounds" = "Focus sessions per set: %d";
 "plan.rounds_help" = "A full focus session counts once. The last session in a set is followed by a long break. Postponing or skipping a break never adds another session.";
-"plan.actions_help" = "Postpone keeps the same break due. Skip moves on without marking it completed. Ending early records the time taken and retries an unfinished break after a waiting period. You can postpone only in the first 5 seconds of a running break.";
+"plan.actions_help" = "Postpone records the time already taken and keeps the same break due; the next reminder restarts the full break duration. You can postpone before or during a break, up to the configured limit. At the limit, the button stays visible but is disabled. Skip moves on without marking the break completed. Ending early records the time taken and retries an unfinished break after a waiting period.";
 "plan.away_help" = "When time away is detected, a long enough absence can satisfy a break. In the dual-interval model, a short absence resets only the short timer; a long one resets both. Locking or sleeping also pauses timing.";
 "plan.rounds_away" = "Time away never completes a focus session. If you step away for at least the short break duration, the current focus session restarts and earlier sessions are kept. An absence as long as a long break starts a new set. During a due break, time away can satisfy that break.";
 "plan.switch_help" = "Applying a routine starts fresh timers. During a break, the change waits until the break finishes, is skipped, or ends early. Paused timers stay paused. Other preferences and past records are kept.";

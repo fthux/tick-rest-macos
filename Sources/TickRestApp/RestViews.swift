@@ -31,6 +31,30 @@ private struct RestCardButtonStyle: ButtonStyle {
     }
 }
 
+private struct RestPostponeButton: View {
+    @ObservedObject var model: AppController
+    let reminder: Reminder
+    private var isDisabled: Bool { reminder.postponements >= model.settings.postponeLimit }
+    private var disabledReason: String {
+        L10n.text(model.settings.postponeLimit == 0 ? "rest.defer_disabled" : "rest.defer_limit")
+    }
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Button(L10n.text("rest.defer", Int(model.settings.postponement(reminder.kind) / 60))) {
+                model.action { $0.postpone(now: Date()) }
+            }
+            .disabled(isDisabled)
+            .help(isDisabled ? disabledReason : "")
+            if isDisabled {
+                Text(disabledReason).font(.caption)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
 struct RestCard: View {
     @ObservedObject var model: AppController
     let size: GentleReminderSize
@@ -108,9 +132,7 @@ struct RestCard: View {
     }
     @ViewBuilder private var secondaryActions: some View {
         if !preview {
-            if r.postponements < model.settings.postponeLimit && (!model.engine.isResting || r.elapsed <= 5) {
-                Button(L10n.text("rest.defer", Int(model.settings.postponement(r.kind) / 60))) { model.action { $0.postpone(now: Date()) } }
-            }
+            RestPostponeButton(model: model, reminder: r)
             Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
         }
     }
@@ -170,9 +192,7 @@ struct OverlayView: View {
                         if !model.engine.isResting {
                             Button(L10n.text("rest.start")) { model.action { $0.start(now: Date()) } }
                         }
-                        if r.elapsed <= 5 && r.postponements < model.settings.postponeLimit {
-                            Button(L10n.text("rest.defer", Int(model.settings.postponement(r.kind) / 60))) { model.action { $0.postpone(now: Date()) } }
-                        }
+                        RestPostponeButton(model: model, reminder: r)
                         if model.engine.isResting {
                             Button(L10n.text("rest.end")) { model.action { $0.finish(now: Date()) } }
                         }
