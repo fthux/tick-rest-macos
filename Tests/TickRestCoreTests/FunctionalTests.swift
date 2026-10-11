@@ -459,7 +459,7 @@ extension EngineTests {
         let bundlePath = try #require(L10n.resourceBundle.path(forResource: identifier, ofType: "lproj"))
         let data = try Data(contentsOf: URL(fileURLWithPath: bundlePath).appendingPathComponent("Localizable.strings"))
         let values = try #require(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String])
-        #expect(values.count == 176)
+        #expect(values.count == 177)
         #expect(values.values.allSatisfy { !$0.isEmpty })
         #expect(values["welcome.title"]?.contains("{appName}") == true)
         #expect(values["menu.remaining"]?.components(separatedBy: "%@").count == 3)

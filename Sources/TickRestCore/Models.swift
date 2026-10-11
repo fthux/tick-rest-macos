@@ -88,6 +88,9 @@ public struct Settings: Codable, Equatable {
         }
         if longEnabled && shortEnabled && longInterval < shortInterval { return "validation.interval" }
         if longEnabled && shortEnabled && longDuration < shortDuration { return "validation.duration" }
+        if !prewarning.isFinite || prewarning < 0
+            || (shortEnabled && prewarning >= shortInterval)
+            || (longEnabled && prewarning >= longInterval) { return "validation.prewarning" }
         if scheduleEnabled && (weekdays.isEmpty || scheduleStart == scheduleEnd) { return "validation.schedule" }
         return nil
     }

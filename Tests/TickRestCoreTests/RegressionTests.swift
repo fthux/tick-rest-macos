@@ -115,7 +115,21 @@ extension EngineTests {
     @Test(arguments: [-1.0, 60, 61, Double.infinity, Double.nan])
     func regressionInvalidPrewarningRejected(_ seconds: Double) {
         var s = Settings(); s.shortInterval = 60; s.prewarning = seconds
-        #expect(s.validationError != nil)
+        #expect(s.validationErrorKey == "validation.prewarning")
+    }
+
+    @Test(arguments: BreakKind.allCases)
+    func regressionPrewarningUsesOnlyEnabledIntervals(_ kind: BreakKind) {
+        var s = Settings(); s.shortInterval = 60; s.longInterval = 120
+        s.shortEnabled = kind == .short; s.longEnabled = kind == .long
+        s.prewarning = s.interval(kind) - 1
+        #expect(s.validationError == nil)
+        s.prewarning = s.interval(kind)
+        #expect(s.validationErrorKey == "validation.prewarning")
+        s.prewarning = 0
+        #expect(s.validationError == nil)
+        s.shortEnabled = false; s.longEnabled = false; s.prewarning = 300
+        #expect(s.validationError == nil)
     }
 
     @Test(arguments: ["start-negative", "end-overflow", "weekday-zero", "weekday-eight"])
