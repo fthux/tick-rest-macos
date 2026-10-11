@@ -122,12 +122,12 @@
 "schedule.start" = "Start time";
 "settings.about" = "About";
 "settings.overview" = "Overview";
-"settings.appearance" = "Reminder style";
+"settings.appearance" = "Style";
 "settings.displays" = "Displays";
 "settings.general" = "General";
-"settings.privacy" = "Data & Privacy";
-"settings.rhythm" = "Break routine";
-"settings.schedule" = "Schedule & Quiet Time";
+"settings.privacy" = "Privacy";
+"settings.rhythm" = "Breaks";
+"settings.schedule" = "Schedule";
 "settings.sidebar.hide" = "Hide sidebar";
 "settings.sidebar.show" = "Show sidebar";
 "state.away" = "Time away detected; timer paused";

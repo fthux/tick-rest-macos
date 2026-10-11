@@ -122,12 +122,12 @@
 "schedule.start" = "시작 시간";
 "settings.about" = "앱 정보";
 "settings.overview" = "요약";
-"settings.appearance" = "알림 표시 방식";
+"settings.appearance" = "스타일";
 "settings.displays" = "디스플레이";
 "settings.general" = "일반";
-"settings.privacy" = "데이터 및 개인정보";
-"settings.rhythm" = "휴식 간격과 시간";
-"settings.schedule" = "작업 시간과 알림 일시 정지";
+"settings.privacy" = "개인정보";
+"settings.rhythm" = "휴식";
+"settings.schedule" = "작업 시간";
 "settings.sidebar.hide" = "사이드바 숨기기";
 "settings.sidebar.show" = "사이드바 보기";
 "state.away" = "자리 비움 감지 · 타이머 일시 정지";

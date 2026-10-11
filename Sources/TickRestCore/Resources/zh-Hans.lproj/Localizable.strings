@@ -122,12 +122,12 @@
 "schedule.start" = "开始时间";
 "settings.about" = "关于";
 "settings.overview" = "概览";
-"settings.appearance" = "提醒样式";
+"settings.appearance" = "样式";
 "settings.displays" = "显示器";
 "settings.general" = "通用";
-"settings.privacy" = "数据与隐私";
+"settings.privacy" = "隐私";
 "settings.rhythm" = "休息计划";
-"settings.schedule" = "工作时段与免打扰";
+"settings.schedule" = "时段";
 "settings.sidebar.hide" = "收起侧栏";
 "settings.sidebar.show" = "展开侧栏";
 "state.away" = "检测到离席，计时暂停";

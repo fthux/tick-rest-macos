@@ -122,12 +122,12 @@
 "schedule.start" = "開始時間";
 "settings.about" = "關於";
 "settings.overview" = "概覽";
-"settings.appearance" = "提醒樣式";
+"settings.appearance" = "樣式";
 "settings.displays" = "螢幕";
 "settings.general" = "一般";
-"settings.privacy" = "資料與隱私";
-"settings.rhythm" = "休息節奏";
-"settings.schedule" = "工作時段與免打擾";
+"settings.privacy" = "隱私";
+"settings.rhythm" = "休息計畫";
+"settings.schedule" = "時段";
 "settings.sidebar.hide" = "隱藏側邊欄";
 "settings.sidebar.show" = "顯示側邊欄";
 "state.away" = "偵測到離席 · 計時已暫停";
