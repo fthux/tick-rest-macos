@@ -243,10 +243,10 @@ public final class Engine {
         guard seconds > 0 else { return }
         let start = ending.addingTimeInterval(-seconds)
         let midnight = Calendar.current.startOfDay(for: ending)
-        let segments: [(Date, Double)] = start < midnight && midnight < ending
+        let segments: [(Date, Double)] = start < midnight && midnight <= ending
             ? [(midnight.addingTimeInterval(-0.001), midnight.timeIntervalSince(start)), (ending, ending.timeIntervalSince(midnight))]
             : [(ending, seconds)]
-        for (date, duration) in segments {
+        for (date, duration) in segments where duration > 0 {
             // usage records with a reminderID represent measured rest segments.
             records.append(Record(date: date, kind: kind, outcome: outcome, seconds: duration, reminderID: rest ? reminderID : nil))
         }
