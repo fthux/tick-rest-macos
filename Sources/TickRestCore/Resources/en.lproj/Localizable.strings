@@ -155,7 +155,7 @@
 "validation.interval" = "When both break types are enabled, the movement break interval cannot be shorter than the eye break interval.";
 "validation.range" = "Keep intervals and durations within the allowed ranges.";
 "validation.prewarning" = "Advance notice must be off or shorter than every enabled break interval.";
-"validation.schedule" = "Select at least one workday. Start and end times must differ.";
+"validation.schedule" = "Select valid workdays and times. When scheduling is enabled, select at least one day and use different start and end times.";
 "validation.idle_timeout" = "The time away threshold must be between 1 and 60 minutes.";
 "warning.body" = "In %d seconds: %@ for %@. You can finish what you are typing first.";
 "welcome.begin" = "Get started";

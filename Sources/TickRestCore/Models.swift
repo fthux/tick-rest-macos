@@ -91,7 +91,9 @@ public struct Settings: Codable, Equatable {
         if !prewarning.isFinite || prewarning < 0
             || (shortEnabled && prewarning >= shortInterval)
             || (longEnabled && prewarning >= longInterval) { return "validation.prewarning" }
-        if scheduleEnabled && (weekdays.isEmpty || scheduleStart == scheduleEnd) { return "validation.schedule" }
+        if !(0..<1440).contains(scheduleStart) || !(0..<1440).contains(scheduleEnd)
+            || !weekdays.isSubset(of: Set(1...7))
+            || (scheduleEnabled && (weekdays.isEmpty || scheduleStart == scheduleEnd)) { return "validation.schedule" }
         return nil
     }
 }

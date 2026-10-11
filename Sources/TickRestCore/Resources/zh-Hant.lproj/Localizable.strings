@@ -155,7 +155,7 @@
 "validation.interval" = "同時開啟兩類休息時，起身活動的使用間隔不能短於護眼休息的使用間隔。";
 "validation.range" = "請將間隔和時間長度設定在允許的範圍內。";
 "validation.prewarning" = "請關閉提前提醒，或將提前提醒時間設為短於每種已啟用休息的使用間隔。";
-"validation.schedule" = "請至少選擇一個工作日，且開始與結束時間不能相同。";
+"validation.schedule" = "請選擇有效的工作日和時間。啟用工作時段時，需至少選擇一個工作日，且開始與結束時間不能相同。";
 "validation.idle_timeout" = "自動離席時間需在 1 至 60 分鐘之間。";
 "warning.body" = "%d 秒後%@，休息%@。可以先完成手上的一句話。";
 "welcome.begin" = "開始使用";

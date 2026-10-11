@@ -155,7 +155,7 @@
 "validation.interval" = "두 휴식을 모두 사용하면 움직이기 휴식 간격은 눈 휴식 간격보다 짧을 수 없습니다.";
 "validation.range" = "간격과 휴식 시간을 허용 범위 내에서 설정하세요.";
 "validation.prewarning" = "미리 알림을 끄거나 사용 중인 모든 휴식 간격보다 짧게 설정하세요.";
-"validation.schedule" = "작업일을 하나 이상 선택하고 시작과 종료 시간을 다르게 설정하세요.";
+"validation.schedule" = "올바른 작업일과 시간을 선택하세요. 작업 시간대를 사용하려면 작업일을 하나 이상 선택하고 시작과 종료 시간을 다르게 설정하세요.";
 "validation.idle_timeout" = "자리 비움 감지 시간은 1~60분이어야 합니다.";
 "warning.body" = "%d초 후 %@을 시작합니다. 휴식 시간은 %@입니다. 입력 중인 문장을 먼저 마무리해도 됩니다.";
 "welcome.begin" = "시작하기";

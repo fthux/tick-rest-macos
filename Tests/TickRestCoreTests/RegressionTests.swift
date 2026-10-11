@@ -132,15 +132,48 @@ extension EngineTests {
         #expect(s.validationError == nil)
     }
 
-    @Test(arguments: ["start-negative", "end-overflow", "weekday-zero", "weekday-eight"])
+    @Test(arguments: ["start-negative", "start-overflow", "end-negative", "end-overflow", "weekday-zero", "weekday-eight", "weekday-mixed"])
     func regressionInvalidScheduleValuesRejected(_ scenario: String) {
         var s = Settings(); s.scheduleEnabled = true
         switch scenario {
         case "start-negative": s.scheduleStart = -1
+        case "start-overflow": s.scheduleStart = 1440
+        case "end-negative": s.scheduleEnd = -1
         case "end-overflow": s.scheduleEnd = 1440
         case "weekday-zero": s.weekdays = [0]
+        case "weekday-mixed": s.weekdays = [2, 8]
         default: s.weekdays = [8]
         }
-        #expect(s.validationError != nil)
+        #expect(s.validationErrorKey == "validation.schedule")
+        s.scheduleEnabled = false
+        #expect(s.validationErrorKey == "validation.schedule")
+    }
+
+    @Test func regressionValidScheduleBoundsAndDisabledEmptyDays() {
+        var s = Settings(); s.scheduleEnabled = true; s.weekdays = Set(1...7)
+        s.scheduleStart = 0; s.scheduleEnd = 1439
+        #expect(s.validationError == nil)
+        s.scheduleStart = 1439; s.scheduleEnd = 0
+        #expect(s.validationError == nil)
+        s.scheduleEnabled = false; s.weekdays = []; s.scheduleStart = 0; s.scheduleEnd = 0
+        #expect(s.validationError == nil)
+        s.scheduleEnabled = true
+        #expect(s.validationErrorKey == "validation.schedule")
+    }
+
+    @Test(arguments: ["minutes", "weekdays"])
+    func regressionInvalidScheduleFileIsPreserved(_ scenario: String) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tickrest-invalid-schedule-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DataStore(url: directory.appendingPathComponent("state.json"))
+        var saved = SavedData(); saved.settings.scheduleEnabled = true
+        if scenario == "minutes" { saved.settings.scheduleStart = -1 }
+        else { saved.settings.weekdays = [8] }
+        try store.save(saved)
+        let original = try Data(contentsOf: store.url)
+        let loaded = store.load()
+        #expect(loaded.settings == Settings() && store.loadErrorKey == "error.load")
+        let backup = try #require(FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil).first { $0.lastPathComponent.hasPrefix("state-damaged-") })
+        #expect(try Data(contentsOf: backup) == original)
     }
 }
