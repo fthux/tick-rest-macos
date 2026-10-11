@@ -78,6 +78,18 @@ extension EngineTests {
         #expect(TodaySummary(records: e.records, now: midnight.addingTimeInterval(-1)).natural == 60)
         #expect(TodaySummary(records: e.records, now: midnight).natural == followingDay.timeIntervalSince(midnight))
         #expect(TodaySummary(records: e.records, now: followingDay).natural == 60)
+        #expect(e.remaining(.short) == 1200 && e.remaining(.long) == 3600)
+        #expect(!e.records.contains { $0.outcome == .completed })
+        #expect(e.records.reduce(0) { $0 + $1.seconds } == followingDay.timeIntervalSince(midnight) + 120)
+    }
+
+    @Test func regressionNaturalRestEndingAtMidnightBelongsToPreviousDay() {
+        let midnight = Calendar.current.startOfDay(for: Date()); let e = Engine(settings: Settings())
+        e.beginAway(at: midnight.addingTimeInterval(-60))
+        e.endAway(now: midnight, minimumShort: 20)
+        #expect(TodaySummary(records: e.records, now: midnight.addingTimeInterval(-1)).natural == 60)
+        #expect(TodaySummary(records: e.records, now: midnight).natural == 0)
+        #expect(e.records.count == 1 && e.records.first?.seconds == 60)
     }
 
     @Test func regressionSleepAcrossScheduleEndEmitsOneInterruptionPerReminder() {

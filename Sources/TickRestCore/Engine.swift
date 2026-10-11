@@ -225,7 +225,8 @@ public final class Engine {
         interruptedReminder = nil
         let qualifiesLong = combined >= settings.longDuration
         let qualifiesShort = combined >= minimumShort
-        records.append(Record(date: now, kind: nil, outcome: .natural, seconds: seconds))
+        if seconds == 0 { records.append(Record(date: now, kind: nil, outcome: .natural)) }
+        else { recordDurationSplit(seconds: seconds, ending: now, kind: nil, outcome: .natural, reminderID: nil, rest: false) }
         if qualifiesLong { reset(.long) }
         else if qualifiesShort { reset(.short) }
         if qualifiesShort || qualifiesLong || isResting { phase = .working }
@@ -241,14 +242,19 @@ public final class Engine {
     }
     private func recordDurationSplit(seconds: Double, ending: Date, kind: BreakKind?, outcome: Outcome, reminderID: UUID?, rest: Bool) {
         guard seconds > 0 else { return }
-        let start = ending.addingTimeInterval(-seconds)
-        let midnight = Calendar.current.startOfDay(for: ending)
-        let segments: [(Date, Double)] = start < midnight && midnight <= ending
-            ? [(midnight.addingTimeInterval(-0.001), midnight.timeIntervalSince(start)), (ending, ending.timeIntervalSince(midnight))]
-            : [(ending, seconds)]
-        for (date, duration) in segments where duration > 0 {
+        var start = ending.addingTimeInterval(-seconds)
+        var remaining = seconds
+        while start < ending {
+            guard let day = Calendar.current.dateInterval(of: .day, for: start) else { return }
+            let segmentEnd = min(day.end, ending)
+            // Use local calendar day boundaries, including 23/25-hour DST days.
+            let date = segmentEnd == day.end ? segmentEnd.addingTimeInterval(-0.001) : segmentEnd
+            // Keep the measured total exact instead of round-tripping the final
+            // segment through Date's floating-point timestamp precision.
+            let duration = segmentEnd == ending ? remaining : segmentEnd.timeIntervalSince(start)
             // usage records with a reminderID represent measured rest segments.
             records.append(Record(date: date, kind: kind, outcome: outcome, seconds: duration, reminderID: rest ? reminderID : nil))
+            start = segmentEnd; remaining -= duration
         }
     }
     public func drain() -> ([EngineEffect], [Record]) {
