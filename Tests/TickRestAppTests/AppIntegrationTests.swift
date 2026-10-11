@@ -265,7 +265,7 @@ final class AppIntegrationTests: XCTestCase {
 
     func testFullscreenBackgroundPickerPersistsAndResets() async throws {
         try await withFixture { model, _, _ in
-            model.update { $0.style = .overlay }
+            model.update { $0.style = .overlay; $0.language = "zh-Hans" }
             let navigation = SettingsNavigation(); navigation.page = .appearance
             let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
@@ -288,6 +288,8 @@ final class AppIntegrationTests: XCTestCase {
             XCTAssertEqual(selected.green, 0.7, accuracy: 0.001)
             XCTAssertEqual(selected.blue, 0.6, accuracy: 0.001)
             XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, selected)
+            try self.writeSnapshot(SettingsView(model: model, navigation: navigation),
+                                   name: "settings-zh-Hans-overlay-background", size: NSSize(width: 860, height: 640))
             XCTAssertTrue(self.press(try self.button(named: L10n.text("reminder.background_color_reset"), in: window)))
             XCTAssertEqual(model.settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
             XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
@@ -315,10 +317,19 @@ final class AppIntegrationTests: XCTestCase {
                         let view = try XCTUnwrap(panel.contentView)
                         let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
                         view.cacheDisplay(in: view.bounds, to: bitmap)
+                        // Compare a native swatch on the same display, so ColorSync
+                        // profiles on different connected screens do not skew RGB values.
+                        let swatch = NSView(frame: view.frame)
+                        swatch.wantsLayer = true; swatch.layer?.backgroundColor = background.cgColor
+                        panel.contentView = swatch
+                        defer { panel.contentView = view }
+                        let reference = try XCTUnwrap(swatch.bitmapImageRepForCachingDisplay(in: swatch.bounds))
+                        swatch.cacheDisplay(in: swatch.bounds, to: reference)
                         let pixel = try XCTUnwrap(bitmap.colorAt(x: 10, y: 10)?.usingColorSpace(.sRGB))
-                        XCTAssertEqual(pixel.redComponent, color.red, accuracy: 0.02)
-                        XCTAssertEqual(pixel.greenComponent, color.green, accuracy: 0.02)
-                        XCTAssertEqual(pixel.blueComponent, color.blue, accuracy: 0.02)
+                        let expected = try XCTUnwrap(reference.colorAt(x: 10, y: 10)?.usingColorSpace(.sRGB))
+                        XCTAssertEqual(pixel.redComponent, expected.redComponent, accuracy: 0.02)
+                        XCTAssertEqual(pixel.greenComponent, expected.greenComponent, accuracy: 0.02)
+                        XCTAssertEqual(pixel.blueComponent, expected.blueComponent, accuracy: 0.02)
                     }
                     try self.writeSnapshot(OverlayView(model: model, preview: preview, primary: true, previewEnd: {}),
                                            name: "overlay-background-\(index)-\(preview ? "preview" : "rest")", size: NSSize(width: 1000, height: 720))

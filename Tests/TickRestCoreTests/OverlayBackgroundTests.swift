@@ -3,6 +3,27 @@ import Testing
 @testable import TickRestCore
 
 struct OverlayBackgroundTests {
+    @Test func backgroundEditsPreserveDueReminderAndPendingPlan() throws {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let engine = Engine(settings: Settings())
+        engine.tick(seconds: engine.settings.shortInterval - engine.settings.prewarning, now: now)
+        let effects = engine.effects
+        var settings = engine.settings
+        settings.overlayBackgroundColor = SRGBColor(red: 0.8, green: 0.7, blue: 0.6)
+        engine.updateSettings(settings)
+        #expect(engine.effects == effects && engine.graceRemaining == 0)
+        engine.tick(seconds: settings.prewarning, now: now)
+        #expect(engine.isResting)
+        engine.tick(seconds: 3, now: now)
+        engine.applyPlan(.preset(.pomodoro), now: now)
+        let reminder = try #require(engine.reminder)
+        let pending = engine.pendingPlan
+        settings = engine.settings; settings.overlayBackgroundColor = Settings.defaultOverlayBackgroundColor
+        engine.updateSettings(settings)
+        #expect(engine.reminder == reminder && engine.pendingPlan == pending)
+        #expect(engine.graceRemaining == 0)
+    }
+
     @Test func customBackgroundSurvivesSaveAndReload() throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
