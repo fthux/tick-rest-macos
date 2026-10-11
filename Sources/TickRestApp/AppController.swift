@@ -36,8 +36,8 @@ final class AppController: ObservableObject {
     private var notificationEnabled = false
     private var lastRestTick: Date?
 
-    init() {
-        let disk = DataStore(), loaded = disk.load()
+    init(store disk: DataStore = DataStore()) {
+        let loaded = disk.load()
         store = disk; saved = loaded; settings = loaded.settings
         L10n.language = loaded.settings.language
         interfaceLanguage = L10n.resolvedLanguage

@@ -42,21 +42,35 @@ struct SettingsView: View {
     @State private var confirmClear = false
     var body: some View {
         NavigationSplitView(columnVisibility: $navigation.columnVisibility) {
-            List(selection: Binding<SettingsPage?>(
-                get: { navigation.page },
-                set: { if let page = $0 { navigation.page = page } }
-            )) {
+            // Draw the selected background ourselves: native sidebar selection
+            // can keep the system accent color despite tint/accentColor overrides.
+            List {
                 ForEach(SettingsPage.allCases) { item in
-                    Label(item.title, systemImage: item.symbol)
-                        .foregroundStyle(.primary)
-                        // Keep icons and titles monochrome across macOS sidebar styles.
-                        .listItemTint(.monochrome)
-                        .tag(item)
+                    Button { navigation.page = item } label: {
+                        Label(item.title, systemImage: item.symbol)
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(page == item ? .isSelected : [])
+                    .listRowBackground(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(page == item ? Color.orange : Color.clear)
+                    )
                 }
             }
             .listStyle(.sidebar)
-            .tint(.orange)
-            .accentColor(.orange)
+            .onMoveCommand { direction in
+                guard let index = SettingsPage.allCases.firstIndex(of: page) else { return }
+                let next: Int
+                switch direction {
+                case .up: next = max(0, index - 1)
+                case .down: next = min(SettingsPage.allCases.count - 1, index + 1)
+                default: return
+                }
+                navigation.page = SettingsPage.allCases[next]
+            }
             .navigationSplitViewColumnWidth(min: 180, ideal: 206, max: 260)
             // Native List rows can retain labels when their stable IDs do not change.
             .id(model.interfaceLanguage)

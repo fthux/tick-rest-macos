@@ -19,7 +19,8 @@ let package = Package(
     targets: [
         .target(name: coreTarget, path: "Sources/TickRestCore", resources: [.process("Resources")]),
         .executableTarget(name: appTarget, dependencies: [.byName(name: coreTarget)], path: "Sources/TickRestApp"),
-        .testTarget(name: "\(coreTarget)Tests", dependencies: [.byName(name: coreTarget)], path: "Tests/TickRestCoreTests")
+        .testTarget(name: "\(coreTarget)Tests", dependencies: [.byName(name: coreTarget)], path: "Tests/TickRestCoreTests"),
+        .testTarget(name: "\(appTarget)Tests", dependencies: [.byName(name: appTarget), .byName(name: coreTarget)], path: "Tests/TickRestAppTests")
     ],
     swiftLanguageModes: [.v5]
 )

@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import plistlib
+import platform
 import subprocess
 import unittest
 
@@ -89,6 +90,29 @@ class PackagingTests(unittest.TestCase):
     def test_development_signature_passes_strict_verification(self):
         result = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(APP)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_binary_supports_the_current_machine_architecture(self):
+        executable = APP / "Contents/MacOS" / self.info["CFBundleExecutable"]
+        architectures = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).split()
+        self.assertIn(platform.machine(), architectures)
+
+    def test_binary_deployment_target_matches_advertised_macos13(self):
+        # Info.plist alone cannot guarantee that the compiled binary runs on macOS 13.
+        executable = APP / "Contents/MacOS" / self.info["CFBundleExecutable"]
+        commands = subprocess.check_output(["otool", "-l", str(executable)], text=True)
+        targets = [line.strip().split()[1] for line in commands.splitlines()
+                   if line.strip().startswith("minos ")]
+        self.assertTrue(targets, "No LC_BUILD_VERSION deployment target found")
+        self.assertTrue(all(float(value.split(".")[0]) <= 13 for value in targets), targets)
+
+    def test_runtime_dependencies_do_not_reference_build_directories(self):
+        executable = APP / "Contents/MacOS" / self.info["CFBundleExecutable"]
+        linked = subprocess.check_output(["otool", "-L", str(executable)], text=True).splitlines()[1:]
+        self.assertTrue(linked)
+        for line in linked:
+            dependency = line.strip().split(" (", 1)[0]
+            with self.subTest(dependency=dependency):
+                self.assertTrue(dependency.startswith(("/System/Library/", "/usr/lib/", "@rpath/")), dependency)
 
 
 if __name__ == "__main__":
