@@ -233,6 +233,19 @@ struct SettingsView: View {
                             }
                         }.labelsHidden()
                     }
+                    LabeledContent {
+                        gentlePositionPicker
+                            .help(L10n.text("reminder.position_help"))
+                    } label: {
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(L10n.text("reminder.position"))
+                            Text(model.settings.gentleReminderPosition.title)
+                                .font(.caption).foregroundStyle(.secondary)
+                            Text(L10n.text("reminder.position_help"))
+                                .font(.caption).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                 } else {
                     row("reminder.background_color", "reminder.background_color_help") {
                         AnchoredColorPicker(selection: overlayBackgroundColor, label: L10n.text("reminder.background_color"))
@@ -268,6 +281,9 @@ struct SettingsView: View {
             }
             Text(L10n.text("plan.actions_help")).font(.caption).foregroundStyle(.secondary)
         }
+    }
+    private var gentlePositionPicker: some View {
+        GentlePositionPicker(selection: binding(\.gentleReminderPosition))
     }
     private var schedule: some View {
         Group {

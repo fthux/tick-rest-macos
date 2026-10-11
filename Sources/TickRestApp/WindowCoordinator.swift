@@ -7,6 +7,31 @@ final class ReminderPanel: NSPanel {
     override var canBecomeMain: Bool { false }
 }
 
+enum GentleReminderPlacement {
+    static func frame(size: NSSize, in visibleFrame: NSRect, position: GentleReminderPosition) -> NSRect {
+        // Reduce margins on small displays and respect displays with nonzero origins.
+        let horizontalSpace = max(0, visibleFrame.width - size.width)
+        let verticalSpace = max(0, visibleFrame.height - size.height)
+        let horizontalMargin = min(32, horizontalSpace / 2)
+        let verticalMargin = min(30, verticalSpace / 2)
+        let x: CGFloat
+        switch position {
+        case .topLeft, .middleLeft, .bottomLeft: x = visibleFrame.minX + horizontalMargin
+        case .topCenter, .center, .bottomCenter: x = visibleFrame.minX + horizontalSpace / 2
+        case .topRight, .middleRight, .bottomRight: x = visibleFrame.minX + horizontalSpace - horizontalMargin
+        }
+        let y: CGFloat
+        switch position {
+        case .topLeft, .topCenter, .topRight: y = visibleFrame.minY + verticalSpace - verticalMargin
+        case .middleLeft, .center, .middleRight: y = visibleFrame.minY + verticalSpace / 2
+        case .bottomLeft, .bottomCenter, .bottomRight: y = visibleFrame.minY + verticalMargin
+        }
+        // AppKit rounds window origins to whole points; use the same coordinates
+        // so refresh does not repeatedly try to move a centered card by half a point.
+        return NSRect(origin: NSPoint(x: floor(x), y: floor(y)), size: size)
+    }
+}
+
 final class WindowCoordinator {
     let model: AppController
     var showSettings: (() -> Void)?
@@ -39,16 +64,15 @@ final class WindowCoordinator {
         if shownStyle == .overlay {
             panels.forEach { $0.backgroundColor = overlayBackgroundColor }
         }
-        // State changes can wrap translated buttons onto a new row. Keep the card's
-        // top edge anchored while fitting its content, without reopening the reminder.
-        if shownStyle == .gentle, let panel = panels.first, let hosting = panel.contentView {
+        // Keep the selected position as translated content changes height or the
+        // user adjusts the position, without reopening the reminder.
+        if shownStyle == .gentle, let panel = panels.first, let hosting = panel.contentView,
+           let screen = panel.screen ?? currentScreen {
             let height = ceil(hosting.fittingSize.height)
-            if height > 0, abs(panel.frame.height - height) > 0.5 {
-                var frame = panel.frame
-                frame.origin.y = frame.maxY - height
-                frame.size.height = height
-                if let screen = panel.screen { frame.origin.y = max(screen.visibleFrame.minY, frame.origin.y) }
-                panel.setFrame(frame, display: true)
+            if height > 0 {
+                let frame = GentleReminderPlacement.frame(size: NSSize(width: panel.frame.width, height: height),
+                    in: screen.visibleFrame, position: model.settings.gentleReminderPosition)
+                if panel.frame != frame { panel.setFrame(frame, display: true) }
             }
         }
         if !isPreview, shownStyle == .overlay, model.engine.isResting, let reminder = model.engine.reminder {
@@ -75,7 +99,8 @@ final class WindowCoordinator {
             let hosting = NSHostingView(rootView: RestCard(model: model, size: cardSize, preview: preview, previewEnd: { [weak self] in self?.hide() }).frame(width: width))
             hosting.sizingOptions = [.intrinsicContentSize]
             let size = NSSize(width: width, height: ceil(hosting.fittingSize.height))
-            let rect = NSRect(x: max(screen.visibleFrame.minX, screen.visibleFrame.maxX - size.width - 32), y: max(screen.visibleFrame.minY, screen.visibleFrame.maxY - size.height - 30), width: size.width, height: size.height)
+            let rect = GentleReminderPlacement.frame(size: size, in: screen.visibleFrame,
+                                                     position: model.settings.gentleReminderPosition)
             let panel = makePanel(frame: rect, overlay: false)
             panel.contentView = hosting
             panel.setContentSize(size)

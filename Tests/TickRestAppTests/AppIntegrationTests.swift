@@ -299,12 +299,13 @@ final class AppIntegrationTests: XCTestCase {
         }
     }
 
-    func testRealCardButtonsStartPostponeSkipAndClose() async throws {
+    func testRealCardButtonsStartPostponeSkipAndEnd() async throws {
         try await withFixture { model, _, _ in
             model.update { $0.breakStartMode = .manual }
             model.engine.tick(seconds: 1200, now: Date()); model.engine.tick(seconds: 1, now: Date()); model.consume()
             var panel = try XCTUnwrap(self.panels.first)
             try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertNil(self.findButton(named: L10n.text("common.close"), in: panel))
             let start = try self.button(named: L10n.text("rest.start"), in: panel)
             XCTAssertTrue(self.press(start))
             XCTAssertTrue(model.engine.isResting)
@@ -323,10 +324,50 @@ final class AppIntegrationTests: XCTestCase {
             model.action { $0.startNow(.short, now: Date()) }
             panel = try XCTUnwrap(self.panels.first)
             try await Task.sleep(nanoseconds: 100_000_000)
-            let close = try self.button(named: L10n.text("common.close"), in: panel)
-            XCTAssertTrue(self.press(close))
+            XCTAssertNil(self.findButton(named: L10n.text("common.close"), in: panel))
+            let end = try self.button(named: L10n.text("rest.end"), in: panel)
+            XCTAssertTrue(self.press(end))
             XCTAssertFalse(panel.isVisible)
             XCTAssertEqual(model.saved.records.filter { $0.outcome == .ended }.count, 1)
+        }
+    }
+
+    func testReminderButtonOrderMatchesInBothStylesAndStates() async throws {
+        try await withFixture { model, _, _ in
+            for style in ReminderStyle.allCases {
+                for size in GentleReminderSize.allCases {
+                    model.update { $0.style = style; $0.gentleReminderSize = size; $0.breakStartMode = .manual }
+                    model.engine.tick(seconds: 1200, now: Date())
+                    if model.engine.reminder == nil { model.engine.tick(seconds: 31, now: Date()) }
+                    model.consume()
+                    for running in [false, true] {
+                        if running { model.action { $0.start(now: Date()) } }
+                        try await Task.sleep(nanoseconds: 150_000_000)
+                        let panel = try XCTUnwrap(self.panels.first)
+                        let reminder = try XCTUnwrap(model.engine.reminder)
+                        let titles = [L10n.text(running ? "rest.end" : "rest.start"),
+                                      L10n.text("rest.defer", Int(model.settings.postponement(reminder.kind) / 60)),
+                                      L10n.text("rest.skip")]
+                        let frames = try titles.map { title -> NSRect in
+                            let button = try self.button(named: title, in: panel)
+                            let selector = NSSelectorFromString("accessibilityFrame")
+                            XCTAssertTrue(button.responds(to: selector))
+                            typealias FrameValue = @convention(c) (AnyObject, Selector) -> NSRect
+                            return unsafeBitCast(button.method(for: selector), to: FrameValue.self)(button, selector)
+                        }
+                        for (first, second) in zip(frames, frames.dropFirst()) {
+                            XCTAssertFalse(first.isEmpty || second.isEmpty)
+                            if abs(first.midY - second.midY) < 1 {
+                                XCTAssertLessThan(first.maxX, second.minX)
+                            } else {
+                                XCTAssertGreaterThan(first.minY, second.maxY)
+                            }
+                        }
+                        XCTAssertNil(self.findButton(named: L10n.text("common.close"), in: panel))
+                    }
+                    model.action { $0.skip(now: Date()) }
+                }
+            }
         }
     }
 
@@ -403,10 +444,15 @@ final class AppIntegrationTests: XCTestCase {
             model.update { $0.style = .overlay }
             let colors = [Settings.defaultOverlayBackgroundColor,
                           SRGBColor(red: 0.95, green: 0.9, blue: 0.8),
-                          SRGBColor(red: 0.1, green: 0.2, blue: 0.6)]
+                          SRGBColor(red: 0.1, green: 0.2, blue: 0.6),
+                          SRGBColor(red: 1, green: 0, blue: 0),
+                          SRGBColor(red: 1, green: 1, blue: 0),
+                          SRGBColor(red: 0.46, green: 0.46, blue: 0.46),
+                          SRGBColor(red: 0, green: 0, blue: 0),
+                          SRGBColor(red: 1, green: 1, blue: 1)]
             for (index, color) in colors.enumerated() {
                 model.update { $0.overlayBackgroundColor = color }
-                XCTAssertEqual(OverlayPalette(background: color).usesDarkText, index == 1)
+                XCTAssertEqual(OverlayPalette(background: color).usesDarkText, [1, 3, 4, 7].contains(index))
                 for preview in [true, false] {
                     if preview { windows.preview() }
                     else { model.action { $0.startNow(.short, now: Date()) } }

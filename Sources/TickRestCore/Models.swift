@@ -7,6 +7,12 @@ public enum BreakKind: String, Codable, CaseIterable {
 }
 public enum ReminderStyle: String, Codable, CaseIterable { case gentle, overlay }
 public enum GentleReminderSize: String, Codable, CaseIterable { case normal, small, mini }
+public enum GentleReminderPosition: String, Codable, CaseIterable {
+    case topLeft, topCenter, topRight
+    case middleLeft, center, middleRight
+    case bottomLeft, bottomCenter, bottomRight
+    public var title: String { L10n.text("reminder.position.\(rawValue)") }
+}
 public enum BreakStartMode: String, Codable, CaseIterable { case automatic, manual }
 public enum DisplayScope: String, Codable, CaseIterable { case all, current }
 public enum AppTheme: String, Codable, CaseIterable { case system, light, dark }
@@ -33,6 +39,7 @@ public struct Settings: Codable, Equatable {
     public var prewarning: Double = 10
     public var style: ReminderStyle = .gentle
     public var gentleReminderSize: GentleReminderSize = .normal
+    public var gentleReminderPosition: GentleReminderPosition = .topCenter
     public static let defaultOverlayBackgroundColor = SRGBColor(red: 0.10, green: 0.18, blue: 0.15)
     public var overlayBackgroundColor = Settings.defaultOverlayBackgroundColor
     public var breakStartMode: BreakStartMode = .automatic
@@ -56,7 +63,7 @@ public struct Settings: Codable, Equatable {
     private enum CodingKeys: String, CodingKey {
         case planID, basePlanID, timingModel, rounds, shortPostpone, longPostpone, singlePostpone, postponeLimit
         case shortEnabled, longEnabled, shortInterval, shortDuration, longInterval, longDuration
-        case prewarning, style, gentleReminderSize, breakStartMode, displayScope, sound, reminderSound, detectIdle, idleTimeout, avoidFullscreen
+        case prewarning, style, gentleReminderSize, gentleReminderPosition, breakStartMode, displayScope, sound, reminderSound, detectIdle, idleTimeout, avoidFullscreen
         case scheduleEnabled, weekdays, scheduleStart, scheduleEnd, showCountdown, theme, language, onboardingComplete
         case showStatusDot, statusDotPalette
         case overlayBackgroundColor
@@ -72,6 +79,7 @@ public struct Settings: Codable, Equatable {
         prewarning = try values.decode(Double.self, forKey: .prewarning)
         style = try values.decode(ReminderStyle.self, forKey: .style)
         gentleReminderSize = try values.decodeIfPresent(GentleReminderSize.self, forKey: .gentleReminderSize) ?? .normal
+        gentleReminderPosition = (try? values.decode(GentleReminderPosition.self, forKey: .gentleReminderPosition)) ?? .topCenter
         overlayBackgroundColor = (try? values.decode(SRGBColor.self, forKey: .overlayBackgroundColor)) ?? Self.defaultOverlayBackgroundColor
         // Existing configurations adopt automatic starts without losing other preferences.
         breakStartMode = try values.decodeIfPresent(BreakStartMode.self, forKey: .breakStartMode) ?? .automatic

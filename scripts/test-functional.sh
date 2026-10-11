@@ -31,6 +31,7 @@ shopt -u nullglob
 if [ "${#raw_profiles[@]}" -gt 0 ] && [ -f "$test_binary" ]; then
     if run_check coverage-merge xcrun llvm-profdata merge -sparse "${raw_profiles[@]}" -o "$log_dir/coverage.profdata"; then
         run_check coverage xcrun llvm-cov report "$test_binary" "-instr-profile=$log_dir/coverage.profdata" Sources/TickRestCore/*.swift
+        run_check coverage-app xcrun llvm-cov report "$test_binary" "-instr-profile=$log_dir/coverage.profdata" Sources/TickRestApp/*.swift
     fi
 else
     results+=("coverage:skipped")

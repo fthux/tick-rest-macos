@@ -281,3 +281,15 @@
 "reminder.background_color" = "전체 화면 알림 배경색";
 "reminder.background_color_help" = "전체 화면 휴식 알림과 미리 보기에 적용됩니다. 배경색에 맞춰 글자 밝기가 자동으로 조정됩니다.";
 "reminder.background_color_reset" = "기본 배경색 복원";
+
+"reminder.position" = "알림 창 위치";
+"reminder.position_help" = "현재 화면에서 알림 창을 표시할 위치를 선택하세요.";
+"reminder.position.topLeft" = "왼쪽 위";
+"reminder.position.topCenter" = "가운데 위";
+"reminder.position.topRight" = "오른쪽 위";
+"reminder.position.middleLeft" = "왼쪽 가운데";
+"reminder.position.center" = "가운데";
+"reminder.position.middleRight" = "오른쪽 가운데";
+"reminder.position.bottomLeft" = "왼쪽 아래";
+"reminder.position.bottomCenter" = "가운데 아래";
+"reminder.position.bottomRight" = "오른쪽 아래";

@@ -281,3 +281,15 @@
 "reminder.background_color" = "全画面通知の背景色";
 "reminder.background_color_help" = "全画面の休憩通知とプレビューに適用されます。文字の明るさは背景色に合わせて自動調整されます。";
 "reminder.background_color_reset" = "背景色を標準に戻す";
+
+"reminder.position" = "カードの位置";
+"reminder.position_help" = "現在の画面でカードを表示する位置を選択します。";
+"reminder.position.topLeft" = "左上";
+"reminder.position.topCenter" = "中央上";
+"reminder.position.topRight" = "右上";
+"reminder.position.middleLeft" = "左中央";
+"reminder.position.center" = "中央";
+"reminder.position.middleRight" = "右中央";
+"reminder.position.bottomLeft" = "左下";
+"reminder.position.bottomCenter" = "中央下";
+"reminder.position.bottomRight" = "右下";

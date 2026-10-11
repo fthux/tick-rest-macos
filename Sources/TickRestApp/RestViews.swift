@@ -14,20 +14,35 @@ struct GentleCardLayout {
 }
 
 // Nonactivating panels need explicit colors for every action, independent of window focus.
-private struct RestCardButtonStyle: ButtonStyle {
+private struct RestActionButtonStyle: ButtonStyle {
     var prominent = false
     var compact = false
+    var palette: OverlayPalette? = nil
     @Environment(\.isEnabled) private var isEnabled
+    @State private var isHovered = false
+
+    private var foreground: Color {
+        palette?.foreground ?? (prominent ? Color.white : Color.primary)
+    }
+    private func background(pressed: Bool) -> Color {
+        if let palette {
+            return palette.buttonBackground(prominent: prominent, highlighted: isEnabled && (isHovered || pressed))
+        }
+        return prominent ? restColor : Color.primary.opacity(0.08)
+    }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font((compact ? Font.callout : Font.body).weight(.medium))
-            .foregroundStyle(prominent ? Color.white : Color.primary)
-            .padding(.horizontal, compact ? 10 : 16)
-            .padding(.vertical, compact ? 6 : 8)
-            .background(prominent ? restColor : Color.primary.opacity(0.08), in: RoundedRectangle(cornerRadius: 8))
-            .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.5)
+            .font((compact ? Font.callout : Font.body).weight(prominent ? .semibold : .medium))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, compact ? 10 : palette == nil ? 16 : 20)
+            .padding(.vertical, compact ? 6 : palette == nil ? 8 : 10)
+            .background(background(pressed: configuration.isPressed), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(palette?.foreground.opacity(prominent ? 0.30 : 0.15) ?? .clear))
+            .opacity(isEnabled ? (configuration.isPressed && palette == nil ? 0.8 : 1) : 0.5)
             .contentShape(RoundedRectangle(cornerRadius: 8))
+            .onHover { isHovered = $0 }
     }
 }
 
@@ -55,6 +70,44 @@ private struct RestPostponeButton: View {
     }
 }
 
+// Share both the action order and wrapping behavior across reminder styles.
+private struct RestActions: View {
+    @ObservedObject var model: AppController
+    let reminder: Reminder
+    let preview: Bool
+    let previewEnd: () -> Void
+    var compact = false
+    var palette: OverlayPalette? = nil
+    private var spacing: CGFloat { palette == nil ? 8 : 16 }
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: spacing) { primaryAction; secondaryActions }
+            VStack(spacing: 8) {
+                primaryAction
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .top, spacing: spacing) { secondaryActions }
+                    VStack(spacing: 8) { secondaryActions }
+                }
+            }
+        }.buttonStyle(RestActionButtonStyle(compact: compact, palette: palette))
+    }
+    private var primaryAction: some View {
+        Button(L10n.text(preview ? "common.close" : model.engine.isResting ? "rest.end" : "rest.start")) {
+            if preview { previewEnd() }
+            else {
+                model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.start(now: Date()) } }
+            }
+        }.buttonStyle(RestActionButtonStyle(prominent: true, compact: compact, palette: palette))
+    }
+    @ViewBuilder private var secondaryActions: some View {
+        if !preview {
+            RestPostponeButton(model: model, reminder: reminder)
+            Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
+        }
+    }
+}
+
 struct RestCard: View {
     @ObservedObject var model: AppController
     let size: GentleReminderSize
@@ -70,7 +123,6 @@ struct RestCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if size == .mini { clock }
-                Button { close() } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel(L10n.text("common.close"))
             }.font((size == .mini ? Font.caption : Font.callout).bold())
             if !preview, model.settings.timingModel == .rounds {
                 Text(L10n.text("plan.focus_state", model.engine.focusRound, model.settings.rounds))
@@ -98,16 +150,7 @@ struct RestCard: View {
                 Text(r.idea)
                     .font(.callout).multilineTextAlignment(.center).frame(maxWidth: .infinity).fixedSize(horizontal: false, vertical: true)
             }
-            ViewThatFits(in: .horizontal) {
-                HStack { primaryAction; secondaryActions }
-                VStack(spacing: 8) {
-                    primaryAction
-                    ViewThatFits(in: .horizontal) {
-                        HStack { secondaryActions }
-                        VStack(spacing: 8) { secondaryActions }
-                    }
-                }
-            }.buttonStyle(RestCardButtonStyle(compact: layout.compact))
+            RestActions(model: model, reminder: r, preview: preview, previewEnd: previewEnd, compact: layout.compact)
         }.padding(layout.padding).frame(maxWidth: .infinity)
             .fixedSize(horizontal: false, vertical: true)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: layout.radius))
@@ -121,30 +164,10 @@ struct RestCard: View {
             .fixedSize()
             .accessibilityLabel(L10n.text("rest.remaining", L10n.duration(preview ? 5 : r.target - r.elapsed)))
     }
-    @ViewBuilder private var primaryAction: some View {
-        if preview {
-            Button(L10n.text("common.close"), action: previewEnd)
-        } else {
-            Button(L10n.text(model.engine.isResting ? "rest.end" : "rest.start")) {
-                model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.start(now: Date()) } }
-            }.buttonStyle(RestCardButtonStyle(prominent: true, compact: layout.compact))
-        }
-    }
-    @ViewBuilder private var secondaryActions: some View {
-        if !preview {
-            RestPostponeButton(model: model, reminder: r)
-            Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
-        }
-    }
-    private func close() {
-        if preview { previewEnd() }
-        else { model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.skip(now: Date()) } } }
-    }
 }
 
 struct OverlayPalette {
     let background: SRGBColor
-    private let lightText = SRGBColor(red: 0.91, green: 0.95, blue: 0.84)
     private func luminance(_ color: SRGBColor) -> Double {
         func linear(_ value: Double) -> Double {
             value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
@@ -153,15 +176,29 @@ struct OverlayPalette {
     }
     var usesDarkText: Bool {
         let brightness = luminance(background)
-        return (brightness + 0.05) / 0.05 >= (luminance(lightText) + 0.05) / (brightness + 0.05)
+        return (brightness + 0.05) / 0.05 >= 1.05 / (brightness + 0.05)
     }
     var foreground: Color {
-        usesDarkText ? .black : Color(.sRGB, red: lightText.red, green: lightText.green, blue: lightText.blue)
+        usesDarkText ? .black : .white
     }
     var backgroundColor: Color {
         Color(.sRGB, red: background.red, green: background.green, blue: background.blue)
     }
     var colorScheme: ColorScheme { usesDarkText ? .light : .dark }
+
+    func buttonBackgroundComponents(prominent: Bool, highlighted: Bool = false) -> SRGBColor {
+        // Blend toward the opposite of the text to keep contrast at least as
+        // strong as on the original background, including saturated colors.
+        let amount = (prominent ? 0.16 : 0.06) + (highlighted ? 0.06 : 0)
+        let target = usesDarkText ? 1.0 : 0.0
+        return SRGBColor(red: background.red * (1 - amount) + target * amount,
+                         green: background.green * (1 - amount) + target * amount,
+                         blue: background.blue * (1 - amount) + target * amount)
+    }
+    func buttonBackground(prominent: Bool, highlighted: Bool = false) -> Color {
+        let color = buttonBackgroundComponents(prominent: prominent, highlighted: highlighted)
+        return Color(.sRGB, red: color.red, green: color.green, blue: color.blue)
+    }
 }
 
 struct OverlayView: View {
@@ -186,19 +223,7 @@ struct OverlayView: View {
                 }
                 Text(preview ? L10n.text("rest.preview") : r.idea)
                     .font(.title3).multilineTextAlignment(.center).frame(maxWidth: 600)
-                HStack(spacing: 16) {
-                    if preview { Button(L10n.text("common.close"), action: previewEnd) }
-                    else {
-                        if !model.engine.isResting {
-                            Button(L10n.text("rest.start")) { model.action { $0.start(now: Date()) } }
-                        }
-                        RestPostponeButton(model: model, reminder: r)
-                        if model.engine.isResting {
-                            Button(L10n.text("rest.end")) { model.action { $0.finish(now: Date()) } }
-                        }
-                        Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
-                    }
-                }.buttonStyle(.bordered).controlSize(.large)
+                RestActions(model: model, reminder: r, preview: preview, previewEnd: previewEnd, palette: palette)
             }
         }.padding(40).frame(maxWidth: .infinity, maxHeight: .infinity)
             .foregroundStyle(palette.foreground)

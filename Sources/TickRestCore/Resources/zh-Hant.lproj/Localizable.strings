@@ -281,3 +281,15 @@
 "reminder.background_color" = "全螢幕提醒背景色";
 "reminder.background_color_help" = "用於全螢幕休息提醒和預覽，文字明暗會自動適應背景色。";
 "reminder.background_color_reset" = "恢復預設背景色";
+
+"reminder.position" = "提醒位置";
+"reminder.position_help" = "選擇提醒小卡在目前螢幕上的顯示位置。";
+"reminder.position.topLeft" = "左上";
+"reminder.position.topCenter" = "上方置中";
+"reminder.position.topRight" = "右上";
+"reminder.position.middleLeft" = "左側置中";
+"reminder.position.center" = "正中";
+"reminder.position.middleRight" = "右側置中";
+"reminder.position.bottomLeft" = "左下";
+"reminder.position.bottomCenter" = "下方置中";
+"reminder.position.bottomRight" = "右下";

@@ -281,3 +281,15 @@
 "reminder.background_color" = "Fullscreen background color";
 "reminder.background_color_help" = "Used for fullscreen reminders and previews. Text adjusts automatically for readability.";
 "reminder.background_color_reset" = "Restore default background color";
+
+"reminder.position" = "Card position";
+"reminder.position_help" = "Choose where the card appears on the current screen.";
+"reminder.position.topLeft" = "Upper left";
+"reminder.position.topCenter" = "Upper center";
+"reminder.position.topRight" = "Upper right";
+"reminder.position.middleLeft" = "Center left";
+"reminder.position.center" = "Center";
+"reminder.position.middleRight" = "Center right";
+"reminder.position.bottomLeft" = "Lower left";
+"reminder.position.bottomCenter" = "Lower center";
+"reminder.position.bottomRight" = "Lower right";
