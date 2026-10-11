@@ -58,7 +58,7 @@ struct PlanEditor: View {
                         Text(L10n.text("plan.rounds_help")).font(.caption).foregroundStyle(.secondary)
                     }
                 }
-            }.controlSize(.small)
+            }
             Section {
                 Text(L10n.text("rhythm.help")).font(.callout)
                 Text(L10n.text("plan.actions_help")).font(.caption).foregroundStyle(.secondary)

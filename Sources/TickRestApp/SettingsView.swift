@@ -2,6 +2,15 @@ import SwiftUI
 import AppKit
 import TickRestCore
 
+private struct SettingsSwitchToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Toggle(configuration)
+            .toggleStyle(.switch)
+            .tint(.orange)
+            .accentColor(.orange)
+    }
+}
+
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general, rhythm, schedule, appearance, displays, overview, privacy, about
     var id: String { rawValue }
@@ -46,6 +55,8 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.sidebar)
+            .tint(.orange)
+            .accentColor(.orange)
             .navigationSplitViewColumnWidth(min: 180, ideal: 206, max: 260)
             // Native List rows can retain labels when their stable IDs do not change.
             .id(model.interfaceLanguage)
@@ -77,7 +88,7 @@ struct SettingsView: View {
             // Recreate cached Picker options as well as the visible form labels.
             .id(model.interfaceLanguage)
         }
-        .toggleStyle(.switch)
+        .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
         .confirmationDialog(L10n.text("data.clear_title"), isPresented: $confirmClear) {
             Button(L10n.text("data.clear"), role: .destructive) { model.clearRecords() }
