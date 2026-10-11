@@ -38,7 +38,11 @@ struct SettingsView: View {
                 set: { if let page = $0 { navigation.page = page } }
             )) {
                 ForEach(SettingsPage.allCases) { item in
-                    Label(item.title, systemImage: item.symbol).tag(item)
+                    Label(item.title, systemImage: item.symbol)
+                        .foregroundStyle(.primary)
+                        // Keep icons and titles monochrome across macOS sidebar styles.
+                        .listItemTint(.monochrome)
+                        .tag(item)
                 }
             }
             .listStyle(.sidebar)
