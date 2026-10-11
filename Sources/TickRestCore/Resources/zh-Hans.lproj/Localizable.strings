@@ -69,8 +69,6 @@
 "menu.settings_title" = "{appName} · 设置";
 "menu.start_long" = "立即起身休息";
 "menu.start_short" = "立即护眼休息";
-"menu.overview" = "概览…";
-"menu.overview_title" = "{appName} · 概览";
 "permission.allowed" = "已允许";
 "permission.bundle" = "请从应用安装包启动";
 "permission.denied" = "系统通知已关闭";
@@ -134,7 +132,6 @@
 "settings.sidebar.show" = "展开侧栏";
 "state.away" = "检测到离席，计时暂停";
 "state.deferred" = "%@已延期 · 还剩 %@";
-"state.due" = "已到%@时间";
 "state.due_grace" = "%@已到期 · 稍后提醒（%@）";
 "state.due_later" = "%@已到期 · 稍后提醒";
 "state.waiting" = "%@已到期 · 等待开始";

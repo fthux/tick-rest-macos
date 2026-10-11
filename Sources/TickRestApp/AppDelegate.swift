@@ -112,7 +112,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             item.submenu = sub
         }
         menu.addItem(.separator())
-        add(menu, L10n.text("menu.overview"), #selector(openOverview)).image = NSImage(systemSymbolName: SettingsPage.overview.symbol, accessibilityDescription: nil)
         add(menu, L10n.text("menu.settings"), #selector(openSettings), key: ",")
         add(menu, L10n.text("menu.about"), #selector(openAbout)).image = NSImage(systemSymbolName: SettingsPage.about.symbol, accessibilityDescription: nil)
         menu.addItem(.separator())
@@ -221,10 +220,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             if let controller = findSplitViewController(in: child) { return controller }
         }
         return nil
-    }
-    @objc private func openOverview() {
-        settingsNavigation.page = .overview
-        openSettings()
     }
     private func openWelcome() {
         welcomeWindow = makeWindow(title: L10n.text("welcome.title"), size: NSSize(width: 580, height: 1), content: WelcomeView(model: model, finish: { [weak self] in

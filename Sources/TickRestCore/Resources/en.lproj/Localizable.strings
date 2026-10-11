@@ -45,7 +45,7 @@
 "general.notifications_help" = "Used only for advance break reminders. In-app cards still work without permission. Do Not Disturb may hide notifications.";
 "general.request_notifications" = "Request notification permission";
 "general.theme" = "Appearance";
-"language.system" = "System default";
+"language.system" = "Follow system";
 "language.native_name" = "English";
 "menu.about" = "About";
 "menu.end" = "End this break";
@@ -69,8 +69,6 @@
 "menu.settings_title" = "{appName} · Settings";
 "menu.start_long" = "Start movement break now";
 "menu.start_short" = "Start eye break now";
-"menu.overview" = "Overview…";
-"menu.overview_title" = "{appName} · Overview";
 "permission.allowed" = "Allowed";
 "permission.bundle" = "Please launch the packaged app";
 "permission.denied" = "System notifications are off";
@@ -134,7 +132,6 @@
 "settings.sidebar.show" = "Show sidebar";
 "state.away" = "Time away detected; timer paused";
 "state.deferred" = "%@ postponed · %@ remaining";
-"state.due" = "Time for %@";
 "state.due_grace" = "%@ is due · Remind later (%@)";
 "state.due_later" = "%@ is due · Remind later";
 "state.waiting" = "%@ is due · Waiting to start";

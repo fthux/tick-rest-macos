@@ -69,8 +69,6 @@
 "menu.settings_title" = "{appName} · 설정";
 "menu.start_long" = "지금 움직이기 휴식";
 "menu.start_short" = "지금 눈 휴식";
-"menu.overview" = "요약…";
-"menu.overview_title" = "{appName} · 요약";
 "permission.allowed" = "허용됨";
 "permission.bundle" = "패키지 앱으로 실행하세요";
 "permission.denied" = "시스템 알림이 꺼져 있습니다";
@@ -134,7 +132,6 @@
 "settings.sidebar.show" = "사이드바 보기";
 "state.away" = "자리 비움 감지 · 타이머 일시 정지";
 "state.deferred" = "%@ 미룸 · %@ 남음";
-"state.due" = "%@ 시간입니다";
 "state.due_grace" = "%@ 시간입니다 · 나중에 알림 (%@)";
 "state.due_later" = "%@ 시간입니다 · 나중에 알림";
 "state.waiting" = "%@ 시간입니다 · 시작 대기 중";

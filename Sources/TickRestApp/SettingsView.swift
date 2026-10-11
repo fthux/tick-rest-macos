@@ -134,7 +134,6 @@ struct SettingsView: View {
                 }
                 Button(L10n.text("general.request_notifications")) { model.requestNotifications() }
             }
-            Text(model.stateText).font(.callout).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
         }
     }
     private var rhythm: some View {

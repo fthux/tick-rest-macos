@@ -69,8 +69,6 @@
 "menu.settings_title" = "{appName} · 設定";
 "menu.start_long" = "今すぐ体を動かす休憩";
 "menu.start_short" = "今すぐ目の休憩";
-"menu.overview" = "概要…";
-"menu.overview_title" = "{appName} · 概要";
 "permission.allowed" = "許可済み";
 "permission.bundle" = "パッケージ化されたアプリから起動してください";
 "permission.denied" = "システム通知は無効です";
@@ -134,7 +132,6 @@
 "settings.sidebar.show" = "サイドバーを表示";
 "state.away" = "離席を検出、タイマー停止中";
 "state.deferred" = "%@を延期 · あと%@";
-"state.due" = "%@の時間です";
 "state.due_grace" = "%@の時間です · 後で通知（%@）";
 "state.due_later" = "%@の時間です · 後で通知";
 "state.waiting" = "%@の時間です · 開始待ち";
