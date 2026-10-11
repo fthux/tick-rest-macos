@@ -91,7 +91,8 @@ public final class Engine {
         outsideSchedule = !workingTime
         if priorWorkingTime == false && workingTime { reset(.long); phase = .working; warnedKind = nil; grace = 30 }
         if priorWorkingTime == true && !workingTime {
-            if case .resting(let r) = phase { record(r, .interrupted, now) }
+            // Away transitions retain the reminder and settle it once on return.
+            if !away, case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false) }
             phase = .working; effects.append(.hide); warnedKind = nil
         }
         priorWorkingTime = workingTime

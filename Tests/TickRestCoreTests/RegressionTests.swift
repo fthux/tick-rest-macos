@@ -92,7 +92,8 @@ extension EngineTests {
         #expect(e.records.count == 1 && e.records.first?.seconds == 60)
     }
 
-    @Test func regressionSleepAcrossScheduleEndEmitsOneInterruptionPerReminder() {
+    @Test(arguments: [true, false])
+    func regressionSleepAcrossScheduleEndEmitsOneInterruptionPerReminder(_ away: Bool) {
         let calendar = Calendar.current
         let end = calendar.date(from: DateComponents(year: 2026, month: 10, day: 12, hour: 18))!
         var s = Settings(); s.scheduleEnabled = true; s.weekdays = [2]; s.prewarning = 0
@@ -101,11 +102,14 @@ extension EngineTests {
         e.startNow(.long, now: end.addingTimeInterval(-30))
         e.tick(seconds: 20, now: end.addingTimeInterval(-10))
         let id = e.reminder?.id
-        e.beginAway(at: end.addingTimeInterval(-10))
+        if away { e.beginAway(at: end.addingTimeInterval(-10)) }
         // The controller timer continues running during a locked user session.
         e.tick(seconds: 1, now: end)
-        e.endAway(now: end.addingTimeInterval(10), minimumShort: 20)
+        if away { e.endAway(now: end.addingTimeInterval(10), minimumShort: 20) }
         #expect(e.records.filter { $0.outcome == .interrupted && $0.reminderID == id }.count == 1)
+        #expect(e.records.filter { $0.outcome == .interrupted }.allSatisfy { $0.seconds == 0 })
+        #expect(TodaySummary(records: e.records, now: end).rest == 20)
+        #expect(!e.isResting && e.reminder == nil)
     }
 
     @Test(arguments: [-1.0, 60, 61, Double.infinity, Double.nan])
