@@ -461,7 +461,7 @@ extension EngineTests {
         let bundlePath = try #require(L10n.resourceBundle.path(forResource: identifier, ofType: "lproj"))
         let data = try Data(contentsOf: URL(fileURLWithPath: bundlePath).appendingPathComponent("Localizable.strings"))
         let values = try #require(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String])
-        #expect(values.count == 194)
+        #expect(values.count == 206)
         #expect(values.values.allSatisfy { !$0.isEmpty })
         #expect(values["welcome.title"]?.contains("{appName}") == true)
         #expect(values["menu.remaining"]?.components(separatedBy: "%@").count == 3)
@@ -470,6 +470,12 @@ extension EngineTests {
         #expect(values["reminder.start_mode"] != nil && values["reminder.start_mode_help"] != nil)
         #expect(values["reminder.size"] != nil && values["reminder.size_help"] != nil)
         #expect(values["rest.idea"] != nil)
+        #expect(values["settings.overview"] != nil && values["menu.overview"] != nil)
+        #expect(values["overview.start_date"] != nil && values["overview.end_date"] != nil)
+        #expect(values["overview.empty"] != nil && values["overview.retention"] != nil && values["overview.partial_day"] != nil)
+        for preset in StatisticsPreset.allCases {
+            #expect(values["overview.period.\(preset.rawValue)"] != nil)
+        }
         for size in GentleReminderSize.allCases {
             #expect(values["reminder.size.\(size.rawValue)"] != nil)
         }

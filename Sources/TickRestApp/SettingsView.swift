@@ -3,12 +3,12 @@ import AppKit
 import TickRestCore
 
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case general, rhythm, appearance, schedule, displays, today, privacy, about
+    case general, rhythm, schedule, appearance, displays, overview, privacy, about
     var id: String { rawValue }
     var title: String { L10n.text("settings.\(rawValue)") }
     var symbol: String {
         switch self {
-        case .today: return "chart.bar"
+        case .overview: return "chart.bar"
         case .general: return "gearshape"
         case .rhythm: return "timer"
         case .appearance: return "paintpalette"
@@ -23,6 +23,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 final class SettingsNavigation: ObservableObject {
     @Published var columnVisibility: NavigationSplitViewVisibility = .all
     @Published var page: SettingsPage = .general
+    @Published var overviewSelection = StatisticsSelection()
 }
 
 struct SettingsView: View {
@@ -58,7 +59,7 @@ struct SettingsView: View {
                     }
                 }
                 switch page {
-                case .today: Section { TodayView(model: model) }
+                case .overview: Section { OverviewView(model: model, navigation: navigation) }
                 case .general: general
                 case .rhythm: rhythm
                 case .appearance: appearance

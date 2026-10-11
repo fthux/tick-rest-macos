@@ -156,7 +156,9 @@ final class AppController: ObservableObject {
         action { $0.setPause(.until(tomorrow), now: Date()) }
     }
     func resume() { action { $0.setPause(nil, now: Date()) } }
-    var summary: TodaySummary { TodaySummary(records: saved.records) }
+    func summary(in range: StatisticsDateRange) -> StatisticsSummary {
+        StatisticsSummary(records: saved.records, range: range)
+    }
     var stateText: String { ReminderDisplay(engine: engine).stateText }
     func consume() {
         let (effects, records) = engine.drain()

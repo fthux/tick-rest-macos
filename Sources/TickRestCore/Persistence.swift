@@ -9,6 +9,7 @@ public struct SavedData: Codable {
 }
 
 public final class DataStore {
+    public static let recordRetention: TimeInterval = 90 * 86400
     public let url: URL
     public private(set) var loadErrorKey: String?
     public var loadError: String? { loadErrorKey.map { L10n.text($0) } }
@@ -49,20 +50,22 @@ public final class DataStore {
                 records[records.count - 1].date = item.date
             } else { records.append(item) }
         }
-        let oldest = now.addingTimeInterval(-90 * 86400)
+        let oldest = now.addingTimeInterval(-recordRetention)
         records.removeAll { $0.date < oldest }
     }
 }
 
-public struct TodaySummary {
+public struct StatisticsSummary {
     public var usage: Double = 0
     public var rest: Double = 0
     public var natural: Double = 0
     public var completed = 0
     public var skipped = 0
     public var ended = 0
-    public init(records: [Record], now: Date = Date()) {
-        for item in records where item.day == Record.dayKey(now) {
+    public private(set) var hasRecords = false
+    public init(records: [Record], range: StatisticsDateRange) {
+        for item in records where range.contains(day: item.day) {
+            hasRecords = true
             switch item.outcome {
             case .usage: if item.reminderID == nil { usage += item.seconds } else { rest += item.seconds }
             case .completed: completed += 1
@@ -73,4 +76,10 @@ public struct TodaySummary {
             }
         }
     }
+    public init(records: [Record], now: Date = Date()) {
+        self.init(records: records, range: StatisticsDateRange(start: now, end: now))
+    }
 }
+
+// Keep the existing single-day API for clients and reminder tests.
+public typealias TodaySummary = StatisticsSummary

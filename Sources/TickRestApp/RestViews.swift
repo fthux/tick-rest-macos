@@ -176,21 +176,65 @@ struct WarningView: View {
     }
 }
 
-struct TodayView: View {
+struct OverviewView: View {
     @ObservedObject var model: AppController
+    @ObservedObject var navigation: SettingsNavigation
     var body: some View {
-        let summary = model.summary
+        let now = Date()
+        let range = navigation.overviewSelection.range(now: now)
+        let available = StatisticsDateRange.availableDates(now: now)
+        let summary = model.summary(in: range)
         VStack(alignment: .leading, spacing: 20) {
-            Text(L10n.text("today.help")).font(.callout).foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
-                metric("today.usage", L10n.duration(summary.usage))
-                metric("today.completed", L10n.text("today.count", summary.completed))
-                metric("today.rest", L10n.duration(summary.rest))
-                metric("today.skipped", L10n.text("today.count", summary.skipped))
+            Picker(L10n.text("overview.period"), selection: Binding(
+                get: { navigation.overviewSelection.preset },
+                set: { navigation.overviewSelection.select($0) }
+            )) {
+                ForEach(StatisticsPreset.allCases) { preset in
+                    Text(L10n.text("overview.period.\(preset.rawValue)")).tag(preset)
+                }
+            }.pickerStyle(.menu).frame(maxWidth: .infinity)
+            if navigation.overviewSelection.preset == .custom {
+                VStack(alignment: .leading, spacing: 12) {
+                    DatePicker(L10n.text("overview.start_date"), selection: Binding(
+                        get: { navigation.overviewSelection.range().start },
+                        set: { navigation.overviewSelection.setCustomStart($0) }
+                    ), in: available, displayedComponents: .date)
+                    DatePicker(L10n.text("overview.end_date"), selection: Binding(
+                        get: { navigation.overviewSelection.range().end },
+                        set: { navigation.overviewSelection.setCustomEnd($0) }
+                    ), in: available, displayedComponents: .date)
+                }.datePickerStyle(.compact).controlSize(.small)
+                    .frame(maxWidth: .infinity)
             }
-            Text(L10n.text("today.natural", L10n.duration(summary.natural))).font(.callout)
-            Text(L10n.text("today.disclaimer")).font(.caption).foregroundStyle(.secondary)
+            Text(L10n.text("overview.dates", dateLabel(range.start), dateLabel(range.end)))
+                .font(.callout).monospacedDigit()
+            Text(L10n.text("overview.help")).font(.callout).foregroundStyle(.secondary)
+            if !summary.hasRecords {
+                Text(L10n.text("overview.empty")).font(.callout).foregroundStyle(.secondary)
+            }
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 14) {
+                metric("overview.usage", L10n.duration(summary.usage))
+                metric("overview.completed", L10n.text("overview.count", summary.completed))
+                metric("overview.rest", L10n.duration(summary.rest))
+                metric("overview.skipped", L10n.text("overview.count", summary.skipped))
+            }
+            Text(L10n.text("overview.natural", L10n.duration(summary.natural))).font(.callout)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(L10n.text("overview.retention"))
+                if range.start <= available.lowerBound {
+                    Text(L10n.text("overview.partial_day"))
+                }
+                Text(L10n.text("overview.disclaimer"))
+            }.font(.caption).foregroundStyle(.secondary)
         }.frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+    private func dateLabel(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = model.interfaceLocale
+        formatter.calendar = Calendar.current
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
     private func metric(_ title: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 13) {

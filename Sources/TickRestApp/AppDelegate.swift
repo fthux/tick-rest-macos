@@ -112,7 +112,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             item.submenu = sub
         }
         menu.addItem(.separator())
-        add(menu, L10n.text("menu.today"), #selector(openToday)).image = NSImage(systemSymbolName: SettingsPage.today.symbol, accessibilityDescription: nil)
+        add(menu, L10n.text("menu.overview"), #selector(openOverview)).image = NSImage(systemSymbolName: SettingsPage.overview.symbol, accessibilityDescription: nil)
         add(menu, L10n.text("menu.settings"), #selector(openSettings), key: ",")
         add(menu, L10n.text("menu.about"), #selector(openAbout)).image = NSImage(systemSymbolName: SettingsPage.about.symbol, accessibilityDescription: nil)
         menu.addItem(.separator())
@@ -222,8 +222,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         }
         return nil
     }
-    @objc private func openToday() {
-        settingsNavigation.page = .today
+    @objc private func openOverview() {
+        settingsNavigation.page = .overview
         openSettings()
     }
     private func openWelcome() {
