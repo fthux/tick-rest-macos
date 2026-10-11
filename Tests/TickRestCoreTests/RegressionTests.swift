@@ -25,14 +25,23 @@ extension EngineTests {
         if case .waiting = restored.phase {} else { Issue.record("Restart must not grant a third postponement") }
     }
 
-    @Test func regressionShortenThenLengthenIntervalPreservesAccumulatedUsage() {
-        let now = Date(); let e = Engine(settings: Settings())
+    @Test(arguments: BreakKind.allCases)
+    func regressionShortenThenLengthenIntervalPreservesAccumulatedUsage(_ kind: BreakKind) {
+        var initial = Settings(); initial.shortEnabled = kind == .short; initial.longEnabled = kind == .long
+        initial.shortInterval = 1200; initial.longInterval = 1200
+        let now = Date(); let e = Engine(settings: initial)
         e.tick(seconds: 1000, now: now)
-        var s = e.settings; s.shortInterval = 600; e.updateSettings(s)
+        var s = e.settings
+        if kind == .short { s.shortInterval = 600 } else { s.longInterval = 600 }
+        e.updateSettings(s)
         e.tick(seconds: 1, now: now.addingTimeInterval(1))
-        s.shortInterval = 1200; e.updateSettings(s)
-        #expect(e.shortElapsed >= 1000)
-        #expect(e.remaining(.short) <= 200)
+        #expect(e.remaining(kind) == 0 && e.reminder == nil)
+        if kind == .short { s.shortInterval = 1200 } else { s.longInterval = 1200 }
+        e.updateSettings(s)
+        #expect((kind == .short ? e.shortElapsed : e.longElapsed) == 1000)
+        #expect(e.remaining(kind) == 200)
+        e.tick(seconds: 1000, now: now.addingTimeInterval(1001))
+        #expect((kind == .short ? e.shortElapsed : e.longElapsed) == 1200)
     }
 
     @Test func regressionUsageEndingExactlyAtMidnightBelongsToPreviousDay() {

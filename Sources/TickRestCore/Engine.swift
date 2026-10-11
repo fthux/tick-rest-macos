@@ -107,8 +107,10 @@ public final class Engine {
             return
         }
         guard workingTime else { return }
-        shortElapsed = min(settings.shortInterval, shortElapsed + delta)
-        longElapsed = min(settings.longInterval, longElapsed + delta)
+        // Stop accumulating at the interval without discarding usage retained
+        // from a longer interval when the user changes settings.
+        shortElapsed = max(shortElapsed, min(settings.shortInterval, shortElapsed + delta))
+        longElapsed = max(longElapsed, min(settings.longInterval, longElapsed + delta))
         recordDurationSplit(seconds: delta, ending: now, kind: nil, outcome: .usage, reminderID: nil, rest: false)
         shortCooldown = max(0, shortCooldown - delta); longCooldown = max(0, longCooldown - delta)
         if case .deferred(let r, let remaining) = phase {
