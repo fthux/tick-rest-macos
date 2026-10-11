@@ -17,9 +17,10 @@
 "common.dismiss" = "收起提示";
 "common.next" = "下一步";
 "common.off" = "关闭";
-"data.clear" = "清空统计记录";
+"data.clear" = "清除统计记录";
 "data.clear_body" = "删除后无法恢复。你的设置和当前计时不受影响。";
-"data.clear_title" = "清空本机统计记录？";
+"data.clear_title" = "清除本机统计记录？";
+"data.clear_success" = "统计记录已清除。";
 "data.directory" = "应用数据目录";
 "data.help" = "无需账号，没有广告，也不会在线收集使用数据。不记录输入内容、窗口标题、鼠标轨迹或桌面画面。";
 "data.local" = "数据保存在本机";

@@ -25,7 +25,7 @@ class PackagingTests(unittest.TestCase):
         cls.info = plistlib.loads((APP / "Contents/Info.plist").read_bytes())
         cls.resources = APP / "Contents/Resources" / (cls.info["AppResourceBundle"] + ".bundle")
 
-    def test_identity_matches_executable_and_compatible_bundle_id(self):
+    def test_identity_matches_executable_and_bundle_id(self):
         for key in ("CFBundleName", "CFBundleDisplayName", "CFBundleExecutable"):
             self.assertEqual(self.info[key], IDENTITY["name"])
         self.assertEqual(self.info["CFBundleIdentifier"], IDENTITY["bundleIdentifier"])

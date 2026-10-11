@@ -18,7 +18,7 @@ public enum AppIdentity {
     }()
 
     public static var name: String { configuration.name }
-    // Keep these stable across branding changes to retain saved data and system registration.
+    // Shared identifiers used for system registration and application data storage.
     public static var bundleIdentifier: String { configuration.bundleIdentifier }
     public static var dataDirectory: String { configuration.dataDirectory }
     public static func identifier(_ suffix: String) -> String { "\(bundleIdentifier).\(suffix)" }

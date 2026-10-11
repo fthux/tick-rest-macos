@@ -22,13 +22,13 @@ private struct RestActionButtonStyle: ButtonStyle {
     @State private var isHovered = false
 
     private var foreground: Color {
-        palette?.foreground ?? (prominent ? Color.white : Color.primary)
+        palette?.foreground ?? Color.primary
     }
     private func background(pressed: Bool) -> Color {
         if let palette {
             return palette.buttonBackground(prominent: prominent, highlighted: isEnabled && (isHovered || pressed))
         }
-        return prominent ? restColor : Color.primary.opacity(0.08)
+        return Color.primary.opacity(0.08)
     }
 
     func makeBody(configuration: Configuration) -> some View {
@@ -98,7 +98,7 @@ private struct RestActions: View {
             else {
                 model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.start(now: Date()) } }
             }
-        }.buttonStyle(RestActionButtonStyle(prominent: true, compact: compact, palette: palette))
+        }.buttonStyle(RestActionButtonStyle(prominent: palette != nil, compact: compact, palette: palette))
     }
     @ViewBuilder private var secondaryActions: some View {
         if !preview {
@@ -155,7 +155,7 @@ struct RestCard: View {
             .fixedSize(horizontal: false, vertical: true)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: layout.radius))
             .overlay(RoundedRectangle(cornerRadius: layout.radius).stroke(.secondary.opacity(0.2)))
-            .padding(1).tint(restColor)
+            .padding(1)
             .environment(\.locale, L10n.locale)
     }
     private var clock: some View {

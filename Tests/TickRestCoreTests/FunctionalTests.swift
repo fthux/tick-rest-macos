@@ -37,8 +37,8 @@ extension EngineTests {
         #expect(!s.detectIdle && s.idleTimeout == 300 && s.avoidFullscreen)
         #expect(!s.scheduleEnabled && !s.sound && !s.onboardingComplete)
         #expect(AppIdentity.name == "Tick Rest")
-        #expect(AppIdentity.bundleIdentifier == "app.restly.desktop")
-        #expect(AppIdentity.dataDirectory == "Restly")
+        #expect(AppIdentity.bundleIdentifier == "app.tickrest.desktop")
+        #expect(AppIdentity.dataDirectory == "Tick Rest")
     }
 
     @Test func functionalTwoShortBreaksThenOneLongBreak() {

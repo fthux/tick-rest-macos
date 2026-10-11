@@ -20,6 +20,7 @@
 "data.clear" = "Clear statistics";
 "data.clear_body" = "This cannot be undone. Your settings and current timer will stay as they are.";
 "data.clear_title" = "Clear statistics on this Mac?";
+"data.clear_success" = "Statistics cleared.";
 "data.directory" = "App data folder";
 "data.help" = "No account required. No ads or online usage tracking. The app does not record what you type, window titles, mouse movements, or images of your desktop.";
 "data.local" = "Data stays on this Mac";

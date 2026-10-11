@@ -69,7 +69,7 @@ extension AppIntegrationTests {
         menu.performActionForItem(at: index)
     }
 
-    func testLaunchWelcomeBackNextFinishAndReopenUseOneSettingsWindow() async throws {
+    func testLaunchWelcomeFinishesWithoutOpeningSettingsAndManualReopenUsesOneWindow() async throws {
         try await withDelegate(onboarding: false) { delegate, model, status, _ in
             let welcome: NSWindow = try self.field("welcomeWindow", of: delegate)
             XCTAssertTrue(welcome.isVisible)
@@ -89,6 +89,11 @@ extension AppIntegrationTests {
             XCTAssertFalse(welcome.isVisible)
             XCTAssertTrue(model.settings.onboardingComplete)
             XCTAssertTrue(model.store.load().settings.onboardingComplete)
+            let automaticSettings: NSWindow? = try self.field("settingsWindow", of: delegate, as: NSWindow?.self)
+            XCTAssertNil(automaticSettings)
+            XCTAssertNotNil(status.button)
+            let menu = try XCTUnwrap(status.menu); delegate.menuWillOpen(menu)
+            try self.activateMenu(L10n.text("menu.settings"), in: menu)
             let settings: NSWindow = try self.field("settingsWindow", of: delegate)
             XCTAssertTrue(settings.isVisible)
             self.assertSettingsMinimum(settings)
@@ -96,7 +101,7 @@ extension AppIntegrationTests {
             XCTAssertFalse(delegate.applicationShouldHandleReopen(NSApp, hasVisibleWindows: false))
             let reopened: NSWindow = try self.field("settingsWindow", of: delegate)
             XCTAssertTrue(reopened === settings && reopened.isVisible)
-            let menu = try XCTUnwrap(status.menu); delegate.menuWillOpen(menu)
+            delegate.menuWillOpen(menu)
             try self.activateMenu(L10n.text("menu.about"), in: menu)
             let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
             XCTAssertEqual(navigation.page, .about)
@@ -228,6 +233,12 @@ extension AppIntegrationTests {
             XCTAssertEqual(other.errorMessage, L10n.text("error.save"))
             XCTAssertEqual(try Data(contentsOf: blocker), Data("blocker".utf8))
             other.dismissError(); XCTAssertNil(other.errorMessage)
+            other.action { $0.startNow(.short, now: Date()); $0.skip(now: Date()) }
+            let records = other.saved.records
+            XCTAssertFalse(records.isEmpty)
+            XCTAssertFalse(other.clearRecords())
+            XCTAssertEqual(other.saved.records.map(\.id), records.map(\.id))
+            XCTAssertEqual(other.errorMessage, L10n.text("error.save"))
         }
     }
 
@@ -291,6 +302,8 @@ extension AppIntegrationTests {
             XCTAssertTrue(model.saved.records.isEmpty)
             XCTAssertTrue(model.store.load().records.isEmpty)
             XCTAssertEqual(model.settings, preferences)
+            XCTAssertTrue(window.isVisible)
+            XCTAssertTrue(self.containsText(L10n.text("data.clear_success"), in: window))
         }
     }
 

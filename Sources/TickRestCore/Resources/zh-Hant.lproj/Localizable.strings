@@ -20,6 +20,7 @@
 "data.clear" = "清除統計記錄";
 "data.clear_body" = "刪除後無法復原。你的設定和目前的計時不受影響。";
 "data.clear_title" = "要清除此 Mac 上的統計記錄嗎？";
+"data.clear_success" = "統計記錄已清除。";
 "data.directory" = "應用程式資料夾";
 "data.help" = "不需帳號、沒有廣告，也不會在線上收集使用資料。不記錄輸入內容、視窗標題、滑鼠軌跡或桌面畫面。";
 "data.local" = "資料儲存在此 Mac 上";

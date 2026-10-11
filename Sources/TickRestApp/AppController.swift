@@ -180,7 +180,21 @@ final class AppController: ObservableObject {
         saved.settings = settings; saved.snapshot = engine.snapshot(now: Date())
         do { try store.save(saved) } catch { showError("error.save") }
     }
-    func clearRecords() { saved.records = []; persist(); revision += 1 }
+    @discardableResult func clearRecords() -> Bool {
+        var cleared = saved
+        cleared.records = []
+        cleared.settings = settings
+        cleared.snapshot = engine.snapshot(now: Date())
+        do {
+            try store.save(cleared)
+            saved = cleared
+            revision += 1
+            return true
+        } catch {
+            showError("error.save")
+            return false
+        }
+    }
     func refreshLogin() { launchAtLogin = SMAppService.mainApp.status == .enabled }
     func setLogin(_ enabled: Bool) {
         do { if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }

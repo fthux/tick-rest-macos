@@ -3,6 +3,7 @@
 # test entry point to the shipping app or touching its real data/login item.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+app_name="$(python3 -c 'import json; print(json.load(open("Sources/TickRestCore/Resources/AppIdentity.json"))["name"])')"
 audit_root="$PWD/.build/native-system-audit"
 mkdir -p "$audit_root/package/Sources"
 python3 - "$PWD" "$audit_root" <<'PY'
@@ -29,19 +30,20 @@ sources = {str(p.relative_to(project)): hashlib.sha256(p.read_bytes()).hexdigest
 PY
 swift build --package-path "$audit_root/package" --disable-sandbox
 audit_binary_dir="$(swift build --package-path "$audit_root/package" --show-bin-path)"
-python3 - "$audit_root" "$audit_binary_dir" <<'PY'
-import plistlib, shutil, sys
+python3 - "$audit_root" "$audit_binary_dir" "$PWD/Sources/TickRestCore/Resources/AppIdentity.json" <<'PY'
+import json, plistlib, shutil, sys
 from pathlib import Path
-audit, binary = map(Path, sys.argv[1:])
+audit, binary, identity_path = map(Path, sys.argv[1:])
+identity = json.loads(identity_path.read_text())
 for choice in ('denied', 'allowed'):
-    app = audit/f'Tick Rest Audit {choice}.app'
+    app = audit/f'{identity["name"]} Audit {choice}.app'
     (app/'Contents/MacOS').mkdir(parents=True, exist_ok=True)
     (app/'Contents/Resources').mkdir(parents=True, exist_ok=True)
     shutil.copy2(binary/'SystemAudit', app/'Contents/MacOS/SystemAudit')
     resources = binary/'TickRestSystemAudit_TickRestCore.bundle'
     shutil.copytree(resources, app/'Contents/Resources'/resources.name, dirs_exist_ok=True)
-    info = dict(CFBundleIdentifier=f'app.restly.desktop.audit.{choice}',
-        CFBundleName=f'Tick Rest Audit {choice}', CFBundleDisplayName=f'Tick Rest Audit {choice}',
+    info = dict(CFBundleIdentifier=f'{identity["bundleIdentifier"]}.audit.{choice}',
+        CFBundleName=f'{identity["name"]} Audit {choice}', CFBundleDisplayName=f'{identity["name"]} Audit {choice}',
         CFBundleExecutable='SystemAudit', CFBundlePackageType='APPL', CFBundleVersion='1',
         CFBundleShortVersionString='0.1', LSMinimumSystemVersion='13.0',
         AppResourceBundle=resources.stem, NSHighResolutionCapable=True)
@@ -49,7 +51,7 @@ for choice in ('denied', 'allowed'):
     (audit/choice).mkdir(exist_ok=True)
 PY
 for choice in denied allowed; do
-    codesign --force --deep --sign - "$audit_root/Tick Rest Audit $choice.app"
-    codesign --verify --deep --strict "$audit_root/Tick Rest Audit $choice.app"
+    codesign --force --deep --sign - "$audit_root/$app_name Audit $choice.app"
+    codesign --verify --deep --strict "$audit_root/$app_name Audit $choice.app"
 done
 printf 'Built isolated native test apps in %s\n' "$audit_root"

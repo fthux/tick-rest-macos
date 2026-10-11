@@ -40,6 +40,7 @@ struct SettingsView: View {
     @ObservedObject var navigation: SettingsNavigation
     private var page: SettingsPage { navigation.page }
     @State private var confirmClear = false
+    @State private var recordsCleared = false
     @State private var aboutCountry: AboutCountry?
     var body: some View {
         NavigationSplitView(columnVisibility: $navigation.columnVisibility) {
@@ -89,7 +90,7 @@ struct SettingsView: View {
         .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
         .confirmationDialog(L10n.text("data.clear_title"), isPresented: $confirmClear) {
-            Button(L10n.text("data.clear"), role: .destructive) { model.clearRecords() }
+            Button(L10n.text("data.clear"), role: .destructive) { recordsCleared = model.clearRecords() }
             Button(L10n.text("common.cancel"), role: .cancel) {}
         } message: { Text(L10n.text("data.clear_body")) }
     }
@@ -365,8 +366,12 @@ struct SettingsView: View {
                 Text(L10n.text("data.directory")).font(.callout)
                 Text(model.store.url.deletingLastPathComponent().path).font(.caption.monospaced()).textSelection(.enabled).foregroundStyle(.secondary)
                 Button(L10n.text("data.open_directory")) { NSWorkspace.shared.open(model.store.url.deletingLastPathComponent()) }
-                Button(role: .destructive) { confirmClear = true } label: {
+                Button(role: .destructive) { recordsCleared = false; confirmClear = true } label: {
                     Text(L10n.text("data.clear")).foregroundStyle(.red)
+                }
+                if recordsCleared {
+                    Label(L10n.text("data.clear_success"), systemImage: "checkmark.circle.fill")
+                        .font(.callout).foregroundStyle(.green)
                 }
             }
         }

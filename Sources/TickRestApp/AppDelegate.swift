@@ -271,7 +271,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private func openWelcome() {
         welcomeWindow = makeWindow(title: L10n.text("welcome.title"), size: NSSize(width: 580, height: 1), content: WelcomeView(model: model, finish: { [weak self] in
             self?.model.update { $0.onboardingComplete = true }
-            self?.welcomeWindow?.close(); self?.openSettings()
+            self?.welcomeWindow?.close()
         }, layoutChanged: { [weak self] in self?.resizeWelcome() }))
         welcomeWindow?.styleMask.remove(.resizable)
         resizeWelcome()

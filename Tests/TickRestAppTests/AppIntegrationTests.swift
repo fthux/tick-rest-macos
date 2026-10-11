@@ -684,11 +684,17 @@ final class AppIntegrationTests: XCTestCase {
             model.action { $0.startNow(.short, now: Date()); $0.skip(now: Date()) }
             XCTAssertFalse(model.saved.records.isEmpty)
             let settings = model.settings
-            model.clearRecords()
+            model.action { $0.startNow(.short, now: Date()); $0.tick(seconds: 3, now: Date()) }
+            let reminder = try XCTUnwrap(model.engine.reminder)
+            XCTAssertTrue(model.clearRecords())
             let loaded = model.store.load()
             XCTAssertTrue(loaded.records.isEmpty)
             XCTAssertEqual(loaded.settings, settings)
             XCTAssertEqual(model.store.url.deletingLastPathComponent().path, directory.path)
+            XCTAssertEqual(model.engine.reminder?.id, reminder.id)
+            XCTAssertEqual(model.engine.reminder?.elapsed, reminder.elapsed)
+            model.action { $0.tick(seconds: 1, now: Date()) }
+            XCTAssertEqual(model.engine.reminder?.elapsed, reminder.elapsed + 1)
         }
     }
 
