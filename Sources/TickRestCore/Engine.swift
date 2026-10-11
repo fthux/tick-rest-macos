@@ -188,7 +188,13 @@ public final class Engine {
         if case .deferred(let r, let remaining) = phase {
             if r.kind == .short && isDue(.long) {
                 phase = .working; effects.append(.hide); warnedKind = nil
-            } else if remaining > delta { phase = .deferred(r, remaining - delta); return }
+            } else if remaining > delta {
+                phase = .deferred(r, remaining - delta)
+                // Recovery grace overlaps the postponement; it must not add
+                // another delay once the promised postponement expires.
+                if !suppressed { grace = max(0, grace - delta) }
+                return
+            }
             else {
                 if suppressed { phase = .deferred(r, 0); return }
                 if grace > 0 { tickGrace(delta, kind: r.kind); phase = .deferred(r, 0); return }
