@@ -9,7 +9,7 @@ import TickRestCore
 final class AppIntegrationTests: XCTestCase {
     @MainActor private static var applicationInitialized = false
     @MainActor
-    private func withFixture(_ body: @MainActor (AppController, WindowCoordinator, URL) async throws -> Void) async throws {
+    func withFixture(_ body: @MainActor (AppController, WindowCoordinator, URL) async throws -> Void) async throws {
         _ = NSApplication.shared
         if !Self.applicationInitialized {
             NSApp.setActivationPolicy(.accessory)
@@ -38,11 +38,11 @@ final class AppIntegrationTests: XCTestCase {
         try await body(model, coordinator, directory)
     }
 
-    @MainActor private var panels: [ReminderPanel] {
+    @MainActor var panels: [ReminderPanel] {
         NSApp.windows.compactMap { $0 as? ReminderPanel }.filter(\.isVisible)
     }
 
-    @MainActor private func accessibilityValue(_ object: NSObject, _ selectorName: String) -> AnyObject? {
+    @MainActor func accessibilityValue(_ object: NSObject, _ selectorName: String) -> AnyObject? {
         let selector = NSSelectorFromString(selectorName)
         if object.responds(to: selector), let value = object.perform(selector)?.takeUnretainedValue() { return value }
         // AppKit's outline-row proxies still expose the legacy attribute interface.
@@ -58,7 +58,7 @@ final class AppIntegrationTests: XCTestCase {
         return object.accessibilityAttributeValue(attribute) as AnyObject?
     }
 
-    @MainActor private func findButton(named title: String, in root: NSObject) -> NSObject? {
+    @MainActor func findButton(named title: String, in root: NSObject) -> NSObject? {
         var pending: [NSObject] = [root]
         var visited: Set<ObjectIdentifier> = []
         while !pending.isEmpty {
@@ -73,7 +73,7 @@ final class AppIntegrationTests: XCTestCase {
         return nil
     }
 
-    @MainActor private func containsText(_ text: String, in root: NSObject) -> Bool {
+    @MainActor func containsText(_ text: String, in root: NSObject) -> Bool {
         var pending: [NSObject] = [root]
         var visited: Set<ObjectIdentifier> = []
         while let element = pending.popLast() {
@@ -86,13 +86,13 @@ final class AppIntegrationTests: XCTestCase {
         return false
     }
 
-    @MainActor private func button(named title: String, in root: NSObject) throws -> NSObject {
+    @MainActor func button(named title: String, in root: NSObject) throws -> NSObject {
         if let found = findButton(named: title, in: root) { return found }
         XCTFail("Native accessibility tree has no button named \(title)")
         throw NSError(domain: "TickRestNativeTest", code: 1)
     }
 
-    @MainActor private func isEnabled(_ object: NSObject) -> Bool? {
+    @MainActor func isEnabled(_ object: NSObject) -> Bool? {
         let selector = NSSelectorFromString("isAccessibilityEnabled")
         if object.responds(to: selector) {
             typealias EnabledValue = @convention(c) (AnyObject, Selector) -> Bool
@@ -102,7 +102,7 @@ final class AppIntegrationTests: XCTestCase {
         return object.accessibilityAttributeValue(.enabled) as? Bool
     }
 
-    @MainActor private func press(_ object: NSObject) -> Bool {
+    @MainActor func press(_ object: NSObject) -> Bool {
         let selector = NSSelectorFromString("accessibilityPerformPress")
         guard object.responds(to: selector) else { return false }
         // SwiftUI accessibility nodes implement the public Objective-C action,

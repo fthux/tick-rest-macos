@@ -178,12 +178,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     @objc func openSettings() {
         if settingsWindow == nil {
             settingsWindow = makeWindow(title: settingsNavigation.page.title, size: NSSize(width: 860, height: 640), content: SettingsView(model: model, navigation: settingsNavigation), managesToolbar: true)
-            settingsWindow?.minSize = NSSize(width: 720, height: 540)
             settingsWindow?.styleMask.insert(.fullSizeContentView)
             // A hosting controller lets NavigationSplitView install its native toolbar.
             settingsWindow?.contentViewController = NSHostingController(
                 rootView: SettingsView(model: model, navigation: settingsNavigation)
             )
+            // Hosting installs its own sizing constraints; apply ours afterward.
+            settingsWindow?.minSize = NSSize(width: 720, height: 540)
         }
         model.refreshLogin(); model.refreshNotificationStatus(); show(settingsWindow!)
         DispatchQueue.main.async { [weak self] in self?.configureSettingsToolbar() }
@@ -309,6 +310,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
 /// Keep one native toolbar owner when SwiftUI updates the split view's columns.
 private final class SettingsWindow: NSWindow {
     var managedToolbar: NSToolbar?
+    // SwiftUI also recomputes minimum sizes after navigation and layout changes.
+    override var minSize: NSSize {
+        get { super.minSize }
+        set { super.minSize = NSSize(width: max(720, newValue.width), height: max(540, newValue.height)) }
+    }
+    override var contentMinSize: NSSize {
+        get { super.contentMinSize }
+        set {
+            super.contentMinSize = NSSize(width: max(720, newValue.width), height: max(540, newValue.height))
+        }
+    }
     override var toolbar: NSToolbar? {
         get { super.toolbar }
         set { super.toolbar = managedToolbar ?? newValue }
