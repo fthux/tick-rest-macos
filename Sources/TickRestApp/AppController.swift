@@ -206,6 +206,12 @@ final class AppController: ObservableObject {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: [AppIdentity.identifier("prewarning")])
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [AppIdentity.identifier("prewarning")])
     }
+    private var playingSound: NSSound?
+    func playReminderSound() {
+        playingSound?.stop()
+        playingSound = NSSound(named: NSSound.Name(settings.reminderSound.rawValue))
+        playingSound?.play()
+    }
     private func showError(_ key: String, detail: String? = nil) {
         errorDetail = detail
         errorKey = key

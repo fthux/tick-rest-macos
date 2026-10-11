@@ -33,7 +33,7 @@ final class WindowCoordinator {
             case .warning(let kind): model.notifyWarning(kind) { [weak self] in self?.showWarning(kind) }
             case .show(let r): show(r, preview: false)
             case .hide: hide(); model.removeNotifications()
-            case .completed: if model.settings.sound { NSSound(named: "Glass")?.play() }
+            case .completed: if model.settings.sound { model.playReminderSound() }
             }
         }
     }
@@ -73,7 +73,7 @@ final class WindowCoordinator {
                 if target == screen { panel.makeKey() }
             }
         }
-        if model.settings.sound && !preview { NSSound(named: "Glass")?.play() }
+        if model.settings.sound && !preview { model.playReminderSound() }
     }
     private func makePanel(frame: NSRect, overlay: Bool) -> ReminderPanel {
         let panel = ReminderPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)

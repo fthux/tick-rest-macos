@@ -459,11 +459,15 @@ extension EngineTests {
         let bundlePath = try #require(L10n.resourceBundle.path(forResource: identifier, ofType: "lproj"))
         let data = try Data(contentsOf: URL(fileURLWithPath: bundlePath).appendingPathComponent("Localizable.strings"))
         let values = try #require(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String])
-        #expect(values.count == 177)
+        #expect(values.count == 184)
         #expect(values.values.allSatisfy { !$0.isEmpty })
         #expect(values["welcome.title"]?.contains("{appName}") == true)
         #expect(values["menu.remaining"]?.components(separatedBy: "%@").count == 3)
         #expect(values["break.short"] != nil && values["break.long"] != nil)
+        #expect(values["reminder.sound_type"] != nil)
+        for sound in ReminderSound.allCases {
+            #expect(values["sound.\(sound.rawValue.lowercased())"] != nil)
+        }
     }
 
     @Test(arguments: ["zh_CN", "zh-SG", "zh-Hans-TW", "zh-TW", "zh-HK", "zh-Hant-CN", "en-US", "ja-JP", "ko-KR", "fr-FR"])

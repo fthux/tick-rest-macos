@@ -83,6 +83,13 @@
 "reminder.sound_help" = "休息开始和完成时各播放一次，默认关闭。";
 "reminder.style" = "提醒方式";
 "reminder.style_help" = "温和卡片等待你点击开始，不抢正在输入的焦点。遮罩到期后自动开始，并可随时结束。";
+"reminder.sound_type" = "提示音类型";
+"sound.glass" = "玻璃";
+"sound.ping" = "清脆";
+"sound.pop" = "气泡";
+"sound.tink" = "轻铃";
+"sound.purr" = "轻鸣";
+"sound.hero" = "号角";
 "reminder.test_sound" = "试听提示音";
 "rest.defer" = "稍后 %d 分钟";
 "rest.end" = "提前结束";

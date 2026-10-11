@@ -83,6 +83,13 @@
 "reminder.sound_help" = "休憩の開始時と完了時に1回ずつ再生します。初期設定ではオフです。";
 "reminder.style" = "通知の表示方法";
 "reminder.style_help" = "やさしいカードは開始ボタンを押すまで待機し、入力中のフォーカスを奪いません。オーバーレイは時間になると自動で開始し、いつでも終了できます。";
+"reminder.sound_type" = "通知音の種類";
+"sound.glass" = "グラス";
+"sound.ping" = "ピング";
+"sound.pop" = "ポップ";
+"sound.tink" = "ティンク";
+"sound.purr" = "パー";
+"sound.hero" = "ヒーロー";
 "reminder.test_sound" = "通知音を試す";
 "rest.defer" = "%d分後に通知";
 "rest.end" = "早めに終了";

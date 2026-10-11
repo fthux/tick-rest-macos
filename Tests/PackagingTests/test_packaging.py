@@ -57,7 +57,7 @@ class PackagingTests(unittest.TestCase):
                 self.assertTrue(translation.is_file())
                 output = subprocess.check_output(["plutil", "-convert", "json", "-o", "-", str(translation)])
                 values = json.loads(output)
-                self.assertEqual(len(values), 177)
+                self.assertEqual(len(values), 184)
                 self.assertTrue(all(values.values()))
                 self.assertIn("{appName}", values["welcome.title"])
 

@@ -8,6 +8,10 @@ public enum BreakKind: String, Codable, CaseIterable {
 public enum ReminderStyle: String, Codable, CaseIterable { case gentle, overlay }
 public enum DisplayScope: String, Codable, CaseIterable { case all, current }
 public enum AppTheme: String, Codable, CaseIterable { case system, light, dark }
+public enum ReminderSound: String, Codable, CaseIterable {
+    case glass = "Glass", ping = "Ping", pop = "Pop", tink = "Tink", purr = "Purr", hero = "Hero"
+    public var title: String { L10n.text("sound.\(rawValue.lowercased())") }
+}
 
 public struct Settings: Codable, Equatable {
     public var shortEnabled = true
@@ -20,6 +24,7 @@ public struct Settings: Codable, Equatable {
     public var style: ReminderStyle = .gentle
     public var displayScope: DisplayScope = .all
     public var sound = false
+    public var reminderSound: ReminderSound = .glass
     public var detectIdle = true
     public var idleTimeout: Double = 300
     public var avoidFullscreen = true
@@ -34,7 +39,7 @@ public struct Settings: Codable, Equatable {
     public init() {}
     private enum CodingKeys: String, CodingKey {
         case shortEnabled, longEnabled, shortInterval, shortDuration, longInterval, longDuration
-        case prewarning, style, displayScope, sound, detectIdle, idleTimeout, avoidFullscreen
+        case prewarning, style, displayScope, sound, reminderSound, detectIdle, idleTimeout, avoidFullscreen
         case scheduleEnabled, weekdays, scheduleStart, scheduleEnd, showCountdown, theme, language, onboardingComplete
     }
     public init(from decoder: Decoder) throws {
@@ -49,6 +54,8 @@ public struct Settings: Codable, Equatable {
         style = try values.decode(ReminderStyle.self, forKey: .style)
         displayScope = try values.decode(DisplayScope.self, forKey: .displayScope)
         sound = try values.decode(Bool.self, forKey: .sound)
+        // Preserve the existing tone when loading settings saved before sound selection.
+        reminderSound = try values.decodeIfPresent(ReminderSound.self, forKey: .reminderSound) ?? .glass
         detectIdle = try values.decode(Bool.self, forKey: .detectIdle)
         // Older saved settings have no idleTimeout; preserve them and use the new default.
         idleTimeout = values.contains(.idleTimeout) ? try values.decode(Double.self, forKey: .idleTimeout) : 300

@@ -182,7 +182,14 @@ struct SettingsView: View {
                     }.labelsHidden()
                 }
                 row("reminder.sound", "reminder.sound_help") { toggle("reminder.sound", \.sound) }
-                Button(L10n.text("reminder.test_sound")) { NSSound(named: "Glass")?.play() }
+                row("reminder.sound_type") {
+                    Picker(L10n.text("reminder.sound_type"), selection: binding(\.reminderSound)) {
+                        ForEach(ReminderSound.allCases, id: \.self) { sound in
+                            Text(sound.title).tag(sound)
+                        }
+                    }.labelsHidden()
+                }
+                Button(L10n.text("reminder.test_sound")) { model.playReminderSound() }
             }
             Text(L10n.text("reminder.defer_help")).font(.caption).foregroundStyle(.secondary)
         }

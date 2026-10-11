@@ -83,6 +83,13 @@
 "reminder.sound_help" = "Plays once when a break starts and once when it finishes. Off by default.";
 "reminder.style" = "Reminder style";
 "reminder.style_help" = "Gentle cards wait for you to start and keep your typing focus. Overlays start automatically when due and can be ended at any time.";
+"reminder.sound_type" = "Sound choice";
+"sound.glass" = "Glass";
+"sound.ping" = "Ping";
+"sound.pop" = "Pop";
+"sound.tink" = "Tink";
+"sound.purr" = "Purr";
+"sound.hero" = "Hero";
 "reminder.test_sound" = "Test sound";
 "rest.defer" = "Later in %d min";
 "rest.end" = "End early";
