@@ -140,6 +140,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         add(menu, L10n.text("menu.about"), #selector(openAbout)).image = NSImage(systemSymbolName: SettingsPage.about.symbol, accessibilityDescription: nil)
         menu.addItem(.separator())
         add(menu, L10n.text("menu.quit"), #selector(quit), key: "q")
+            .image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
     }
     func menuDidClose(_ menu: NSMenu) {
         menuStateItem = nil; menuPlan = nil; menuRoundItem = nil
