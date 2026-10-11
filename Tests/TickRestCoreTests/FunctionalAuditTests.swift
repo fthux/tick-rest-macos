@@ -180,9 +180,14 @@ struct FunctionalAuditTests {
 
     @Test(arguments: [RestPlanID.tickrest, .eye202020, .fiftyTen, .pomodoro], [false, true])
     func scheduleOpeningPreservesManualBreakAndPendingPlan(_ plan: RestPlanID, _ paused: Bool) throws {
-        var s = settings(plan); s.scheduleEnabled = true; s.weekdays = [2]
-        var time = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 12, hour: 8, minute: 59, second: 58))!
+        var s = settings(plan); s.scheduleEnabled = true; s.weekdays = [2, 3]
+        var time = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 12, hour: 17))!
         let engine = Engine(settings: s); engine.tick(seconds: 0, now: time)
+        step(engine, 500, &time)
+        time = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 12, hour: 18))!
+        engine.tick(seconds: 0, now: time)
+        time = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 13, hour: 8, minute: 59, second: 58))!
+        engine.tick(seconds: 0, now: time)
         engine.startNow(.short, now: time); step(engine, 1, &time)
         engine.applyPlan(.preset(.fiftyTen), now: time)
         let before = try #require(engine.reminder)
@@ -192,6 +197,7 @@ struct FunctionalAuditTests {
         #expect(engine.reminder?.elapsed == (paused ? 1 : 2))
         #expect(engine.pendingPlan == .preset(.fiftyTen))
         #expect(engine.settings.restPlan == s.restPlan)
+        #expect(engine.shortElapsed == 0 && engine.longElapsed == 0 && engine.completedRounds == 0)
         #expect(!engine.effects.contains(.hide))
         #expect(engine.records.allSatisfy { $0.outcome == .usage })
     }

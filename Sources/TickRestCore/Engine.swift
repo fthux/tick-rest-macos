@@ -157,9 +157,11 @@ public final class Engine {
         outsideSchedule = !workingTime
         // A manual break can span the start of a scheduled work session.
         // Retain its progress and any pending plan until the break settles.
-        if priorWorkingTime == false && workingTime && reminder == nil {
-            reset(.long); completedRounds = 0; roundRestKind = nil
-            phase = .working; warnedKind = nil; grace = 30; applyPending(now: now)
+        if priorWorkingTime == false && workingTime {
+            reset(.long); completedRounds = 0; warnedKind = nil; grace = 30
+            if reminder == nil {
+                roundRestKind = nil; phase = .working; applyPending(now: now)
+            }
         }
         if priorWorkingTime == true && !workingTime {
             // Away transitions retain the reminder and settle it once on return.
