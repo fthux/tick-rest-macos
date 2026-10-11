@@ -6,7 +6,7 @@ public enum StatusDotState: String, CaseIterable {
 }
 
 /// Persist opaque sRGB components, independent of AppKit and SwiftUI.
-public struct StatusDotColor: Codable, Equatable {
+public struct SRGBColor: Codable, Equatable {
     public let red: Double
     public let green: Double
     public let blue: Double
@@ -23,6 +23,8 @@ public struct StatusDotColor: Codable, Equatable {
                   blue: try values.decode(Double.self, forKey: .blue))
     }
 }
+
+public typealias StatusDotColor = SRGBColor
 
 public struct StatusDotPalette: Codable, Equatable {
     public var working = StatusDotColor(red: 52 / 255, green: 199 / 255, blue: 89 / 255)

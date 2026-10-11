@@ -92,7 +92,6 @@
 "reminder.test_sound" = "Test sound";
 "rest.defer" = "Remind in %d min";
 "rest.end" = "End early";
-"rest.escape" = "Esc: skip before starting, or end the break early";
 "rest.long_idea" = "Stand up, take a few steps, and relax your shoulders. You do not need to watch the countdown.";
 "rest.preview" = "Reminder preview. Closes after 5 seconds and is not included in break statistics.";
 "rest.remaining" = "Break time remaining: %@";
@@ -275,3 +274,6 @@
 "status_dot.inactive" = "Paused / Away / Outside schedule";
 "state.reminders_off" = "Break reminders are off";
 "state.break_soon" = "%@ starts soon · %@ remaining";
+"reminder.background_color" = "Fullscreen background color";
+"reminder.background_color_help" = "Used for fullscreen reminders and previews. Text adjusts automatically for readability.";
+"reminder.background_color_reset" = "Restore default background color";

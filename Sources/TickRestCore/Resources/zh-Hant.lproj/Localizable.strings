@@ -92,7 +92,6 @@
 "reminder.test_sound" = "試聽提示音";
 "rest.defer" = "%d 分鐘後提醒";
 "rest.end" = "提早結束";
-"rest.escape" = "Esc：休息開始前略過，開始後提早結束";
 "rest.long_idea" = "站起來走幾步，活動一下肩膀。不必一直看著倒數。";
 "rest.preview" = "提醒效果預覽，5 秒後自動關閉，不計入休息統計。";
 "rest.remaining" = "休息剩餘時間：%@";
@@ -275,3 +274,6 @@
 "status_dot.inactive" = "暫停／離席／非工作時段";
 "state.reminders_off" = "休息提醒已關閉";
 "state.break_soon" = "%@即將開始 · 還有 %@";
+"reminder.background_color" = "全螢幕提醒背景色";
+"reminder.background_color_help" = "用於全螢幕休息提醒和預覽，文字明暗會自動適應背景色。";
+"reminder.background_color_reset" = "恢復預設背景色";

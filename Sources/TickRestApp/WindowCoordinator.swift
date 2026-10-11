@@ -5,8 +5,6 @@ import TickRestCore
 final class ReminderPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
-    var escape: (() -> Void)?
-    override func cancelOperation(_ sender: Any?) { escape?() }
 }
 
 final class WindowCoordinator {
@@ -38,6 +36,9 @@ final class WindowCoordinator {
         }
     }
     func refresh() {
+        if shownStyle == .overlay {
+            panels.forEach { $0.backgroundColor = overlayBackgroundColor }
+        }
         // State changes can wrap translated buttons onto a new row. Keep the card's
         // top edge anchored while fitting its content, without reopening the reminder.
         if shownStyle == .gentle, let panel = panels.first, let hosting = panel.contentView {
@@ -95,14 +96,13 @@ final class WindowCoordinator {
         panel.isFloatingPanel = true; panel.hidesOnDeactivate = false; panel.isReleasedWhenClosed = false
         panel.level = overlay ? .screenSaver : .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
-        panel.isOpaque = overlay; panel.backgroundColor = overlay ? NSColor(calibratedRed: 0.10, green: 0.18, blue: 0.15, alpha: 1) : .clear
+        panel.isOpaque = overlay; panel.backgroundColor = overlay ? overlayBackgroundColor : .clear
         panel.hasShadow = !overlay
-        panel.escape = { [weak self] in
-            guard let self else { return }
-            if self.isPreview { self.hide() }
-            else { self.model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.skip(now: Date()) } } }
-        }
         return panel
+    }
+    private var overlayBackgroundColor: NSColor {
+        let color = model.settings.overlayBackgroundColor
+        return NSColor(srgbRed: color.red, green: color.green, blue: color.blue, alpha: 1)
     }
     private func showWarning(_ kind: BreakKind) {
         guard !model.engine.suppressed, !model.engine.away, model.engine.pause == nil, let screen = currentScreen else { return }

@@ -160,25 +160,40 @@ final class AppIntegrationTests: XCTestCase {
         }
     }
 
-    func testEscapeEndsARunningCardButSkipsAWaitingCard() async throws {
-        try await withFixture { model, windows, _ in
-            model.action { $0.startNow(.short, now: Date()) }
-            let runningPanel = try XCTUnwrap(self.panels.first)
-            XCTAssertEqual(self.panels.count, 1)
-            XCTAssertGreaterThan(runningPanel.frame.height, 80)
-            model.engine.tick(seconds: 2, now: Date()); model.consume()
-            runningPanel.cancelOperation(nil)
-            XCTAssertFalse(runningPanel.isVisible)
-            XCTAssertFalse(model.engine.isResting)
-            XCTAssertEqual(model.saved.records.filter { $0.outcome == .ended }.count, 1)
-            model.update { $0.breakStartMode = .manual }
-            model.engine.tick(seconds: 1200, now: Date()); model.engine.tick(seconds: 1, now: Date()); model.consume()
-            let waitingPanel = try XCTUnwrap(self.panels.first)
-            XCTAssertFalse(model.engine.isResting)
-            waitingPanel.cancelOperation(nil)
-            XCTAssertFalse(waitingPanel.isVisible)
-            XCTAssertEqual(model.saved.records.filter { $0.outcome == .skipped }.count, 1)
-            windows.hide()
+    func testEscapeLeavesRunningAndWaitingRemindersUnchanged() async throws {
+        try await withFixture { model, _, _ in
+            for style in [ReminderStyle.gentle, .overlay] {
+                model.update { $0.style = style; $0.breakStartMode = .manual }
+                model.action { $0.startNow(.short, now: Date()) }
+                let runningPanel = try XCTUnwrap(self.panels.first)
+                model.engine.tick(seconds: 2, now: Date()); model.consume()
+                let runningReminder = try XCTUnwrap(model.engine.reminder)
+                let beforeRunning = model.saved.records.map(\.id)
+                runningPanel.cancelOperation(nil)
+                XCTAssertTrue(runningPanel.isVisible)
+                XCTAssertTrue(model.engine.isResting)
+                XCTAssertEqual(model.engine.reminder?.id, runningReminder.id)
+                XCTAssertEqual(model.engine.reminder?.elapsed, runningReminder.elapsed)
+                XCTAssertEqual(model.saved.records.map(\.id), beforeRunning)
+                try await Task.sleep(nanoseconds: 150_000_000)
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.end"), in: runningPanel)))
+                XCTAssertFalse(runningPanel.isVisible)
+                XCTAssertFalse(model.engine.isResting)
+
+                model.engine.tick(seconds: 1200, now: Date()); model.engine.tick(seconds: 1, now: Date()); model.consume()
+                let waitingPanel = try XCTUnwrap(self.panels.first)
+                let waitingReminder = try XCTUnwrap(model.engine.reminder)
+                let beforeWaiting = model.saved.records.map(\.id)
+                waitingPanel.cancelOperation(nil)
+                XCTAssertTrue(waitingPanel.isVisible)
+                XCTAssertFalse(model.engine.isResting)
+                XCTAssertEqual(model.engine.reminder?.id, waitingReminder.id)
+                XCTAssertEqual(model.engine.reminder?.elapsed, waitingReminder.elapsed)
+                XCTAssertEqual(model.saved.records.map(\.id), beforeWaiting)
+                try await Task.sleep(nanoseconds: 150_000_000)
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.skip"), in: waitingPanel)))
+                XCTAssertFalse(waitingPanel.isVisible)
+            }
         }
     }
 
@@ -248,6 +263,72 @@ final class AppIntegrationTests: XCTestCase {
         }
     }
 
+    func testFullscreenBackgroundPickerPersistsAndResets() async throws {
+        try await withFixture { model, _, _ in
+            model.update { $0.style = .overlay }
+            let navigation = SettingsNavigation(); navigation.page = .appearance
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+                                  styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            window.contentView = NSHostingView(rootView: SettingsView(model: model, navigation: navigation))
+            defer { window.close() }
+            window.orderFrontRegardless()
+            try await Task.sleep(nanoseconds: 150_000_000)
+            var pending = [try XCTUnwrap(window.contentView)]
+            var well: NSColorWell?
+            while let view = pending.popLast() {
+                if let colorWell = view as? NSColorWell { well = colorWell; break }
+                pending += view.subviews
+            }
+            let picker = try XCTUnwrap(well)
+            picker.color = NSColor(srgbRed: 0.8, green: 0.7, blue: 0.6, alpha: 1)
+            XCTAssertTrue(picker.sendAction(picker.action, to: picker.target))
+            let selected = model.settings.overlayBackgroundColor
+            XCTAssertEqual(selected.red, 0.8, accuracy: 0.001)
+            XCTAssertEqual(selected.green, 0.7, accuracy: 0.001)
+            XCTAssertEqual(selected.blue, 0.6, accuracy: 0.001)
+            XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, selected)
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("reminder.background_color_reset"), in: window)))
+            XCTAssertEqual(model.settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
+            XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
+        }
+    }
+
+    func testFullscreenCustomBackgroundRendersInPreviewAndActiveRest() async throws {
+        try await withFixture { model, windows, _ in
+            model.update { $0.style = .overlay }
+            let colors = [Settings.defaultOverlayBackgroundColor,
+                          SRGBColor(red: 0.95, green: 0.9, blue: 0.8),
+                          SRGBColor(red: 0.1, green: 0.2, blue: 0.6)]
+            for (index, color) in colors.enumerated() {
+                model.update { $0.overlayBackgroundColor = color }
+                XCTAssertEqual(OverlayPalette(background: color).usesDarkText, index == 1)
+                for preview in [true, false] {
+                    if preview { windows.preview() }
+                    else { model.action { $0.startNow(.short, now: Date()) } }
+                    try await Task.sleep(nanoseconds: 150_000_000)
+                    for panel in self.panels {
+                        let background = try XCTUnwrap(panel.backgroundColor.usingColorSpace(.sRGB))
+                        XCTAssertEqual(background.redComponent, color.red, accuracy: 0.001)
+                        XCTAssertEqual(background.greenComponent, color.green, accuracy: 0.001)
+                        XCTAssertEqual(background.blueComponent, color.blue, accuracy: 0.001)
+                        let view = try XCTUnwrap(panel.contentView)
+                        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+                        view.cacheDisplay(in: view.bounds, to: bitmap)
+                        let pixel = try XCTUnwrap(bitmap.colorAt(x: 10, y: 10)?.usingColorSpace(.sRGB))
+                        XCTAssertEqual(pixel.redComponent, color.red, accuracy: 0.02)
+                        XCTAssertEqual(pixel.greenComponent, color.green, accuracy: 0.02)
+                        XCTAssertEqual(pixel.blueComponent, color.blue, accuracy: 0.02)
+                    }
+                    try self.writeSnapshot(OverlayView(model: model, preview: preview, primary: true, previewEnd: {}),
+                                           name: "overlay-background-\(index)-\(preview ? "preview" : "rest")", size: NSSize(width: 1000, height: 720))
+                    if preview { windows.hide() }
+                    else { model.action { $0.finish(now: Date()) } }
+                }
+            }
+        }
+    }
+
     /// Move the real pointer to each connected display; restore it after the test.
     @MainActor private func onEveryConnectedDisplay(_ body: (NSScreen) async throws -> Void) async throws {
         guard NSScreen.screens.count >= 2 else {
@@ -304,14 +385,21 @@ final class AppIntegrationTests: XCTestCase {
         }
     }
 
-    func testTwoDisplaysSecondaryEscapeClosesEveryOverlay() async throws {
+    func testTwoDisplaysSecondaryEscapeLeavesEveryOverlayOpen() async throws {
         try await withFixture { model, _, _ in
             model.update { $0.style = .overlay; $0.displayScope = .all }
             try await self.onEveryConnectedDisplay { screen in
                 model.action { $0.startNow(.long, now: Date()) }
                 let open = self.panels
                 let secondary = try XCTUnwrap(open.first { $0.frame != screen.frame })
+                let before = model.saved.records.map(\.id)
                 secondary.cancelOperation(nil)
+                XCTAssertTrue(open.allSatisfy(\.isVisible))
+                XCTAssertTrue(model.engine.isResting)
+                XCTAssertEqual(model.saved.records.map(\.id), before)
+                let primary = try XCTUnwrap(open.first { $0.frame == screen.frame })
+                try await Task.sleep(nanoseconds: 150_000_000)
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.end"), in: primary)))
                 XCTAssertTrue(open.allSatisfy { !$0.isVisible })
                 XCTAssertFalse(model.engine.isResting)
             }
@@ -330,7 +418,7 @@ final class AppIntegrationTests: XCTestCase {
                     XCTAssertTrue(screen.visibleFrame.contains(panel.frame), "\(size) card must fit \(screen.localizedName)")
                     XCTAssertEqual(panel.frame.width, GentleCardLayout(size: size).width, accuracy: 1)
                     XCTAssertEqual(panel.backingScaleFactor, screen.backingScaleFactor)
-                    panel.cancelOperation(nil)
+                    model.action { $0.finish(now: Date()) }
                     XCTAssertTrue(self.panels.isEmpty)
                 }
             }
@@ -360,14 +448,21 @@ final class AppIntegrationTests: XCTestCase {
         }
     }
 
-    func testPreviewEscapeAndAutomaticTimeoutDoNotChangeStatistics() async throws {
+    func testPreviewIgnoresEscapeAndCloseAndTimeoutDoNotChangeStatistics() async throws {
         try await withFixture { model, windows, _ in
             let before = model.saved.records.map(\.id)
-            windows.preview()
-            let panel = try XCTUnwrap(self.panels.first)
-            panel.cancelOperation(nil)
-            XCTAssertFalse(panel.isVisible)
-            XCTAssertNil(model.engine.reminder)
+            for style in [ReminderStyle.gentle, .overlay] {
+                model.update { $0.style = style }
+                windows.preview()
+                let panel = try XCTUnwrap(self.panels.first)
+                panel.cancelOperation(nil)
+                XCTAssertTrue(panel.isVisible)
+                XCTAssertNil(model.engine.reminder)
+                XCTAssertEqual(model.saved.records.map(\.id), before)
+                try await Task.sleep(nanoseconds: 150_000_000)
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("common.close"), in: panel)))
+                XCTAssertFalse(panel.isVisible)
+            }
             windows.preview()
             let timedPanel = try XCTUnwrap(self.panels.first)
             try await Task.sleep(nanoseconds: 5_300_000_000)

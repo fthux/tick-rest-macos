@@ -192,6 +192,17 @@ struct SettingsView: View {
         })
     }
     private var rhythm: some View { PlanEditor(model: model) }
+    private var overlayBackgroundColor: Binding<Color> {
+        Binding(get: {
+            let color = model.settings.overlayBackgroundColor
+            return Color(.sRGB, red: color.red, green: color.green, blue: color.blue, opacity: 1)
+        }, set: { value in
+            guard let color = NSColor(value).usingColorSpace(.sRGB) else { return }
+            model.update {
+                $0.overlayBackgroundColor = SRGBColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent)
+            }
+        })
+    }
     private var appearance: some View {
         Group {
             Section {
@@ -208,6 +219,14 @@ struct SettingsView: View {
                                 Text(L10n.text("reminder.size.\($0.rawValue)")).tag($0)
                             }
                         }.labelsHidden()
+                    }
+                } else {
+                    row("reminder.background_color", "reminder.background_color_help") {
+                        AnchoredColorPicker(selection: overlayBackgroundColor, label: L10n.text("reminder.background_color"))
+                            .frame(width: 44, height: 22)
+                    }
+                    Button(L10n.text("reminder.background_color_reset")) {
+                        model.update { $0.overlayBackgroundColor = TickRestCore.Settings.defaultOverlayBackgroundColor }
                     }
                 }
                 row("reminder.start_mode", "reminder.start_mode_help") {

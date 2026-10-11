@@ -120,12 +120,35 @@ struct RestCard: View {
     }
 }
 
+struct OverlayPalette {
+    let background: SRGBColor
+    private let lightText = SRGBColor(red: 0.91, green: 0.95, blue: 0.84)
+    private func luminance(_ color: SRGBColor) -> Double {
+        func linear(_ value: Double) -> Double {
+            value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * linear(color.red) + 0.7152 * linear(color.green) + 0.0722 * linear(color.blue)
+    }
+    var usesDarkText: Bool {
+        let brightness = luminance(background)
+        return (brightness + 0.05) / 0.05 >= (luminance(lightText) + 0.05) / (brightness + 0.05)
+    }
+    var foreground: Color {
+        usesDarkText ? .black : Color(.sRGB, red: lightText.red, green: lightText.green, blue: lightText.blue)
+    }
+    var backgroundColor: Color {
+        Color(.sRGB, red: background.red, green: background.green, blue: background.blue)
+    }
+    var colorScheme: ColorScheme { usesDarkText ? .light : .dark }
+}
+
 struct OverlayView: View {
     @ObservedObject var model: AppController
     let preview: Bool
     let primary: Bool
     let previewEnd: () -> Void
     private var r: Reminder { model.engine.reminder ?? model.settings.previewReminder }
+    private var palette: OverlayPalette { OverlayPalette(background: model.settings.overlayBackgroundColor) }
     var body: some View {
         VStack(spacing: 25) {
             if primary { Image(systemName: r.kind == .short ? "leaf" : "figure.walk").font(.system(size: 40)).accessibilityHidden(true) }
@@ -137,7 +160,7 @@ struct OverlayView: View {
             if primary {
                 if !preview {
                     Text(L10n.text(model.engine.isResting ? "rest.running" : "rest.waiting"))
-                        .font(.caption).foregroundStyle(.white.opacity(0.7))
+                        .font(.caption)
                 }
                 Text(preview ? L10n.text("rest.preview") : r.idea)
                     .font(.title3).multilineTextAlignment(.center).frame(maxWidth: 600)
@@ -156,12 +179,11 @@ struct OverlayView: View {
                         Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
                     }
                 }.buttonStyle(.bordered).controlSize(.large)
-                Text(L10n.text("rest.escape")).font(.caption).foregroundStyle(.white.opacity(0.7))
             }
         }.padding(40).frame(maxWidth: .infinity, maxHeight: .infinity)
-            .foregroundStyle(Color(red: 0.91, green: 0.95, blue: 0.84))
-            .background(Color(red: 0.10, green: 0.18, blue: 0.15))
-            .preferredColorScheme(.dark)
+            .foregroundStyle(palette.foreground)
+            .background(palette.backgroundColor)
+            .preferredColorScheme(palette.colorScheme)
             .environment(\.locale, L10n.locale)
     }
 }

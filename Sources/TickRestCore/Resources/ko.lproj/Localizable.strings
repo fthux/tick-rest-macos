@@ -92,7 +92,6 @@
 "reminder.test_sound" = "알림 소리 듣기";
 "rest.defer" = "%d분 후 알림";
 "rest.end" = "일찍 끝내기";
-"rest.escape" = "Esc: 시작 전에는 건너뛰기, 시작 후에는 일찍 끝내기";
 "rest.long_idea" = "일어나 몇 걸음 걷고 어깨를 움직여 보세요. 남은 시간을 계속 보고 있을 필요는 없습니다.";
 "rest.preview" = "알림 미리 보기입니다. 5초 후 닫히며 휴식 통계에는 포함되지 않습니다.";
 "rest.remaining" = "남은 휴식 시간: %@";
@@ -275,3 +274,6 @@
 "status_dot.inactive" = "일시 정지 / 자리 비움 / 설정 시간 외";
 "state.reminders_off" = "휴식 알림이 꺼져 있습니다";
 "state.break_soon" = "%@이 곧 시작됩니다 · %@ 남음";
+"reminder.background_color" = "전체 화면 알림 배경색";
+"reminder.background_color_help" = "전체 화면 휴식 알림과 미리 보기에 적용됩니다. 배경색에 맞춰 글자 밝기가 자동으로 조정됩니다.";
+"reminder.background_color_reset" = "기본 배경색 복원";

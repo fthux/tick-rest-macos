@@ -92,7 +92,6 @@
 "reminder.test_sound" = "通知音を試す";
 "rest.defer" = "%d分後に通知";
 "rest.end" = "早めに終了";
-"rest.escape" = "Esc：開始前はスキップ、開始後は早めに終了";
 "rest.long_idea" = "立ち上がって少し歩き、肩を動かしましょう。残り時間を見続ける必要はありません。";
 "rest.preview" = "通知のプレビューです。5秒後に閉じ、休憩の統計には含まれません。";
 "rest.remaining" = "休憩の残り時間：%@";
@@ -275,3 +274,6 @@
 "status_dot.inactive" = "一時停止／離席／設定時間外";
 "state.reminders_off" = "休憩リマインダーはオフです";
 "state.break_soon" = "%@がまもなく始まります · あと %@";
+"reminder.background_color" = "全画面通知の背景色";
+"reminder.background_color_help" = "全画面の休憩通知とプレビューに適用されます。文字の明るさは背景色に合わせて自動調整されます。";
+"reminder.background_color_reset" = "背景色を標準に戻す";
