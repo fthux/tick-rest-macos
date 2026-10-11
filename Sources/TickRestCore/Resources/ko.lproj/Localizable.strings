@@ -1,6 +1,8 @@
 /* Korean. Keep keys and format arguments consistent across locales. */
 "about.description" = "컴퓨터를 사용하는 동안 눈을 쉬게 하고 몸을 가볍게 움직일 수 있도록 정기적으로 휴식을 알려 줍니다.";
 "about.development" = "{appName} 앱은 업데이트 확인을 위해 자동으로 인터넷에 접속하지 않습니다.";
+"about.free" = "{appName} 앱은 현재 거주하시는 국가 또는 지역에서 무료로 이용할 수 있습니다.";
+"about.free_country" = "{appName} 앱은 현재 거주하시는 국가 또는 지역(%@)에서 무료로 이용할 수 있습니다.";
 "about.health" = "규칙적으로 쉬는 습관을 돕는 앱입니다. 의학적 조언을 제공하지 않으며, 실제로 눈을 쉬게 하거나 화면에서 벗어났는지는 확인할 수 없습니다.";
 "about.languages" = "중국어 간체, 중국어 번체, 영어, 일본어, 한국어를 지원합니다.";
 "about.version" = "%@";

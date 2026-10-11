@@ -1,6 +1,8 @@
 /* Simplified Chinese. Keys are stable across all future locales. */
 "about.description" = "帮助你在使用电脑时，定期远眺、放松和起身活动。";
 "about.development" = "{appName}不会自动联网检查更新。";
+"about.free" = "{appName}目前在你所在的国家或地区免费。";
+"about.free_country" = "{appName}目前在你所在的国家或地区免费（%@）";
 "about.health" = "本应用帮助你养成定时休息的习惯，不提供医疗建议，也无法确认你是否真的远眺或离开了屏幕。";
 "about.languages" = "支持简体中文、繁体中文、英文、日语和韩语。";
 "about.version" = "%@";

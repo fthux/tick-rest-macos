@@ -40,6 +40,7 @@ struct SettingsView: View {
     @ObservedObject var navigation: SettingsNavigation
     private var page: SettingsPage { navigation.page }
     @State private var confirmClear = false
+    @State private var aboutCountry: AboutCountry?
     var body: some View {
         NavigationSplitView(columnVisibility: $navigation.columnVisibility) {
             // Draw the selected background ourselves: native sidebar selection
@@ -361,9 +362,22 @@ struct SettingsView: View {
                 }
             }
             Text(L10n.text("about.description")).font(.callout)
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
+                Text(aboutCountry?.availabilityText ?? L10n.text("about.free"))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .font(.callout.weight(.medium))
+            .padding(.vertical, 4)
             Text(L10n.text("about.development")).font(.caption).foregroundStyle(.secondary)
             Text(L10n.text("about.health")).font(.caption).foregroundStyle(.secondary)
             Text(L10n.text("about.languages")).font(.caption).foregroundStyle(.secondary)
+        }
+        .task {
+            guard aboutCountry == nil else { return }
+            let country = await AboutCountry.lookup()
+            guard !Task.isCancelled else { return }
+            aboutCountry = country
         }
     }
 }
