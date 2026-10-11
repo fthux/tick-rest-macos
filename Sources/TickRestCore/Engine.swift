@@ -63,8 +63,17 @@ public final class Engine {
         return calendar.date(byAdding: .minute, value: settings.scheduleStart, to: startDay)
     }
     public func updateSettings(_ value: Settings) {
-        // Changing colors must not postpone a due reminder or repeat a warning.
+        // Presentation changes preserve deadlines, grace and warning identity.
         var appearanceOnly = settings
+        appearanceOnly.theme = value.theme
+        appearanceOnly.language = value.language
+        appearanceOnly.style = value.style
+        appearanceOnly.gentleReminderSize = value.gentleReminderSize
+        appearanceOnly.displayScope = value.displayScope
+        appearanceOnly.sound = value.sound
+        appearanceOnly.reminderSound = value.reminderSound
+        appearanceOnly.showCountdown = value.showCountdown
+        appearanceOnly.onboardingComplete = value.onboardingComplete
         appearanceOnly.showStatusDot = value.showStatusDot
         appearanceOnly.statusDotPalette = value.statusDotPalette
         appearanceOnly.overlayBackgroundColor = value.overlayBackgroundColor
