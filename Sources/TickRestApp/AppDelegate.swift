@@ -181,6 +181,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
               let split = findSplitViewController(in: window.contentView) else { return }
         settingsSplitController = split
         split.splitViewItems.first?.allowsFullHeightLayout = true
+        // Use the titlebar background and safe area as the visual boundary.
+        for item in split.splitViewItems.dropFirst() {
+            item.titlebarSeparatorStyle = .none
+        }
         guard window.toolbar?.identifier != NSToolbar.Identifier(AppIdentity.identifier("settingsToolbar")) else { return }
         settingsTitleField.stringValue = settingsNavigation.page.title
         settingsTitleField.font = .systemFont(ofSize: 13, weight: .semibold)
@@ -194,6 +198,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         window.toolbarStyle = .unified
         (window as? SettingsWindow)?.managedToolbar = toolbar
         window.toolbar = toolbar
+        window.titlebarAppearsTransparent = false
+        window.titlebarSeparatorStyle = .none
     }
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [.flexibleSpace, sidebarToolbarIdentifier, separatorToolbarIdentifier, titleToolbarIdentifier, .flexibleSpace]
@@ -298,5 +304,9 @@ private final class SettingsWindow: NSWindow {
     override var titleVisibility: NSWindow.TitleVisibility {
         get { super.titleVisibility }
         set { super.titleVisibility = managedToolbar == nil ? newValue : .hidden }
+    }
+    override var titlebarAppearsTransparent: Bool {
+        get { super.titlebarAppearsTransparent }
+        set { super.titlebarAppearsTransparent = managedToolbar == nil ? newValue : false }
     }
 }

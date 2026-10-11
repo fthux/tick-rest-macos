@@ -34,7 +34,7 @@ extension EngineTests {
         #expect(s.longInterval == 3600 && s.longDuration == 300)
         #expect(s.style == .gentle && s.prewarning == 10)
         #expect(s.breakStartMode == .automatic)
-        #expect(s.detectIdle && s.idleTimeout == 300 && s.avoidFullscreen)
+        #expect(!s.detectIdle && s.idleTimeout == 300 && s.avoidFullscreen)
         #expect(!s.scheduleEnabled && !s.sound && !s.onboardingComplete)
         #expect(AppIdentity.name == "Tick Rest")
         #expect(AppIdentity.bundleIdentifier == "app.restly.desktop")

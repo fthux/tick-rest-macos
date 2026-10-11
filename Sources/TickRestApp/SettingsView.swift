@@ -75,32 +75,15 @@ struct SettingsView: View {
             // Native List rows can retain labels when their stable IDs do not change.
             .id(model.interfaceLanguage)
         } detail: {
-            Form {
-                if let error = model.errorMessage {
-                    Section {
-                        HStack(alignment: .top) {
-                            Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-                            Text(error).font(.callout)
-                            Spacer()
-                            Button { model.dismissError() } label: { Image(systemName: "xmark") }
-                                .buttonStyle(.plain).accessibilityLabel(L10n.text("common.dismiss"))
-                        }
-                    }
-                }
-                switch page {
-                case .overview: Section { OverviewView(model: model, navigation: navigation) }
-                case .general: general
-                case .rhythm: rhythm
-                case .appearance: appearance
-                case .schedule: schedule
-                case .displays: displays
-                case .privacy: privacy
-                case .about: about
-                }
+            // A non-scrolling container keeps the Form's viewport inside the
+            // detail safe area, including during scroll rubber-banding.
+            VStack(spacing: 0) {
+                settingsForm
+                    .padding(.top, 16)
             }
-            .formStyle(.grouped)
-            // Recreate cached Picker options as well as the visible form labels.
-            .id(model.interfaceLanguage)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+            .background(Color(nsColor: .windowBackgroundColor), ignoresSafeAreaEdges: [])
         }
         .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
@@ -108,6 +91,35 @@ struct SettingsView: View {
             Button(L10n.text("data.clear"), role: .destructive) { model.clearRecords() }
             Button(L10n.text("common.cancel"), role: .cancel) {}
         } message: { Text(L10n.text("data.clear_body")) }
+    }
+    private var settingsForm: some View {
+        Form {
+            if let error = model.errorMessage {
+                Section {
+                    HStack(alignment: .top) {
+                        Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                        Text(error).font(.callout)
+                        Spacer()
+                        Button { model.dismissError() } label: { Image(systemName: "xmark") }
+                            .buttonStyle(.plain).accessibilityLabel(L10n.text("common.dismiss"))
+                    }
+                }
+            }
+            switch page {
+            case .overview: Section { OverviewView(model: model, navigation: navigation) }
+            case .general: general
+            case .rhythm: rhythm
+            case .appearance: appearance
+            case .schedule: schedule
+            case .displays: displays
+            case .privacy: privacy
+            case .about: about
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        // Recreate cached Picker options as well as the visible form labels.
+        .id(model.interfaceLanguage)
     }
     private func binding<T>(_ path: WritableKeyPath<TickRestCore.Settings, T>) -> Binding<T> {
         Binding(get: { model.settings[keyPath: path] }, set: { value in model.update { $0[keyPath: path] = value } })

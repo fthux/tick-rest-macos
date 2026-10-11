@@ -39,7 +39,7 @@ public struct Settings: Codable, Equatable {
     public var displayScope: DisplayScope = .all
     public var sound = false
     public var reminderSound: ReminderSound = .glass
-    public var detectIdle = true
+    public var detectIdle = false
     public var idleTimeout: Double = 300
     public var avoidFullscreen = true
     public var scheduleEnabled = false
