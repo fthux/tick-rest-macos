@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var statusSubscription: AnyCancellable?
     private let statusDotRenderer = StatusDotRenderer()
     private var menuPlan: RestPlan?
+    private var menuLanguage: String?
     private var menuKinds: [BreakKind] = []
     private var menuResting = false
     private var menuRoundItem: NSMenuItem?
@@ -27,17 +28,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private let settingsTitleField = NSTextField(labelWithString: "")
     private var welcomeWindow: NSWindow?
     private var lockFD: Int32 = -1
+    private let injectedStore: DataStore?
+    private let injectedLockDirectory: URL?
+
+    // Tests run the real launch/menu/window paths with an isolated store and lock.
+    // The default app entry point retains its normal per-user locations.
+    init(store: DataStore? = nil, lockDirectory: URL? = nil) {
+        injectedStore = store; injectedLockDirectory = lockDirectory
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // A per-user flock avoids duplicate schedulers without a persistent stale PID file.
-        let lockDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent(AppIdentity.dataDirectory)
+        let lockDirectory = injectedLockDirectory ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!.appendingPathComponent(AppIdentity.dataDirectory)
         try? FileManager.default.createDirectory(at: lockDirectory, withIntermediateDirectories: true)
         lockFD = open(lockDirectory.appendingPathComponent("instance.lock").path, O_CREAT | O_RDWR, 0o600)
         guard lockFD >= 0, flock(lockFD, LOCK_EX | LOCK_NB) == 0 else {
             DistributedNotificationCenter.default().postNotificationName(NSNotification.Name(AppIdentity.identifier("showSettings")), object: nil)
             NSApp.terminate(nil); return
         }
-        model = AppController(); windows = WindowCoordinator(model: model)
+        model = injectedStore.map { AppController(store: $0) } ?? AppController(); windows = WindowCoordinator(model: model)
         windows.showSettings = { [weak self] in self?.openSettings() }
         model.onEffects = { [weak self] effects in self?.windows.apply(effects) }
         model.applyAppearance()
@@ -86,7 +96,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         button.toolTip = L10n.text("app.name") + " — " + model.stateText
         button.setAccessibilityLabel(button.toolTip)
         if menuStateItem != nil, let menu = status.menu,
-           menuPlan != model.settings.restPlan || menuKinds != engine.displayKinds || menuResting != engine.isResting { menuWillOpen(menu) }
+           menuPlan != model.settings.restPlan || menuKinds != engine.displayKinds
+           || menuResting != engine.isResting || menuLanguage != L10n.language { menuWillOpen(menu) }
         menuRoundItem?.title = L10n.text("plan.focus_state", engine.focusRound, model.settings.rounds)
         menuStateItem?.title = display.menuStateText
         for (kind, item) in menuCountdownItems {
@@ -100,6 +111,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     }
     func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems(); menuPlan = model.settings.restPlan
+        menuLanguage = L10n.language
         menuKinds = model.engine.displayKinds; menuResting = model.engine.isResting
         menuCountdownItems.removeAll()
         let display = ReminderDisplay(engine: model.engine)
@@ -143,7 +155,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             .image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
     }
     func menuDidClose(_ menu: NSMenu) {
-        menuStateItem = nil; menuPlan = nil; menuRoundItem = nil
+        menuStateItem = nil; menuPlan = nil; menuLanguage = nil; menuRoundItem = nil
         menuCountdownItems.removeAll()
     }
     @discardableResult private func add(_ menu: NSMenu, _ title: String, _ action: Selector?, key: String = "") -> NSMenuItem {
