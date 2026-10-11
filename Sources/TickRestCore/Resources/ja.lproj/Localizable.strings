@@ -1,10 +1,12 @@
 /* Japanese. Keep keys and format arguments consistent across locales. */
 "about.description" = "パソコン作業の合間に、目を休めたり、体をほぐしたりする時間をお知らせします。";
-"about.development" = "{appName}は、アップデートの確認のために自動でインターネットに接続することはありません。";
 "about.free" = "{appName}は現在、お住まいの国・地域で無料でご利用いただけます。";
 "about.free_country" = "{appName}は現在、お住まいの国・地域（%@）で無料でご利用いただけます。";
 "about.health" = "休憩を習慣にするためのアプリです。医療上の助言は行いません。また、実際に目を休めたり、画面から離れたりしたかどうかは確認できません。";
-"about.languages" = "簡体字中国語、繁体字中国語、英語、日本語、韓国語に対応しています。";
+"about.source" = "ソースコード";
+"about.report_bug" = "バグを報告";
+"about.website" = "ウェブサイトを開く";
+"about.email" = "メールを送る";
 "about.version" = "%@";
 "app.name" = "{appName}";
 "break.long" = "体を動かす休憩";

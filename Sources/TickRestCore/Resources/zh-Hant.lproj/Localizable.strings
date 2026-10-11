@@ -1,10 +1,12 @@
 /* Traditional Chinese. Keys are stable across all future locales. */
 "about.description" = "提醒你在使用電腦時，定時讓眼睛休息、放鬆身體並起身活動。";
-"about.development" = "{appName}不會自動連線檢查更新。";
 "about.free" = "{appName}目前在你所在的國家或地區免費。";
 "about.free_country" = "{appName}目前在你所在的國家或地區免費（%@）";
 "about.health" = "本應用程式幫助你養成定時休息的習慣，不提供醫療建議，也無法確認你是否真的遠眺或離開了螢幕。";
-"about.languages" = "支援簡體中文、繁體中文、英文、日語和韓語。";
+"about.source" = "專案原始碼";
+"about.report_bug" = "回報 Bug";
+"about.website" = "造訪網站";
+"about.email" = "寄信給我";
 "about.version" = "%@";
 "app.name" = "{appName}";
 "break.long" = "起身活動";

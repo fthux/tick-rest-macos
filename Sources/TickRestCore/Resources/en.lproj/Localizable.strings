@@ -1,10 +1,12 @@
 /* English. Keep keys and format arguments consistent across locales. */
 "about.description" = "Take regular breaks from your computer to rest your eyes, relax, and move around.";
-"about.development" = "{appName} does not automatically check for updates online.";
 "about.free" = "{appName} is currently free in your country";
 "about.free_country" = "{appName} is currently free in your country (%@)";
 "about.health" = "These reminders help you build a break routine. The app does not provide medical advice or check whether you actually rested your eyes or stepped away from the screen.";
-"about.languages" = "Supports Simplified Chinese, Traditional Chinese, English, Japanese, and Korean.";
+"about.source" = "Source Code";
+"about.report_bug" = "Report a Bug";
+"about.website" = "Visit Website";
+"about.email" = "Email Me";
 "about.version" = "%@";
 "app.name" = "{appName}";
 "break.long" = "Movement break";

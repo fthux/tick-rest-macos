@@ -30,7 +30,9 @@ struct PlanEditor: View {
                 Text(draft.title).font(.headline)
                 Text(L10n.text("plan.reference")).font(.caption).foregroundStyle(.secondary)
                 Text((draft.baseID ?? draft.id).description).font(.callout).foregroundStyle(.secondary)
-                if let source = (draft.baseID ?? draft.id).sourceURL { Link(L10n.text("plan.learn_more"), destination: source).font(.caption) }
+                if let source = (draft.baseID ?? draft.id).sourceURL {
+                    SettingsExternalLink(title: L10n.text("plan.learn_more"), destination: source).font(.caption)
+                }
                 Text(L10n.text("plan.health_note")).font(.caption).foregroundStyle(.secondary)
             }
             Section {
@@ -82,7 +84,7 @@ struct PlanEditor: View {
                     Spacer()
                     Button(L10n.text("common.cancel")) { reload() }.disabled(!changed)
                     Button(L10n.text("plan.apply")) { model.applyPlan(draft); reload() }
-                        .buttonStyle(.borderedProminent).disabled(!changed || validation != nil)
+                        .disabled(!changed || validation != nil)
                 }
             }
         }

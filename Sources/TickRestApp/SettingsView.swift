@@ -118,6 +118,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .buttonStyle(.bordered)
         .scrollContentBackground(.hidden)
         // Recreate cached Picker options as well as the visible form labels.
         .id(model.interfaceLanguage)
@@ -364,30 +365,42 @@ struct SettingsView: View {
                 Text(L10n.text("data.directory")).font(.callout)
                 Text(model.store.url.deletingLastPathComponent().path).font(.caption.monospaced()).textSelection(.enabled).foregroundStyle(.secondary)
                 Button(L10n.text("data.open_directory")) { NSWorkspace.shared.open(model.store.url.deletingLastPathComponent()) }
-                Button(L10n.text("data.clear"), role: .destructive) { confirmClear = true }
+                Button(role: .destructive) { confirmClear = true } label: {
+                    Text(L10n.text("data.clear")).foregroundStyle(.red)
+                }
             }
         }
     }
     private var about: some View {
-        Section {
-            HStack(spacing: 16) {
-                Image(systemName: "leaf.fill").font(.system(size: 36)).foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(L10n.text("app.name")).font(.title2.bold())
-                    Text(L10n.text("about.version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0")).font(.caption).foregroundStyle(.secondary)
+        Group {
+            Section {
+                HStack(spacing: 16) {
+                    Image(systemName: "leaf.fill").font(.system(size: 36)).foregroundStyle(.orange)
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(L10n.text("app.name")).font(.title2.bold())
+                        Text(L10n.text("about.version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0")).font(.caption).foregroundStyle(.secondary)
+                    }
                 }
+                Text(L10n.text("about.description")).font(.callout)
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
+                    Text(aboutCountry?.availabilityText ?? L10n.text("about.free"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .font(.callout.weight(.medium))
+                .padding(.vertical, 4)
+                Text(L10n.text("about.health")).font(.caption).foregroundStyle(.secondary)
             }
-            Text(L10n.text("about.description")).font(.callout)
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
-                Text(aboutCountry?.availabilityText ?? L10n.text("about.free"))
-                    .fixedSize(horizontal: false, vertical: true)
+            Section {
+                SettingsExternalLink(title: L10n.text("about.source"), systemImage: "chevron.left.forwardslash.chevron.right",
+                                     destination: URL(string: "https://github.com/fthux/tick-rest-macos")!)
+                SettingsExternalLink(title: L10n.text("about.website"), systemImage: "globe",
+                                     destination: URL(string: "https://tick-rest.fthux.com")!)
+                SettingsExternalLink(title: L10n.text("about.email"), systemImage: "envelope",
+                                     destination: URL(string: "mailto:penleymcleod@gmail.com")!)
+                SettingsExternalLink(title: L10n.text("about.report_bug"), systemImage: "ladybug",
+                                     destination: URL(string: "https://github.com/fthux/tick-rest-macos/issues")!)
             }
-            .font(.callout.weight(.medium))
-            .padding(.vertical, 4)
-            Text(L10n.text("about.development")).font(.caption).foregroundStyle(.secondary)
-            Text(L10n.text("about.health")).font(.caption).foregroundStyle(.secondary)
-            Text(L10n.text("about.languages")).font(.caption).foregroundStyle(.secondary)
         }
         .task {
             guard aboutCountry == nil else { return }
@@ -395,6 +408,51 @@ struct SettingsView: View {
             guard !Task.isCancelled else { return }
             aboutCountry = country
         }
+    }
+}
+
+/// External destinations share a quiet appearance and keep native Link behavior.
+struct SettingsExternalLink: View {
+    let title: String
+    var systemImage: String? = nil
+    let destination: URL
+    @State private var isHovered = false
+    @FocusState private var isFocused: Bool
+    private var iconColor: Color { isHovered || isFocused ? .orange : .secondary }
+
+    var body: some View {
+        Link(destination: destination) {
+            HStack(spacing: 10) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .frame(width: 20)
+                        .foregroundStyle(iconColor)
+                        .accessibilityHidden(true)
+                }
+                Text(title).foregroundStyle(.primary)
+                Spacer(minLength: 12)
+                Image(systemName: "arrow.up.right")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(iconColor)
+                    .accessibilityHidden(true)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isHovered || isFocused ? Color.orange.opacity(0.08) : .clear,
+                        in: RoundedRectangle(cornerRadius: 6))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(isFocused ? Color.orange : .clear, lineWidth: 1.5)
+                    .allowsHitTesting(false)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .tint(.orange)
+        .focused($isFocused)
+        .onHover { isHovered = $0 }
+        .help(destination.absoluteString)
     }
 }
 
