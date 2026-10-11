@@ -136,33 +136,7 @@ struct SettingsView: View {
             }
         }
     }
-    private var rhythm: some View {
-        Group {
-            Text(L10n.text("rhythm.help")).font(.callout).foregroundStyle(.secondary)
-            Section {
-                row("break.short", "rhythm.short_help") { toggle("break.short", \.shortEnabled) }
-                Stepper(value: minutes(\.shortInterval), in: 1...120, step: 1) { Text(L10n.text("rhythm.interval_minutes", Int(model.settings.shortInterval / 60))) }
-                    .controlSize(.small)
-                    .disabled(!model.settings.shortEnabled)
-                Stepper(value: binding(\.shortDuration), in: 10...300, step: 5) { Text(L10n.text("rhythm.duration_seconds", Int(model.settings.shortDuration))) }
-                    .controlSize(.small)
-                    .disabled(!model.settings.shortEnabled)
-            }
-            Section {
-                row("break.long", "rhythm.long_help") { toggle("break.long", \.longEnabled) }
-                Stepper(value: minutes(\.longInterval), in: 1...240, step: 1) { Text(L10n.text("rhythm.interval_minutes", Int(model.settings.longInterval / 60))) }
-                    .controlSize(.small)
-                    .disabled(!model.settings.longEnabled)
-                Text(L10n.text("rhythm.interval_rule"))
-                    .font(.caption).foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                Stepper(value: minutes(\.longDuration), in: 1...30, step: 1) { Text(L10n.text("rhythm.duration_minutes", Int(model.settings.longDuration / 60))) }
-                    .controlSize(.small)
-                    .disabled(!model.settings.longEnabled)
-            }
-            Text(L10n.text("rhythm.merge_help")).font(.caption).foregroundStyle(.secondary)
-        }
-    }
+    private var rhythm: some View { PlanEditor(model: model) }
     private var appearance: some View {
         Group {
             Section {
@@ -205,7 +179,7 @@ struct SettingsView: View {
                 }
                 Button(L10n.text("reminder.test_sound")) { model.playReminderSound() }
             }
-            Text(L10n.text("reminder.defer_help")).font(.caption).foregroundStyle(.secondary)
+            Text(L10n.text("plan.actions_help")).font(.caption).foregroundStyle(.secondary)
         }
     }
     private var schedule: some View {

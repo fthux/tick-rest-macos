@@ -55,6 +55,7 @@ public enum L10n {
     public static func duration(_ seconds: Double) -> String {
         let minutes = max(0, Int(seconds / 60))
         if minutes >= 60 { return text("duration.hours_minutes", minutes / 60, minutes % 60) }
+        if minutes > 0 && Int(seconds) % 60 == 0 { return text("duration.minutes", minutes) }
         if minutes > 0 { return text("duration.minutes_seconds", minutes, max(0, Int(seconds) % 60)) }
         return text("duration.seconds", max(0, Int(seconds)))
     }

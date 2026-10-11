@@ -38,16 +38,20 @@ struct RestCard: View {
     let previewEnd: () -> Void
     @State private var showingIdea = false
     private var layout: GentleCardLayout { GentleCardLayout(size: size) }
-    private var r: Reminder { model.engine.reminder ?? Reminder(kind: .short, target: 5) }
+    private var r: Reminder { model.engine.reminder ?? model.settings.previewReminder }
     var body: some View {
         VStack(spacing: layout.spacing) {
             HStack(spacing: 8) {
-                Label(r.kind.title, systemImage: r.kind == .short ? "eye" : "figure.walk")
+                Label(r.title, systemImage: r.kind == .short ? "eye" : "figure.walk")
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if size == .mini { clock }
                 Button { close() } label: { Image(systemName: "xmark") }.buttonStyle(.plain).accessibilityLabel(L10n.text("common.close"))
             }.font((size == .mini ? Font.caption : Font.callout).bold())
+            if !preview, model.settings.timingModel == .rounds {
+                Text(L10n.text("plan.focus_state", model.engine.focusRound, model.settings.rounds))
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             if size != .mini { clock }
             HStack(spacing: 8) {
                 Text(L10n.text(preview ? "rest.preview" : model.engine.isResting ? "rest.running" : "rest.waiting"))
@@ -104,8 +108,8 @@ struct RestCard: View {
     }
     @ViewBuilder private var secondaryActions: some View {
         if !preview {
-            if r.postponements < 2 && (!model.engine.isResting || r.elapsed <= 5) {
-                Button(L10n.text("rest.defer", Int(r.kind.postponement / 60))) { model.action { $0.postpone(now: Date()) } }
+            if r.postponements < model.settings.postponeLimit && (!model.engine.isResting || r.elapsed <= 5) {
+                Button(L10n.text("rest.defer", Int(model.settings.postponement(r.kind) / 60))) { model.action { $0.postpone(now: Date()) } }
             }
             Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
         }
@@ -121,11 +125,14 @@ struct OverlayView: View {
     let preview: Bool
     let primary: Bool
     let previewEnd: () -> Void
-    private var r: Reminder { model.engine.reminder ?? Reminder(kind: .short, target: 5) }
+    private var r: Reminder { model.engine.reminder ?? model.settings.previewReminder }
     var body: some View {
         VStack(spacing: 25) {
             if primary { Image(systemName: r.kind == .short ? "leaf" : "figure.walk").font(.system(size: 40)).accessibilityHidden(true) }
-            Text(r.kind.title).font(.title2)
+            Text(r.title).font(.title2)
+            if !preview, model.settings.timingModel == .rounds {
+                Text(L10n.text("plan.focus_state", model.engine.focusRound, model.settings.rounds)).font(.callout)
+            }
             Text(preview ? "00:05" : L10n.clock(r.target - r.elapsed)).font(.system(size: primary ? 88 : 52, weight: .light, design: .rounded)).monospacedDigit()
             if primary {
                 if !preview {
@@ -140,8 +147,8 @@ struct OverlayView: View {
                         if !model.engine.isResting {
                             Button(L10n.text("rest.start")) { model.action { $0.start(now: Date()) } }
                         }
-                        if r.elapsed <= 5 && r.postponements < 2 {
-                            Button(L10n.text("rest.defer", Int(r.kind.postponement / 60))) { model.action { $0.postpone(now: Date()) } }
+                        if r.elapsed <= 5 && r.postponements < model.settings.postponeLimit {
+                            Button(L10n.text("rest.defer", Int(model.settings.postponement(r.kind) / 60))) { model.action { $0.postpone(now: Date()) } }
                         }
                         if model.engine.isResting {
                             Button(L10n.text("rest.end")) { model.action { $0.finish(now: Date()) } }
@@ -168,7 +175,7 @@ struct WarningView: View {
             Image(systemName: "leaf").font(.title2).foregroundStyle(restColor)
             VStack(alignment: .leading, spacing: 7) {
                 Text(L10n.text("app.name")).font(.callout.bold())
-                Text(L10n.text("warning.body", Int(settings.prewarning), kind.title, L10n.duration(settings.duration(kind)))).font(.callout)
+                Text(L10n.text("warning.body", Int(settings.prewarning), settings.breakTitle(kind), L10n.duration(settings.duration(kind)))).font(.callout)
             }
             Spacer(minLength: 0)
         }.padding(17).frame(maxWidth: .infinity, maxHeight: .infinity).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14)).padding(1)
@@ -217,6 +224,8 @@ struct OverviewView: View {
                 metric("overview.completed", L10n.text("overview.count", summary.completed))
                 metric("overview.rest", L10n.duration(summary.rest))
                 metric("overview.skipped", L10n.text("overview.count", summary.skipped))
+                metric("plan.focus_completed", L10n.text("overview.count", summary.focusCompleted))
+                metric("plan.ended_count", L10n.text("overview.count", summary.ended))
             }
             Text(L10n.text("overview.natural", L10n.duration(summary.natural))).font(.callout)
             VStack(alignment: .leading, spacing: 6) {
@@ -250,6 +259,7 @@ struct WelcomeView: View {
     let finish: () -> Void
     let layoutChanged: () -> Void
     @State private var step = 0
+    @State private var selectedPlan: RestPlanID = .tickrest
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack {
@@ -259,9 +269,11 @@ struct WelcomeView: View {
             Text(L10n.text("welcome.step", step + 1)).font(.caption).foregroundStyle(.secondary)
             if step == 0 {
                 Text(L10n.text("welcome.rhythm")).font(.headline)
-                Text(L10n.text("welcome.rhythm_help")).font(.body).foregroundStyle(.secondary)
-                Toggle(L10n.text("break.short"), isOn: Binding(get: { model.settings.shortEnabled }, set: { v in model.update { $0.shortEnabled = v } }))
-                Toggle(L10n.text("break.long"), isOn: Binding(get: { model.settings.longEnabled }, set: { v in model.update { $0.longEnabled = v } }))
+                Picker(L10n.text("plan.choose"), selection: $selectedPlan) {
+                    ForEach(RestPlanID.allCases) { plan in Text(plan.title).tag(plan) }
+                }
+                Text(selectedPlan.description).font(.body).foregroundStyle(.secondary)
+                Text(L10n.text("plan.health_note")).font(.caption).foregroundStyle(.secondary)
             } else if step == 1 {
                 Text(L10n.text("welcome.style")).font(.headline)
                 Picker(L10n.text("reminder.style"), selection: Binding(get: { model.settings.style }, set: { v in model.update { $0.style = v } })) {
@@ -284,7 +296,7 @@ struct WelcomeView: View {
             HStack {
                 if step > 0 { Button(L10n.text("common.back")) { step -= 1 } }
                 Spacer()
-                Button(L10n.text(step == 2 ? "welcome.begin" : "common.next")) { if step == 2 { finish() } else { step += 1 } }
+                Button(L10n.text(step == 2 ? "welcome.begin" : "common.next")) { if step == 2 { finish() } else { if step == 0 { model.applyPlan(.preset(selectedPlan)) }; step += 1 } }
                     .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
             }
         }.padding(28).frame(width: 580)

@@ -17,6 +17,9 @@ public final class Engine {
     public private(set) var away = false
     public private(set) var suppressed = false
     public private(set) var outsideSchedule = false
+    public private(set) var completedRounds = 0
+    public private(set) var roundRestKind: BreakKind?
+    public private(set) var pendingPlan: RestPlan?
     private var grace: Double = 0
     private var shortCooldown: Double = 0
     private var longCooldown: Double = 0
@@ -33,14 +36,18 @@ public final class Engine {
             longElapsed = sameSession ? saved.longElapsed : 0
             shortCooldown = sameSession ? saved.shortCooldown : 0
             longCooldown = sameSession ? saved.longCooldown : 0
+            completedRounds = sameSession ? min(settings.rounds, max(0, saved.completedRounds ?? 0)) : 0
+            roundRestKind = sameSession ? saved.roundRestKind : nil
+            pendingPlan = saved.pendingPlan
             pause = saved.pause
             if let active = saved.activeReminder {
-                records.append(Record(date: now, kind: active.kind, outcome: .interrupted, seconds: active.elapsed, reminderID: active.id))
+                appendRecord(Record(date: now, kind: active.kind, outcome: .interrupted, seconds: active.elapsed, reminderID: active.id))
                 if active.elapsed >= settings.shortDuration { shortElapsed = 0 }
             }
             if sameSession, let deferred = saved.deferredReminder, let remaining = saved.deferredRemaining {
                 phase = .deferred(deferred, remaining)
             }
+            if let pending = pendingPlan { installPlan(pending, now: now) }
             grace = 30
         }
         if case .until(let end) = pause, end <= now { pause = nil }
@@ -56,12 +63,52 @@ public final class Engine {
         return calendar.date(byAdding: .minute, value: settings.scheduleStart, to: startDay)
     }
     public func updateSettings(_ value: Settings) {
+        if let pending = pendingPlan {
+            var future = value; future.restPlan = pending
+            guard future.validationErrorKey == nil else { return }
+        }
         if !settings.shortEnabled && value.shortEnabled { shortElapsed = 0 }
         if !settings.longEnabled && value.longEnabled { longElapsed = 0 }
         let active = reminder
         settings = value
         if let active, !value.enabled(active.kind) { phase = .working; effects.append(.hide) }
         grace = 30; warnedKind = nil
+    }
+    public func applyPlan(_ plan: RestPlan, now: Date) {
+        var candidate = settings; candidate.restPlan = plan
+        guard candidate.validationErrorKey == nil else { return }
+        if isResting { pendingPlan = plan }
+        else { installPlan(plan, now: now) }
+    }
+    public func cancelPendingPlan() { pendingPlan = nil }
+    private func installPlan(_ plan: RestPlan, now: Date) {
+        appendRecord(Record(date: now, kind: nil, outcome: .planChanged))
+        settings.restPlan = plan; pendingPlan = nil
+        shortElapsed = 0; longElapsed = 0; shortCooldown = 0; longCooldown = 0
+        completedRounds = 0; roundRestKind = nil; interruptedReminder = nil
+        // The new routine starts after the switch, even when the user is away.
+        if away { awayStarted = now }
+        phase = .working; warnedKind = nil; grace = 0; effects.append(.hide)
+    }
+    private func applyPending(now: Date) {
+        if let pending = pendingPlan { installPlan(pending, now: now) }
+    }
+    public func restartFocus(group: Bool, now: Date) {
+        guard settings.timingModel == .rounds else { return }
+        if let r = reminder { record(r, .interrupted, now, includeDuration: false) }
+        appendRecord(Record(date: now, kind: nil, outcome: .restarted))
+        if group { completedRounds = 0 }
+        // A completed group's next focus belongs to a fresh group.
+        if completedRounds >= settings.rounds { completedRounds = 0 }
+        shortElapsed = 0; longElapsed = 0; shortCooldown = 0; longCooldown = 0
+        roundRestKind = nil; phase = .working; warnedKind = nil; grace = 0
+        interruptedReminder = nil; if away { awayStarted = now }
+        effects.append(.hide); applyPending(now: now)
+    }
+    public var focusRound: Int { max(1, min(settings.rounds, completedRounds + (roundRestKind == nil ? 1 : 0))) }
+    public var displayKinds: [BreakKind] {
+        if settings.timingModel == .rounds { return [roundRestKind ?? (completedRounds + 1 >= settings.rounds ? .long : .short)] }
+        return BreakKind.allCases.filter(settings.enabled)
     }
     public var reminder: Reminder? {
         switch phase {
@@ -72,28 +119,33 @@ public final class Engine {
     public var isResting: Bool { if case .resting = phase { return true }; return false }
     public var graceRemaining: Double { grace }
     public func remaining(_ kind: BreakKind) -> Double {
+        if settings.timingModel == .rounds {
+            if let due = roundRestKind { return due == kind ? (kind == .short ? shortCooldown : longCooldown) : settings.shortInterval }
+            return max(0, settings.shortInterval - shortElapsed)
+        }
         let intervalRemaining = max(0, settings.interval(kind) - (kind == .short ? shortElapsed : longElapsed))
         let cooldown = kind == .short ? shortCooldown : longCooldown
         // Both the usage interval and early-end cooldown must expire before a reminder is due.
         return max(intervalRemaining, cooldown)
     }
     public var nextKind: BreakKind? {
-        let enabled = BreakKind.allCases.filter(settings.enabled)
+        let enabled = displayKinds
         return enabled.min { remaining($0) < remaining($1) || (remaining($0) == remaining($1) && $0 == .long) }
     }
     private func isDue(_ kind: BreakKind) -> Bool {
-        settings.enabled(kind) && remaining(kind) == 0
+        displayKinds.contains(kind) && settings.enabled(kind) && remaining(kind) == 0
     }
     public func tick(seconds: Double, now: Date) {
         let delta = max(0, seconds)
         if case .until(let date) = pause, now >= date { pause = nil; grace = 30; warnedKind = nil }
         let workingTime = settings.isWorkingTime(now)
         outsideSchedule = !workingTime
-        if priorWorkingTime == false && workingTime { reset(.long); phase = .working; warnedKind = nil; grace = 30 }
+        if priorWorkingTime == false && workingTime { reset(.long); completedRounds = 0; roundRestKind = nil; phase = .working; warnedKind = nil; grace = 30; applyPending(now: now) }
         if priorWorkingTime == true && !workingTime {
             // Away transitions retain the reminder and settle it once on return.
             if !away, case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false) }
             phase = .working; effects.append(.hide); warnedKind = nil
+            if !away { applyPending(now: now) }
         }
         priorWorkingTime = workingTime
         guard pause == nil, !away else { return }
@@ -102,16 +154,24 @@ public final class Engine {
             recordDurationSplit(seconds: used, ending: now, kind: r.kind, outcome: .usage, reminderID: r.id, rest: true)
             r.elapsed += used
             if r.elapsed >= r.target {
-                record(r, .completed, now, includeDuration: false); reset(r.kind)
+                record(r, .completed, now, includeDuration: false); settleRest(r)
                 phase = .working; warnedKind = nil; effects += [.hide, .completed(r.kind)]
+                applyPending(now: now)
             } else { phase = .resting(r) }
             return
         }
         guard workingTime else { return }
         // Stop accumulating at the interval without discarding usage retained
         // from a longer interval when the user changes settings.
-        shortElapsed = max(shortElapsed, min(settings.shortInterval, shortElapsed + delta))
-        longElapsed = max(longElapsed, min(settings.longInterval, longElapsed + delta))
+        if settings.timingModel != .rounds || roundRestKind == nil {
+            shortElapsed = max(shortElapsed, min(settings.shortInterval, shortElapsed + delta))
+        }
+        if settings.timingModel == .dual { longElapsed = max(longElapsed, min(settings.longInterval, longElapsed + delta)) }
+        if settings.timingModel == .rounds && roundRestKind == nil && shortElapsed >= settings.shortInterval {
+            completedRounds += 1
+            roundRestKind = completedRounds >= settings.rounds ? .long : .short
+            appendRecord(Record(date: now, kind: nil, outcome: .focusCompleted))
+        }
         recordDurationSplit(seconds: delta, ending: now, kind: nil, outcome: .usage, reminderID: nil, rest: false)
         shortCooldown = max(0, shortCooldown - delta); longCooldown = max(0, longCooldown - delta)
         if case .deferred(let r, let remaining) = phase {
@@ -148,6 +208,7 @@ public final class Engine {
     }
     private func makeReminder(_ kind: BreakKind) -> Reminder {
         var reminder = Reminder(kind: kind, target: settings.duration(kind))
+        reminder.planID = settings.planID; reminder.basePlanID = settings.basePlanID; reminder.timingModel = settings.timingModel
         reminder.ideaIndex = ((lastIdea[kind] ?? -1) + 1) % 5
         lastIdea[kind] = reminder.ideaIndex
         return reminder
@@ -164,40 +225,54 @@ public final class Engine {
         phase = .resting(r)
     }
     public func startNow(_ kind: BreakKind, now: Date) {
-        guard !away else { return }
+        guard !away, settings.enabled(kind) else { return }
         // Manual start explicitly overrides manual pause but not the session/sleep boundary.
         pause = nil
         if case .resting = phase { finish(now: now) }
+        guard settings.enabled(kind) else { return }
+        if settings.timingModel == .rounds {
+            if let due = roundRestKind, due != kind { return }
+            if roundRestKind == nil { roundRestKind = kind }
+        }
         phase = .resting(makeReminder(kind))
         effects.append(.show(reminder!))
     }
     public func postpone(now: Date) {
-        guard var r = reminder, r.postponements < 2 else { return }
+        guard var r = reminder, r.postponements < settings.postponeLimit else { return }
         if isResting && r.elapsed > 5 { return }
         if r.elapsed > 0 {
             // Per-segment duration has already been recorded; only emit the outcome here.
             record(r, .postponed, now, includeDuration: false)
-        } else { records.append(Record(date: now, kind: r.kind, outcome: .postponed, reminderID: r.id)) }
+        } else { appendRecord(Record(date: now, kind: r.kind, outcome: .postponed, reminderID: r.id)) }
         r.postponements += 1; r.elapsed = 0
-        phase = .deferred(r, r.kind.postponement); effects.append(.hide)
+        phase = .deferred(r, settings.postponement(r.kind)); effects.append(.hide)
     }
     public func skip(now: Date) {
         guard let r = reminder else { return }
         // Explicit skips consume the reminder; closing a running timer uses finish instead.
         // Measured rest segments are already recorded, so do not add them again here.
-        record(r, .skipped, now, includeDuration: false); reset(r.kind)
-        phase = .working; warnedKind = nil; effects.append(.hide)
+        record(r, .skipped, now, includeDuration: false); settleRest(r)
+        phase = .working; warnedKind = nil; effects.append(.hide); applyPending(now: now)
+    }
+    private func settleRest(_ r: Reminder) {
+        reset(r.kind)
+        if settings.timingModel == .rounds {
+            roundRestKind = nil
+            if r.kind == .long { completedRounds = 0 }
+        }
     }
     public func finish(now: Date) {
         guard case .resting(let r) = phase else { return }
         record(r, .ended, now, includeDuration: false)
-        if r.elapsed >= settings.shortDuration { shortElapsed = 0 }
+        if settings.timingModel != .rounds && r.elapsed >= settings.shortDuration { shortElapsed = 0 }
         if r.kind == .long && r.elapsed >= r.target { longElapsed = 0 }
-        if r.kind == .short { shortCooldown = r.kind.postponement } else { longCooldown = r.kind.postponement }
-        phase = .working; warnedKind = nil; effects.append(.hide)
+        if r.kind == .short { shortCooldown = settings.postponement(.short) } else { longCooldown = settings.postponement(.long) }
+        // A voluntary early break must not manufacture a completed focus round.
+        if settings.timingModel == .rounds && roundRestKind == nil { shortElapsed = 0 }
+        phase = .working; warnedKind = nil; effects.append(.hide); applyPending(now: now)
     }
     public func setPause(_ mode: PauseMode?, now: Date) {
-        if case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false); phase = .working }
+        if case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false); phase = .deferred(r, 0) }
         if case .waiting(let r) = phase { phase = .deferred(r, 0) }
         if case .warning = phase { phase = .working }
         pause = mode; grace = 30; warnedKind = nil; effects.append(.hide)
@@ -221,18 +296,47 @@ public final class Engine {
     public func endAway(now: Date, minimumShort: Double) {
         guard away else { return }
         let seconds = max(0, now.timeIntervalSince(awayStarted ?? now))
-        let combined = seconds + (interruptedReminder?.elapsed ?? 0)
+        let interrupted = interruptedReminder
+        let combined = seconds + (interrupted?.elapsed ?? 0)
         away = false; awayStarted = nil
         if let r = interruptedReminder { record(r, .interrupted, now, includeDuration: false) }
         interruptedReminder = nil
         let qualifiesLong = combined >= settings.longDuration
-        let qualifiesShort = combined >= minimumShort
-        if seconds == 0 { records.append(Record(date: now, kind: nil, outcome: .natural)) }
+        let qualifiesShort = combined >= (settings.timingModel == .dual ? minimumShort : settings.shortDuration)
+        if seconds == 0 { appendRecord(Record(date: now, kind: nil, outcome: .natural)) }
         else { recordDurationSplit(seconds: seconds, ending: now, kind: nil, outcome: .natural, reminderID: nil, rest: false) }
-        if qualifiesLong { reset(.long) }
-        else if qualifiesShort { reset(.short) }
-        if qualifiesShort || qualifiesLong || isResting { phase = .working }
-        else if case .waiting(let r) = phase { phase = .deferred(r, 0) }
+        switch settings.timingModel {
+        case .dual:
+            if qualifiesLong { reset(.long) }
+            else if qualifiesShort { reset(.short) }
+            if qualifiesShort || qualifiesLong || isResting { phase = .working }
+            else if case .waiting(let r) = phase { phase = .deferred(r, 0) }
+        case .single:
+            if qualifiesShort { reset(.short); phase = .working }
+            else if case .resting(var r) = phase {
+                r.elapsed = min(r.target, combined); phase = .deferred(r, 0)
+            } else if case .waiting(let r) = phase { phase = .deferred(r, 0) }
+        case .rounds:
+            if qualifiesLong {
+                reset(.long); completedRounds = 0; roundRestKind = nil; phase = .working
+            } else if let due = roundRestKind {
+                let meetsDue = combined >= settings.duration(due)
+                if meetsDue { reset(due); roundRestKind = nil; phase = .working }
+                else if case .resting(var r) = phase {
+                    r.elapsed = min(r.target, combined); phase = .deferred(r, 0)
+                } else if case .waiting(let r) = phase { phase = .deferred(r, 0) }
+            } else if qualifiesShort {
+                reset(.short); phase = .working
+            } else if case .resting(var r) = phase {
+                r.elapsed = min(r.target, combined); phase = .deferred(r, 0)
+            }
+        }
+        if let interrupted, pendingPlan != nil, reminder == nil,
+           combined < interrupted.target {
+            var retained = interrupted; retained.elapsed = combined
+            phase = .deferred(retained, 0)
+        }
+        if pendingPlan != nil && reminder == nil { applyPending(now: now) }
         grace = 30; warnedKind = nil
     }
     private func reset(_ kind: BreakKind) {
@@ -240,7 +344,7 @@ public final class Engine {
         if kind == .long { longElapsed = 0; longCooldown = 0 }
     }
     private func record(_ r: Reminder, _ outcome: Outcome, _ now: Date, includeDuration: Bool = true) {
-        records.append(Record(date: now, kind: r.kind, outcome: outcome, seconds: includeDuration ? r.elapsed : 0, reminderID: r.id))
+        appendRecord(Record(date: now, kind: r.kind, outcome: outcome, seconds: includeDuration ? r.elapsed : 0, reminderID: r.id))
     }
     private func recordDurationSplit(seconds: Double, ending: Date, kind: BreakKind?, outcome: Outcome, reminderID: UUID?, rest: Bool) {
         guard seconds > 0 else { return }
@@ -255,9 +359,14 @@ public final class Engine {
             // segment through Date's floating-point timestamp precision.
             let duration = segmentEnd == ending ? remaining : segmentEnd.timeIntervalSince(start)
             // usage records with a reminderID represent measured rest segments.
-            records.append(Record(date: date, kind: kind, outcome: outcome, seconds: duration, reminderID: rest ? reminderID : nil))
+            appendRecord(Record(date: date, kind: kind, outcome: outcome, seconds: duration, reminderID: rest ? reminderID : nil))
             start = segmentEnd; remaining -= duration
         }
+    }
+    private func appendRecord(_ record: Record) {
+        var record = record
+        record.planID = settings.planID; record.timingModel = settings.timingModel; record.basePlanID = settings.basePlanID
+        records.append(record)
     }
     public func drain() -> ([EngineEffect], [Record]) {
         let result = (effects, records); effects.removeAll(); records.removeAll(); return result
@@ -271,6 +380,7 @@ public final class Engine {
         if case .waiting(let r) = phase { result.deferredReminder = r; result.deferredRemaining = 0 }
         if case .deferred(let r, let remaining) = phase { result.deferredReminder = r; result.deferredRemaining = remaining }
         result.shortCooldown = shortCooldown; result.longCooldown = longCooldown
+        result.completedRounds = completedRounds; result.roundRestKind = roundRestKind; result.pendingPlan = pendingPlan
         return result
     }
 }

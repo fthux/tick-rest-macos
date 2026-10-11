@@ -87,7 +87,7 @@ final class AppController: ObservableObject {
         if settings.detectIdle && idle >= settings.idleTimeout && !idleAway {
             idleAway = true; engine.beginAway(at: Date().addingTimeInterval(-idle)); consume()
         } else if idleAway && (!settings.detectIdle || idle < settings.idleTimeout) {
-            idleAway = false; engine.endAway(now: Date(), minimumShort: max(60, settings.shortDuration)); consume()
+            idleAway = false; engine.endAway(now: Date(), minimumShort: settings.timingModel == .dual ? max(60, settings.shortDuration) : settings.shortDuration); consume()
         }
     }
     private func probeFullscreen() {
@@ -132,10 +132,20 @@ final class AppController: ObservableObject {
     func update(_ mutate: (inout Settings) -> Void) {
         var candidate = settings; mutate(&candidate)
         if let key = candidate.validationErrorKey { showError(key); return }
+        if let pending = engine.pendingPlan {
+            var future = candidate; future.restPlan = pending
+            if let key = future.validationErrorKey { showError(key); return }
+        }
         L10n.language = candidate.language; settings = candidate; engine.updateSettings(candidate)
         interfaceLanguage = L10n.resolvedLanguage
         applyAppearance(); consume(); persist(); revision += 1
     }
+    func applyPlan(_ plan: RestPlan) {
+        var candidate = settings; candidate.restPlan = plan
+        if let key = candidate.validationErrorKey { showError(key); return }
+        action { $0.applyPlan(plan, now: Date()) }
+    }
+    func cancelPendingPlan() { action { $0.cancelPendingPlan() } }
     func applyAppearance() {
         switch settings.theme {
         case .system: NSApp.appearance = nil
@@ -146,7 +156,7 @@ final class AppController: ObservableObject {
     func action(_ body: (Engine) -> Void) {
         // Explicit interaction is evidence the user returned; do not wait for the next idle probe.
         if idleAway && !systemAway {
-            idleAway = false; engine.endAway(now: Date(), minimumShort: max(60, settings.shortDuration))
+            idleAway = false; engine.endAway(now: Date(), minimumShort: settings.timingModel == .dual ? max(60, settings.shortDuration) : settings.shortDuration)
         }
         body(engine); consume(); persist(); revision += 1
     }
@@ -161,6 +171,7 @@ final class AppController: ObservableObject {
     }
     var stateText: String { ReminderDisplay(engine: engine).stateText }
     func consume() {
+        if settings != engine.settings { settings = engine.settings }
         let (effects, records) = engine.drain()
         DataStore.append(records, to: &saved.records, now: Date())
         onEffects?(effects)
@@ -199,7 +210,7 @@ final class AppController: ObservableObject {
         guard notificationEnabled else { fallback(); return }
         let content = UNMutableNotificationContent()
         content.title = L10n.text("app.name")
-        content.body = L10n.text("warning.body", Int(settings.prewarning), kind.title, L10n.duration(settings.duration(kind)))
+        content.body = L10n.text("warning.body", Int(settings.prewarning), settings.breakTitle(kind), L10n.duration(settings.duration(kind)))
         let request = UNNotificationRequest(identifier: AppIdentity.identifier("prewarning"), content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request) { error in if error != nil { DispatchQueue.main.async(execute: fallback) } }
     }

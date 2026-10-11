@@ -16,12 +16,20 @@ public enum ReminderSound: String, Codable, CaseIterable {
 }
 
 public struct Settings: Codable, Equatable {
-    public var shortEnabled = true
-    public var longEnabled = true
-    public var shortInterval: Double = 1200
-    public var shortDuration: Double = 20
-    public var longInterval: Double = 3600
-    public var longDuration: Double = 300
+    public var planID: RestPlanID = .tickrest
+    public var basePlanID: RestPlanID?
+    public var timingModel: TimingModel = .dual
+    public var rounds = RestPlan().rounds
+    public var shortPostpone: Double = RestPlan().shortPostpone
+    public var longPostpone: Double = RestPlan().longPostpone
+    public var singlePostpone: Double = RestPlan().singlePostpone
+    public var postponeLimit = RestPlan().postponeLimit
+    public var shortEnabled = RestPlan().shortEnabled
+    public var longEnabled = RestPlan().longEnabled
+    public var shortInterval: Double = RestPlan().shortInterval
+    public var shortDuration: Double = RestPlan().shortDuration
+    public var longInterval: Double = RestPlan().longInterval
+    public var longDuration: Double = RestPlan().longDuration
     public var prewarning: Double = 10
     public var style: ReminderStyle = .gentle
     public var gentleReminderSize: GentleReminderSize = .normal
@@ -42,6 +50,7 @@ public struct Settings: Codable, Equatable {
     public var onboardingComplete = false
     public init() {}
     private enum CodingKeys: String, CodingKey {
+        case planID, basePlanID, timingModel, rounds, shortPostpone, longPostpone, singlePostpone, postponeLimit
         case shortEnabled, longEnabled, shortInterval, shortDuration, longInterval, longDuration
         case prewarning, style, gentleReminderSize, breakStartMode, displayScope, sound, reminderSound, detectIdle, idleTimeout, avoidFullscreen
         case scheduleEnabled, weekdays, scheduleStart, scheduleEnd, showCountdown, theme, language, onboardingComplete
@@ -75,8 +84,19 @@ public struct Settings: Codable, Equatable {
         theme = try values.decode(AppTheme.self, forKey: .theme)
         language = try values.decode(String.self, forKey: .language)
         onboardingComplete = try values.decode(Bool.self, forKey: .onboardingComplete)
+        planID = try values.decodeIfPresent(RestPlanID.self, forKey: .planID) ?? .tickrest
+        basePlanID = try values.decodeIfPresent(RestPlanID.self, forKey: .basePlanID)
+        timingModel = try values.decodeIfPresent(TimingModel.self, forKey: .timingModel) ?? .dual
+        rounds = try values.decodeIfPresent(Int.self, forKey: .rounds) ?? 4
+        shortPostpone = try values.decodeIfPresent(Double.self, forKey: .shortPostpone) ?? 120
+        longPostpone = try values.decodeIfPresent(Double.self, forKey: .longPostpone) ?? 300
+        singlePostpone = try values.decodeIfPresent(Double.self, forKey: .singlePostpone) ?? 300
+        postponeLimit = try values.decodeIfPresent(Int.self, forKey: .postponeLimit) ?? 2
+        if !values.contains(.planID), restPlan != RestPlan.preset(.tickrest) {
+            planID = .custom; basePlanID = .tickrest
+        }
     }
-    public func enabled(_ kind: BreakKind) -> Bool { kind == .short ? shortEnabled : longEnabled }
+    public func enabled(_ kind: BreakKind) -> Bool { restPlan.enabled(kind) }
     public func interval(_ kind: BreakKind) -> Double { kind == .short ? shortInterval : longInterval }
     public func duration(_ kind: BreakKind) -> Double { kind == .short ? shortDuration : longDuration }
     public func isWorkingTime(_ date: Date, calendar: Calendar = .current) -> Bool {
@@ -96,15 +116,10 @@ public struct Settings: Codable, Equatable {
     }
     public var validationErrorKey: String? {
         if !(60...3600).contains(idleTimeout) { return "validation.idle_timeout" }
-        if !(60...7200).contains(shortInterval) || !(10...300).contains(shortDuration)
-            || !(60...14400).contains(longInterval) || !(60...1800).contains(longDuration) {
-            return "validation.range"
-        }
-        if longEnabled && shortEnabled && longInterval < shortInterval { return "validation.interval" }
-        if longEnabled && shortEnabled && longDuration < shortDuration { return "validation.duration" }
+        if let error = restPlan.validationErrorKey { return error }
         if !prewarning.isFinite || prewarning < 0
-            || (shortEnabled && prewarning >= shortInterval)
-            || (longEnabled && prewarning >= longInterval) { return "validation.prewarning" }
+            || (enabled(.short) && prewarning >= shortInterval)
+            || (enabled(.long) && prewarning >= (timingModel == .rounds ? shortInterval : longInterval)) { return "validation.prewarning" }
         if !(0..<1440).contains(scheduleStart) || !(0..<1440).contains(scheduleEnd)
             || !weekdays.isSubset(of: Set(1...7))
             || (scheduleEnabled && (weekdays.isEmpty || scheduleStart == scheduleEnd)) { return "validation.schedule" }
@@ -112,7 +127,7 @@ public struct Settings: Codable, Equatable {
     }
 }
 
-public enum Outcome: String, Codable { case completed, skipped, ended, postponed, natural, interrupted, usage }
+public enum Outcome: String, Codable { case completed, skipped, ended, postponed, natural, interrupted, usage, focusCompleted, planChanged, restarted }
 public struct Record: Codable, Identifiable {
     public var id: UUID
     public var reminderID: UUID?
@@ -122,6 +137,9 @@ public struct Record: Codable, Identifiable {
     public var kind: BreakKind?
     public var outcome: Outcome
     public var seconds: Double
+    public var planID: RestPlanID?
+    public var timingModel: TimingModel?
+    public var basePlanID: RestPlanID?
     public init(date: Date, kind: BreakKind?, outcome: Outcome, seconds: Double = 0, reminderID: UUID? = nil) {
         self.id = UUID(); self.date = date; self.kind = kind; self.outcome = outcome
         self.seconds = seconds; self.reminderID = reminderID
@@ -140,7 +158,18 @@ public struct Reminder: Codable, Equatable {
     public var elapsed: Double = 0
     public var postponements = 0
     public var ideaIndex = 0
-    public var idea: String { L10n.text("idea.\(kind.rawValue).\(ideaIndex)") }
+    public var planID: RestPlanID?
+    public var timingModel: TimingModel?
+    public var basePlanID: RestPlanID?
+    public var title: String {
+        var p = RestPlan(); p.id = planID ?? .tickrest; p.baseID = basePlanID; p.model = timingModel ?? .dual
+        return p.breakTitle(kind)
+    }
+    public var idea: String {
+        if timingModel == .single && (planID == .eye202020 || basePlanID == .eye202020) { return L10n.text("plan.eye_idea") }
+        if timingModel == .single || timingModel == .rounds { return L10n.text("plan.movement_idea") }
+        return L10n.text("idea.\(kind.rawValue).\(ideaIndex)")
+    }
     public init(kind: BreakKind, target: Double) { self.kind = kind; self.target = target }
 }
 public enum Phase: Equatable {
@@ -159,5 +188,8 @@ public struct Snapshot: Codable {
     public var deferredRemaining: Double?
     public var shortCooldown: Double = 0
     public var longCooldown: Double = 0
+    public var completedRounds: Int?
+    public var roundRestKind: BreakKind?
+    public var pendingPlan: RestPlan?
     public init() {}
 }

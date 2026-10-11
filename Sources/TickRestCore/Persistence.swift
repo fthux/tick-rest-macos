@@ -1,7 +1,7 @@
 import Foundation
 
 public struct SavedData: Codable {
-    public var version = 1
+    public var version = 2
     public var settings = Settings()
     public var records: [Record] = []
     public var snapshot = Snapshot()
@@ -20,9 +20,15 @@ public final class DataStore {
     public func load() -> SavedData {
         guard FileManager.default.fileExists(atPath: url.path) else { return SavedData() }
         do {
-            let result = try JSONDecoder().decode(SavedData.self, from: Data(contentsOf: url))
-            guard result.version == 1, result.settings.validationError == nil else {
+            var result = try JSONDecoder().decode(SavedData.self, from: Data(contentsOf: url))
+            guard (1...2).contains(result.version), result.settings.validationError == nil,
+                  result.snapshot.pendingPlan?.validationErrorKey == nil else {
                 throw CocoaError(.fileReadCorruptFile)
+            }
+            if result.version == 1 {
+                let backup = url.deletingLastPathComponent().appendingPathComponent("state-v1-backup.json")
+                if !FileManager.default.fileExists(atPath: backup.path) { try FileManager.default.copyItem(at: url, to: backup) }
+                result.version = 2
             }
             return result
         } catch {
@@ -45,7 +51,7 @@ public final class DataStore {
         for item in additions {
             if item.outcome == .usage, let last = records.last,
                last.outcome == .usage, last.day == item.day, last.kind == item.kind,
-               last.reminderID == item.reminderID, item.date.timeIntervalSince(last.date) <= 10 {
+               last.reminderID == item.reminderID, last.planID == item.planID, last.timingModel == item.timingModel, last.basePlanID == item.basePlanID, item.date.timeIntervalSince(last.date) <= 10 {
                 records[records.count - 1].seconds += item.seconds
                 records[records.count - 1].date = item.date
             } else { records.append(item) }
@@ -62,6 +68,7 @@ public struct StatisticsSummary {
     public var completed = 0
     public var skipped = 0
     public var ended = 0
+    public var focusCompleted = 0
     public private(set) var hasRecords = false
     public init(records: [Record], range: StatisticsDateRange) {
         for item in records where range.contains(day: item.day) {
@@ -71,6 +78,7 @@ public struct StatisticsSummary {
             case .completed: completed += 1
             case .skipped: skipped += 1
             case .ended: ended += 1
+            case .focusCompleted: focusCompleted += 1
             case .natural: natural += item.seconds
             default: break
             }

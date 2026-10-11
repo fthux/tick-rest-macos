@@ -51,13 +51,13 @@ final class WindowCoordinator {
             }
         }
         if !isPreview, shownStyle == .overlay, model.engine.isResting, let reminder = model.engine.reminder {
-            panels.forEach { $0.title = L10n.text("state.resting", reminder.kind.title, L10n.clock(reminder.target - reminder.elapsed)) }
+            panels.forEach { $0.title = L10n.text("state.resting", reminder.title, L10n.clock(reminder.target - reminder.elapsed)) }
         }
     }
     private var currentScreen: NSScreen? { NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens.first }
     func preview() {
         guard model.engine.reminder == nil else { return }
-        show(Reminder(kind: .short, target: 5), preview: true)
+        show(model.settings.previewReminder, preview: true)
         let task = DispatchWorkItem { [weak self] in self?.hide() }; previewWork = task
         DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: task)
     }

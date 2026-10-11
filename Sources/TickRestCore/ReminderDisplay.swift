@@ -27,13 +27,14 @@ public struct ReminderDisplay {
         if engine.outsideSchedule { return L10n.text("state.outside") }
         if engine.suppressed { return L10n.text("state.fullscreen") }
         switch engine.phase {
-        case .resting(let r): return L10n.text("state.resting", r.kind.title, L10n.clock(r.target - r.elapsed))
-        case .waiting(let r): return L10n.text("state.waiting", r.kind.title)
+        case .resting(let r): return L10n.text("state.resting", r.title, L10n.clock(r.target - r.elapsed))
+        case .waiting(let r): return L10n.text("state.waiting", r.title)
         case .deferred(let r, let seconds):
-            if seconds > 0 { return L10n.text("state.deferred", r.kind.title, L10n.clock(seconds)) }
+            if seconds > 0 { return L10n.text("state.deferred", r.title, L10n.clock(seconds)) }
             return dueText(r.kind)
         default:
             if let kind = engine.nextKind, engine.remaining(kind) == 0 { return dueText(kind) }
+            if engine.settings.timingModel == .rounds { return L10n.text("plan.focus_state", engine.focusRound, engine.settings.rounds) }
             return L10n.text("state.running")
         }
     }
@@ -52,25 +53,28 @@ public struct ReminderDisplay {
 
     public func countdownText(for kind: BreakKind) -> String {
         if case .deferred(let r, let seconds) = engine.phase, r.kind == kind {
-            if seconds > 0 { return L10n.text("state.deferred", kind.title, L10n.clock(seconds)) }
-            return L10n.text("menu.due", kind.title)
+            if seconds > 0 { return L10n.text("state.deferred", engine.settings.breakTitle(kind), L10n.clock(seconds)) }
+            return L10n.text("menu.due", engine.settings.breakTitle(kind))
         }
-        if case .waiting(let r) = engine.phase, r.kind == kind { return L10n.text("menu.due", kind.title) }
+        if case .waiting(let r) = engine.phase, r.kind == kind { return L10n.text("menu.due", engine.settings.breakTitle(kind)) }
         let seconds = engine.remaining(kind)
-        return seconds > 0 ? L10n.text("menu.remaining", kind.title, L10n.clock(seconds)) : L10n.text("menu.due", kind.title)
+        if engine.settings.timingModel == .rounds && engine.roundRestKind == nil {
+            return L10n.text("plan.focus_remaining", engine.focusRound, engine.settings.rounds, L10n.clock(seconds))
+        }
+        return seconds > 0 ? L10n.text("menu.remaining", engine.settings.breakTitle(kind), L10n.clock(seconds)) : L10n.text("menu.due", engine.settings.breakTitle(kind))
     }
 
     private func laterText(_ seconds: Double) -> String {
         seconds > 0 ? L10n.text("menu.later_countdown", L10n.clock(seconds)) : L10n.text("menu.later_short")
     }
     private func dueTitle(_ kind: BreakKind) -> String {
-        L10n.text(kind == .short ? "menu.due_short" : "menu.due_long")
+        engine.settings.timingModel == .dual ? L10n.text(kind == .short ? "menu.due_short" : "menu.due_long") : L10n.text("menu.due", engine.settings.breakTitle(kind))
     }
     private func dueText(_ kind: BreakKind) -> String {
         if engine.pause == nil && !engine.away && !engine.outsideSchedule {
-            if engine.suppressed { return L10n.text("state.due_later", kind.title) }
-            if engine.graceRemaining > 0 { return L10n.text("state.due_grace", kind.title, L10n.clock(engine.graceRemaining)) }
+            if engine.suppressed { return L10n.text("state.due_later", engine.settings.breakTitle(kind)) }
+            if engine.graceRemaining > 0 { return L10n.text("state.due_grace", engine.settings.breakTitle(kind), L10n.clock(engine.graceRemaining)) }
         }
-        return L10n.text("menu.due", kind.title)
+        return L10n.text("menu.due", engine.settings.breakTitle(kind))
     }
 }
