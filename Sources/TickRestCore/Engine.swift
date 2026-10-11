@@ -307,6 +307,11 @@ public final class Engine {
         suppressed = value
         if value {
             if case .waiting(let r) = phase { phase = .deferred(r, 0); effects.append(.hide) }
+            else if !isResting, warnedKind != nil {
+                // Grace warnings can be visible while the phase is working.
+                if case .warning = phase { phase = .working }
+                effects.append(.hide)
+            }
         } else {
             grace = 30; warnedKind = nil
             if case .waiting = phase { phase = .working }
