@@ -238,6 +238,22 @@ struct FunctionalAuditTests {
         #expect(summary.rest == s.shortDuration - 1 && summary.natural == 1 && summary.completed == 0)
     }
 
+    @Test(arguments: [RestPlanID.eye202020, .fiftyTen, .pomodoro])
+    func pausedRestAccumulatesMultipleNaturalSegmentsWithoutDuplicateInterruption(_ plan: RestPlanID) throws {
+        let s = settings(plan); let engine = Engine(settings: s); var time = now
+        step(engine, s.shortInterval, &time); step(engine, s.shortDuration - 2, &time)
+        let id = try #require(engine.reminder?.id)
+        engine.setPause(.indefinite, now: time)
+        for _ in 0..<2 {
+            engine.beginAway(at: time); time = time.addingTimeInterval(1)
+            engine.endAway(now: time, minimumShort: s.shortDuration)
+        }
+        #expect(engine.reminder == nil && engine.pause == .indefinite)
+        #expect(engine.records.filter { $0.outcome == .interrupted && $0.reminderID == id }.count == 1)
+        let summary = TodaySummary(records: engine.records, now: time)
+        #expect(summary.rest == s.shortDuration - 2 && summary.natural == 2 && summary.completed == 0)
+    }
+
     // AUDIT-04: changing a visual preference must not delay a due rest, the same
     // contract already covered for status-dot preferences in StatusDotTests.
     @Test(arguments: ["theme", "language", "countdown", "size", "sound", "scope"])

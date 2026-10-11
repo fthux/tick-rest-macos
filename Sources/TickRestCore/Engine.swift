@@ -312,7 +312,9 @@ public final class Engine {
     public func endAway(now: Date, minimumShort: Double) {
         guard away else { return }
         let seconds = max(0, now.timeIntervalSince(awayStarted ?? now))
-        let interrupted = interruptedReminder
+        // A pause already recorded the interruption, but its deferred reminder
+        // still carries measured rest that qualifies together with time away.
+        let interrupted = interruptedReminder ?? reminder.flatMap { $0.elapsed > 0 ? $0 : nil }
         let combined = seconds + (interrupted?.elapsed ?? 0)
         away = false; awayStarted = nil
         if let r = interruptedReminder { record(r, .interrupted, now, includeDuration: false) }
@@ -321,6 +323,9 @@ public final class Engine {
         let qualifiesShort = combined >= (settings.timingModel == .dual ? minimumShort : settings.shortDuration)
         if seconds == 0 { appendRecord(Record(date: now, kind: nil, outcome: .natural)) }
         else { recordDurationSplit(seconds: seconds, ending: now, kind: nil, outcome: .natural, reminderID: nil, rest: false) }
+        if case .deferred(var r, let delay) = phase, r.elapsed > 0 {
+            r.elapsed = min(r.target, combined); phase = .deferred(r, delay)
+        }
         switch settings.timingModel {
         case .dual:
             if qualifiesLong { reset(.long) }
