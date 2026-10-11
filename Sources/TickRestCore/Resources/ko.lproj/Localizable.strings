@@ -46,6 +46,7 @@
 "general.request_notifications" = "알림 권한 요청";
 "general.theme" = "화면 모드";
 "language.system" = "시스템 설정 따르기";
+"language.native_name" = "한국어";
 "menu.about" = "앱 정보";
 "menu.end" = "이번 휴식 끝내기";
 "menu.due" = "%@ 시간입니다";

@@ -122,7 +122,7 @@ struct SettingsView: View {
                     )) {
                         Text(L10n.text("language.system")).tag("system")
                         ForEach(L10n.availableLanguages, id: \.self) { language in
-                            Text(L10n.locale.localizedString(forIdentifier: language) ?? language).tag(language)
+                            Text(L10n.languageDisplayName(language)).tag(language)
                         }
                     }.labelsHidden()
                 }

@@ -45,7 +45,8 @@
 "general.notifications_help" = "休憩前の予告にのみ使用します。許可しなくてもアプリのカードは利用できます。集中モードにより通知が表示されない場合があります。";
 "general.request_notifications" = "通知の許可を要求";
 "general.theme" = "外観";
-"language.system" = "システムに合わせる";
+"language.system" = "システム設定に従う";
+"language.native_name" = "日本語";
 "menu.about" = "このアプリについて";
 "menu.end" = "今回の休憩を終了";
 "menu.due" = "%@の時間です";

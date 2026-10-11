@@ -45,7 +45,8 @@
 "general.notifications_help" = "Used only for advance break reminders. In-app cards still work without permission. Do Not Disturb may hide notifications.";
 "general.request_notifications" = "Request notification permission";
 "general.theme" = "Appearance";
-"language.system" = "Follow system";
+"language.system" = "System default";
+"language.native_name" = "English";
 "menu.about" = "About";
 "menu.end" = "End this break";
 "menu.due" = "%@ is due";

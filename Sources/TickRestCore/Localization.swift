@@ -7,6 +7,12 @@ public enum L10n {
     public static var availableLanguages: [String] {
         resourceBundle.localizations.filter { $0 != "Base" }.sorted()
     }
+    /// Language choices keep their native names in every interface language.
+    public static func languageDisplayName(_ identifier: String) -> String {
+        let fallback = Locale(identifier: identifier).localizedString(forIdentifier: identifier) ?? identifier
+        let bundle = resourceBundle.path(forResource: identifier, ofType: "lproj").flatMap(Bundle.init(path:))
+        return bundle?.localizedString(forKey: "language.native_name", value: fallback, table: "Localizable") ?? fallback
+    }
     public static var resolvedLanguage: String {
         resolveLanguage(language, preferredLanguages: Locale.preferredLanguages, availableLanguages: availableLanguages)
     }

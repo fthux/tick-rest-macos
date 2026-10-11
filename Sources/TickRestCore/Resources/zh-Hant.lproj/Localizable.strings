@@ -46,6 +46,7 @@
 "general.request_notifications" = "請求通知權限";
 "general.theme" = "外觀";
 "language.system" = "跟隨系統";
+"language.native_name" = "繁體中文";
 "menu.about" = "關於";
 "menu.end" = "結束本次休息";
 "menu.due" = "%@已到期";

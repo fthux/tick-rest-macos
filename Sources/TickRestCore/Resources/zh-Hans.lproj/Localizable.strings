@@ -46,6 +46,7 @@
 "general.request_notifications" = "请求通知权限";
 "general.theme" = "外观";
 "language.system" = "跟随系统";
+"language.native_name" = "简体中文";
 "menu.about" = "关于";
 "menu.end" = "结束本次休息";
 "menu.due" = "%@已到期";
