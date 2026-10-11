@@ -11,6 +11,7 @@ private enum FunctionalFixture {
     }
     static func settings(_ style: ReminderStyle = .gentle) -> Settings {
         var value = Settings(); value.style = style; value.prewarning = 0
+        value.breakStartMode = style == .gentle ? .manual : .automatic
         return value
     }
     static func temporaryStore(_ body: (DataStore, URL) throws -> Void) throws {
@@ -32,6 +33,7 @@ extension EngineTests {
         #expect(s.shortInterval == 1200 && s.shortDuration == 20)
         #expect(s.longInterval == 3600 && s.longDuration == 300)
         #expect(s.style == .gentle && s.prewarning == 10)
+        #expect(s.breakStartMode == .automatic)
         #expect(s.detectIdle && s.idleTimeout == 300 && s.avoidFullscreen)
         #expect(!s.scheduleEnabled && !s.sound && !s.onboardingComplete)
         #expect(AppIdentity.name == "TickRest")
@@ -459,12 +461,16 @@ extension EngineTests {
         let bundlePath = try #require(L10n.resourceBundle.path(forResource: identifier, ofType: "lproj"))
         let data = try Data(contentsOf: URL(fileURLWithPath: bundlePath).appendingPathComponent("Localizable.strings"))
         let values = try #require(PropertyListSerialization.propertyList(from: data, format: nil) as? [String: String])
-        #expect(values.count == 184)
+        #expect(values.count == 188)
         #expect(values.values.allSatisfy { !$0.isEmpty })
         #expect(values["welcome.title"]?.contains("{appName}") == true)
         #expect(values["menu.remaining"]?.components(separatedBy: "%@").count == 3)
         #expect(values["break.short"] != nil && values["break.long"] != nil)
         #expect(values["reminder.sound_type"] != nil)
+        #expect(values["reminder.start_mode"] != nil && values["reminder.start_mode_help"] != nil)
+        for mode in BreakStartMode.allCases {
+            #expect(values["start_mode.\(mode.rawValue)"] != nil)
+        }
         for sound in ReminderSound.allCases {
             #expect(values["sound.\(sound.rawValue.lowercased())"] != nil)
         }

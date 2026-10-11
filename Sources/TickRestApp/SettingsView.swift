@@ -172,6 +172,11 @@ struct SettingsView: View {
                     }.labelsHidden()
                 }
                 Text(L10n.text("reminder.style_help")).font(.caption).foregroundStyle(.secondary)
+                row("reminder.start_mode", "reminder.start_mode_help") {
+                    Picker(L10n.text("reminder.start_mode"), selection: binding(\.breakStartMode)) {
+                        ForEach(BreakStartMode.allCases, id: \.self) { Text(L10n.text("start_mode.\($0.rawValue)")).tag($0) }
+                    }.labelsHidden()
+                }
                 Button(L10n.text("reminder.preview")) { NotificationCenter.default.post(name: .previewRest, object: nil) }.disabled(model.engine.reminder != nil)
             }
             Section {

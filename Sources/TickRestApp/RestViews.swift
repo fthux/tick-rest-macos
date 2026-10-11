@@ -44,6 +44,10 @@ struct RestCard: View {
                 } else if model.engine.isResting {
                     Button(L10n.text("rest.end")) { model.action { $0.finish(now: Date()) } }
                         .buttonStyle(RestCardButtonStyle(prominent: true))
+                    if r.elapsed <= 5 && r.postponements < 2 {
+                        Button(L10n.text("rest.defer", Int(r.kind.postponement / 60))) { model.action { $0.postpone(now: Date()) } }
+                    }
+                    Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
                 } else {
                     Button(L10n.text("rest.start")) { model.action { $0.start(now: Date()) } }
                         .buttonStyle(RestCardButtonStyle(prominent: true))
@@ -60,7 +64,10 @@ struct RestCard: View {
             .padding(1).tint(restColor)
             .environment(\.locale, L10n.locale)
     }
-    private func close() { if preview { previewEnd() } else { model.action { $0.skip(now: Date()) } } }
+    private func close() {
+        if preview { previewEnd() }
+        else { model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.skip(now: Date()) } } }
+    }
 }
 
 struct OverlayView: View {
@@ -75,15 +82,25 @@ struct OverlayView: View {
             Text(r.kind.title).font(.title2)
             Text(preview ? "00:05" : L10n.clock(r.target - r.elapsed)).font(.system(size: primary ? 88 : 52, weight: .light, design: .rounded)).monospacedDigit()
             if primary {
+                if !preview {
+                    Text(L10n.text(model.engine.isResting ? "rest.running" : "rest.waiting"))
+                        .font(.caption).foregroundStyle(.white.opacity(0.7))
+                }
                 Text(preview ? L10n.text("rest.preview") : r.idea)
                     .font(.title3).multilineTextAlignment(.center).frame(maxWidth: 600)
                 HStack(spacing: 16) {
                     if preview { Button(L10n.text("common.close"), action: previewEnd) }
                     else {
+                        if !model.engine.isResting {
+                            Button(L10n.text("rest.start")) { model.action { $0.start(now: Date()) } }
+                        }
                         if r.elapsed <= 5 && r.postponements < 2 {
                             Button(L10n.text("rest.defer", Int(r.kind.postponement / 60))) { model.action { $0.postpone(now: Date()) } }
                         }
-                        Button(L10n.text("rest.end")) { model.action { $0.finish(now: Date()) } }
+                        if model.engine.isResting {
+                            Button(L10n.text("rest.end")) { model.action { $0.finish(now: Date()) } }
+                        }
+                        Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
                     }
                 }.buttonStyle(.bordered).controlSize(.large)
                 Text(L10n.text("rest.escape")).font(.caption).foregroundStyle(.white.opacity(0.7))
@@ -161,6 +178,10 @@ struct WelcomeView: View {
                     ForEach(ReminderStyle.allCases, id: \.self) { Text(L10n.text("style.\($0.rawValue)")).tag($0) }
                 }.pickerStyle(.segmented)
                 Text(L10n.text("reminder.style_help")).foregroundStyle(.secondary)
+                Picker(L10n.text("reminder.start_mode"), selection: Binding(get: { model.settings.breakStartMode }, set: { v in model.update { $0.breakStartMode = v } })) {
+                    ForEach(BreakStartMode.allCases, id: \.self) { Text(L10n.text("start_mode.\($0.rawValue)")).tag($0) }
+                }.pickerStyle(.segmented)
+                Text(L10n.text("reminder.start_mode_help")).font(.caption).foregroundStyle(.secondary)
                 Button(L10n.text("reminder.preview")) { NotificationCenter.default.post(name: .previewRest, object: nil) }
             } else {
                 Text(L10n.text("welcome.ready")).font(.headline)

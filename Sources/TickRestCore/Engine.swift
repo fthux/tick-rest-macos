@@ -142,7 +142,7 @@ public final class Engine {
         }
     }
     private func present(_ value: Reminder) {
-        if settings.style == .overlay { phase = .resting(value) }
+        if settings.breakStartMode == .automatic { phase = .resting(value) }
         else { phase = .waiting(value) }
         effects.append(.show(value))
     }
@@ -183,7 +183,8 @@ public final class Engine {
     }
     public func skip(now: Date) {
         guard let r = reminder else { return }
-        if isResting { finish(now: now); return }
+        // Explicit skips consume the reminder; closing a running timer uses finish instead.
+        // Measured rest segments are already recorded, so do not add them again here.
         record(r, .skipped, now, includeDuration: false); reset(r.kind)
         phase = .working; warnedKind = nil; effects.append(.hide)
     }

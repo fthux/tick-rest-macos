@@ -8,12 +8,14 @@ struct EngineTests {
     private let now = Date(timeIntervalSince1970: 1_800_000_000)
     private func engine(_ style: ReminderStyle = .gentle) -> Engine {
         var settings = Settings(); settings.style = style; settings.prewarning = 0
+        settings.breakStartMode = style == .gentle ? .manual : .automatic
         return Engine(settings: settings)
     }
     @Test func testDueMenuExplainsRestartGraceInsteadOfZeroCountdown() {
         var snapshot = Snapshot(); snapshot.savedAt = now
         snapshot.shortElapsed = 1200; snapshot.longElapsed = 3600; snapshot.longCooldown = 30
-        let e = Engine(settings: Settings(), snapshot: snapshot, now: now)
+        var settings = Settings(); settings.breakStartMode = .manual
+        let e = Engine(settings: settings, snapshot: snapshot, now: now)
         e.tick(seconds: 25, now: now.addingTimeInterval(25))
         let display = ReminderDisplay(engine: e)
         #expect(e.remaining(.short) == 0); #expect(e.remaining(.long) == 5)

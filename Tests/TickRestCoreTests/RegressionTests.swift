@@ -7,6 +7,7 @@ import Testing
 extension EngineTests {
     @Test func regressionWaitingReminderKeepsIdentityAndPostponementBudgetAfterRestart() throws {
         var s = Settings(); s.prewarning = 0
+        s.breakStartMode = .manual
         let now = Date(); let e = Engine(settings: s)
         e.tick(seconds: 1200, now: now)
         let id = try #require(e.reminder?.id)

@@ -85,7 +85,7 @@ final class WindowCoordinator {
         panel.escape = { [weak self] in
             guard let self else { return }
             if self.isPreview { self.hide() }
-            else { self.model.action { $0.skip(now: Date()) } }
+            else { self.model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.skip(now: Date()) } } }
         }
         return panel
     }
