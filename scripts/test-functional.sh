@@ -39,7 +39,7 @@ else
     printf 'Coverage unavailable: no instrumented test binary or raw profiles found.\n'
 fi
 if run_check build bash scripts/build-app.sh debug; then
-    run_check packaging env PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s Tests/PackagingTests -v
+    run_check packaging env PYTHONDONTWRITEBYTECODE=1 TICKREST_BUILD_CONFIGURATION=debug python3 -m unittest discover -s Tests/PackagingTests -v
 else
     results+=("packaging:skipped")
     printf 'Packaging checks skipped because the current source did not build.\n'

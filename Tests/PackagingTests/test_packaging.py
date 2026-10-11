@@ -1,6 +1,8 @@
 """Read-only integration checks for the actual .app produced by build-app.sh.
 
 Run after building: python3 -m unittest discover -s Tests/PackagingTests -v
+Defaults to all Release variants. TICKREST_BUILD_CONFIGURATION and
+TICKREST_BUILD_ARCHITECTURE select the same options as build-app.sh.
 No app is launched; the user's preferences and statistics are never modified.
 """
 import json
@@ -14,22 +16,27 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 IDENTITY = json.loads((ROOT / "Sources/TickRestCore/Resources/AppIdentity.json").read_text())
-APP = ROOT / "dist" / (IDENTITY["name"] + ".app")
+CONFIGURATION = os.environ.get("TICKREST_BUILD_CONFIGURATION", "release")
 
 
 class PackagingTests(unittest.TestCase):
+    architecture = "universal"
+
     @classmethod
     def setUpClass(cls):
-        if not APP.is_dir():
-            raise RuntimeError("Build the app first: ./scripts/build-app.sh")
-        cls.info = plistlib.loads((APP / "Contents/Info.plist").read_bytes())
-        cls.resources = APP / "Contents/Resources" / (cls.info["AppResourceBundle"] + ".bundle")
+        cls.app = ROOT / "dist" / f"{IDENTITY['name']}-macOS-{cls.architecture}-{CONFIGURATION}.app"
+        if not cls.app.is_dir():
+            raise RuntimeError(f"Build the app first: bash scripts/build-app.sh {CONFIGURATION} {cls.architecture}")
+        cls.info = plistlib.loads((cls.app / "Contents/Info.plist").read_bytes())
+        cls.resources = cls.app / "Contents/Resources" / (cls.info["AppResourceBundle"] + ".bundle")
+        if (cls.resources / "Contents/Resources").is_dir():
+            cls.resources /= "Contents/Resources"
 
     def test_identity_matches_executable_and_bundle_id(self):
         for key in ("CFBundleName", "CFBundleDisplayName", "CFBundleExecutable"):
             self.assertEqual(self.info[key], IDENTITY["name"])
         self.assertEqual(self.info["CFBundleIdentifier"], IDENTITY["bundleIdentifier"])
-        executable = APP / "Contents/MacOS" / self.info["CFBundleExecutable"]
+        executable = self.app / "Contents/MacOS" / self.info["CFBundleExecutable"]
         self.assertTrue(os.access(executable, os.X_OK))
         self.assertIn("Mach-O", subprocess.check_output(["file", str(executable)], text=True))
 
@@ -42,7 +49,14 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(self.info["CFBundleVersion"])
 
     def test_no_unexpanded_build_placeholders(self):
-        self.assertNotIn("$(", (APP / "Contents/Info.plist").read_text())
+        self.assertNotIn("$(", (self.app / "Contents/Info.plist").read_text())
+
+    def test_about_build_metadata_matches_packaged_variant(self):
+        self.assertEqual(self.info["AppBuildArchitecture"], self.architecture)
+        self.assertEqual(self.info["AppBuildConfiguration"], CONFIGURATION)
+        template = plistlib.loads((ROOT / "packaging/Info.plist").read_bytes())
+        for key in ("CFBundleShortVersionString", "CFBundleVersion"):
+            self.assertEqual(self.info[key], template[key])
 
     def test_embedded_identity_matches_source(self):
         self.assertEqual(json.loads((self.resources / "AppIdentity.json").read_text()), IDENTITY)
@@ -82,23 +96,24 @@ class PackagingTests(unittest.TestCase):
                 self.assertEqual(read_strings(original), read_strings(bundled))
 
     def test_application_icon_has_valid_icns_header(self):
-        icon = APP / "Contents/Resources" / (self.info["CFBundleIconFile"] + ".icns")
+        icon = self.app / "Contents/Resources" / (self.info["CFBundleIconFile"] + ".icns")
         data = icon.read_bytes()
         self.assertEqual(data[:4], b"icns")
         self.assertEqual(int.from_bytes(data[4:8], "big"), len(data))
 
     def test_development_signature_passes_strict_verification(self):
-        result = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(APP)], capture_output=True, text=True)
+        result = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(self.app)], capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_binary_supports_the_current_machine_architecture(self):
-        executable = APP / "Contents/MacOS" / self.info["CFBundleExecutable"]
+    def test_binary_architectures_match_artifact_name(self):
+        executable = self.app / "Contents/MacOS" / self.info["CFBundleExecutable"]
         architectures = subprocess.check_output(["lipo", "-archs", str(executable)], text=True).split()
-        self.assertIn(platform.machine(), architectures)
+        expected = {"arm64", "x86_64"} if self.architecture == "universal" else {self.architecture}
+        self.assertEqual(set(architectures), expected)
 
     def test_binary_deployment_target_matches_advertised_macos13(self):
         # Info.plist alone cannot guarantee that the compiled binary runs on macOS 13.
-        executable = APP / "Contents/MacOS" / self.info["CFBundleExecutable"]
+        executable = self.app / "Contents/MacOS" / self.info["CFBundleExecutable"]
         commands = subprocess.check_output(["otool", "-l", str(executable)], text=True)
         targets = [line.strip().split()[1] for line in commands.splitlines()
                    if line.strip().startswith("minos ")]
@@ -106,13 +121,29 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue(all(float(value.split(".")[0]) <= 13 for value in targets), targets)
 
     def test_runtime_dependencies_do_not_reference_build_directories(self):
-        executable = APP / "Contents/MacOS" / self.info["CFBundleExecutable"]
-        linked = subprocess.check_output(["otool", "-L", str(executable)], text=True).splitlines()[1:]
+        executable = self.app / "Contents/MacOS" / self.info["CFBundleExecutable"]
+        output = subprocess.check_output(["otool", "-L", str(executable)], text=True)
+        # Universal binaries have a separate, unindented heading per architecture.
+        linked = [line for line in output.splitlines() if line.startswith(("\t", " "))]
         self.assertTrue(linked)
         for line in linked:
             dependency = line.strip().split(" (", 1)[0]
             with self.subTest(dependency=dependency):
                 self.assertTrue(dependency.startswith(("/System/Library/", "/usr/lib/", "@rpath/")), dependency)
+
+
+def load_tests(loader, tests, pattern):
+    architecture = os.environ.get("TICKREST_BUILD_ARCHITECTURE", "all")
+    if architecture == "native":
+        architecture = platform.machine()
+    if CONFIGURATION not in ("debug", "release") or architecture not in ("all", "arm64", "x86_64", "universal"):
+        raise ValueError("Invalid build configuration or architecture")
+    architectures = ("arm64", "x86_64", "universal") if architecture == "all" else (architecture,)
+    suite = unittest.TestSuite()
+    for target in architectures:
+        case = type(f"PackagingTests_{target}", (PackagingTests,), {"architecture": target})
+        suite.addTests(loader.loadTestsFromTestCase(case))
+    return suite
 
 
 if __name__ == "__main__":

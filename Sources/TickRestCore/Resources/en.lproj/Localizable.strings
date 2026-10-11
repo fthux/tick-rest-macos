@@ -7,7 +7,8 @@
 "about.report_bug" = "Report a Bug";
 "about.website" = "Visit Website";
 "about.email" = "Email Me";
-"about.version" = "%@";
+"about.version" = "Version %@ (Build %@) · %@ · %@";
+"about.build_unknown" = "Unknown";
 "app.name" = "{appName}";
 "break.long" = "Movement break";
 "break.short" = "Eye break";

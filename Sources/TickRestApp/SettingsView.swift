@@ -38,6 +38,7 @@ final class SettingsNavigation: ObservableObject {
 struct SettingsView: View {
     @ObservedObject var model: AppController
     @ObservedObject var navigation: SettingsNavigation
+    var buildInfo = AppBuildInfo.current
     private var page: SettingsPage { navigation.page }
     @State private var confirmClear = false
     @State private var recordsCleared = false
@@ -383,7 +384,10 @@ struct SettingsView: View {
                     Image(systemName: "leaf.fill").font(.system(size: 36)).foregroundStyle(.orange)
                     VStack(alignment: .leading, spacing: 5) {
                         Text(L10n.text("app.name")).font(.title2.bold())
-                        Text(L10n.text("about.version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0")).font(.caption).foregroundStyle(.secondary)
+                        Text(buildInfo.versionDescription)
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
                     }
                 }
                 Text(L10n.text("about.description")).font(.callout)

@@ -146,6 +146,34 @@ final class AppIntegrationTests: XCTestCase {
         }
     }
 
+    func testAboutShowsPackagedVersionBuildAndArchitecture() async throws {
+        try await withFixture { model, _, _ in
+            model.update { $0.language = "zh-Hans" }
+            let navigation = SettingsNavigation()
+            navigation.page = .about
+            for architecture in ["arm64", "x86_64", "universal"] {
+                let buildInfo = AppBuildInfo(infoDictionary: [
+                    "CFBundleShortVersionString": "2.4.1",
+                    "CFBundleVersion": "108",
+                    "AppBuildArchitecture": architecture,
+                    "AppBuildConfiguration": "release"
+                ])
+                let root = SettingsView(model: model, navigation: navigation, buildInfo: buildInfo)
+                let view = NSHostingView(rootView: root)
+                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+                                      styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                window.isReleasedWhenClosed = false
+                window.contentView = view
+                defer { window.close() }
+                window.orderFront(nil)
+                view.layoutSubtreeIfNeeded()
+                try await Task.sleep(nanoseconds: 150_000_000)
+                XCTAssertTrue(self.containsText(buildInfo.versionDescription, in: window), architecture)
+                try self.writeSnapshot(root, name: "about-build-\(architecture)", size: NSSize(width: 860, height: 640))
+            }
+        }
+    }
+
     func testCardSizesRenderWaitingAndRunningInEveryLanguage() async throws {
         try await withFixture { model, _, _ in
             model.update { $0.breakStartMode = .manual }

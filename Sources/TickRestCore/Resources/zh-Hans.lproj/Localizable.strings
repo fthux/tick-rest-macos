@@ -7,7 +7,8 @@
 "about.report_bug" = "报告 Bug";
 "about.website" = "访问网站";
 "about.email" = "给我发邮件";
-"about.version" = "%@";
+"about.version" = "版本 %@（构建 %@）· %@ · %@";
+"about.build_unknown" = "未知";
 "app.name" = "{appName}";
 "break.long" = "起身活动";
 "break.short" = "护眼休息";
