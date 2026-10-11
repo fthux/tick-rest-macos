@@ -22,7 +22,9 @@ public final class DataStore {
         do {
             var result = try JSONDecoder().decode(SavedData.self, from: Data(contentsOf: url))
             guard (1...2).contains(result.version), result.settings.validationError == nil,
-                  result.snapshot.pendingPlan?.validationErrorKey == nil else {
+                  Self.validSnapshot(result.snapshot, settings: result.settings),
+                  result.records.allSatisfy(Self.validRecord),
+                  Set(result.records.map(\.id)).count == result.records.count else {
                 throw CocoaError(.fileReadCorruptFile)
             }
             if result.version == 1 {
@@ -41,6 +43,45 @@ public final class DataStore {
         }
     }
     private var canWrite = true
+    private static func validSnapshot(_ snapshot: Snapshot, settings: Settings) -> Bool {
+        let durations = [snapshot.shortElapsed, snapshot.longElapsed,
+                         snapshot.shortCooldown, snapshot.longCooldown]
+        guard durations.allSatisfy({ $0.isFinite && $0 >= 0 }),
+              snapshot.savedAt.timeIntervalSinceReferenceDate.isFinite,
+              snapshot.activeReminder == nil || snapshot.deferredReminder == nil,
+              (snapshot.deferredReminder == nil) == (snapshot.deferredRemaining == nil),
+              snapshot.completedRounds.map({ (0...12).contains($0) }) ?? true else { return false }
+        if let delay = snapshot.deferredRemaining, !delay.isFinite || delay < 0 { return false }
+        if case .until(let date) = snapshot.pause, !date.timeIntervalSinceReferenceDate.isFinite { return false }
+        if let kind = snapshot.roundRestKind,
+           settings.timingModel != .rounds || !settings.enabled(kind) { return false }
+        for reminder in [snapshot.activeReminder, snapshot.deferredReminder].compactMap({ $0 }) {
+            guard settings.enabled(reminder.kind), reminder.target.isFinite, reminder.target > 0,
+                  reminder.elapsed.isFinite, (0...reminder.target).contains(reminder.elapsed),
+                  (0...10).contains(reminder.postponements), (0..<5).contains(reminder.ideaIndex) else { return false }
+            // Targets and budgets may predate an edit to duration or postpone limit.
+            // Legacy reminders also have no plan metadata.
+        }
+        if let pending = snapshot.pendingPlan {
+            var future = settings; future.restPlan = pending
+            guard future.validationErrorKey == nil else { return false }
+        }
+        return true
+    }
+    private static func validRecord(_ record: Record) -> Bool {
+        guard record.seconds.isFinite, record.seconds >= 0,
+              record.date.timeIntervalSinceReferenceDate.isFinite else { return false }
+        // Saved day keys retain their original calendar date across time zones;
+        // validate the date itself without deriving it from today's time zone.
+        let bytes = Array(record.day.utf8)
+        guard bytes.count == 10, bytes[4] == 45, bytes[7] == 45,
+              bytes.enumerated().allSatisfy({ [4, 7].contains($0.offset) || (48...57).contains($0.element) }) else { return false }
+        let parts = record.day.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3, (1...9999).contains(parts[0]) else { return false }
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        guard let date = calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2])) else { return false }
+        return Record.dayKey(date, calendar: calendar) == record.day
+    }
     public func save(_ data: SavedData) throws {
         guard canWrite else { throw CocoaError(.fileWriteNoPermission) }
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
