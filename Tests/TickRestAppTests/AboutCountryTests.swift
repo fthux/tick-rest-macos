@@ -66,7 +66,7 @@ final class AboutCountryTests: XCTestCase {
             {"countryOrRegion":{"code":"JP"},"enrichment":{"countryOrRegion":\(enrichment)}}
             """)
             XCTAssertNil(result)
-            XCTAssertEqual(result?.availabilityText ?? L10n.text("about.free"), "Tick Rest is currently free in your country")
+            XCTAssertEqual(result?.availabilityText ?? L10n.text("about.free"), "Tick Rest is currently free in your country.")
         }
     }
 
