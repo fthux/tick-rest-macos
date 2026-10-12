@@ -100,6 +100,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
            || menuResting != engine.isResting || menuLanguage != L10n.language { menuWillOpen(menu) }
         menuRoundItem?.title = L10n.text("plan.focus_state", engine.focusRound, model.settings.rounds)
         menuStateItem?.title = display.menuStateText
+        if let item = menuRoundItem { item.isHidden = item.title == display.menuStateText }
         for (kind, item) in menuCountdownItems {
             item.title = display.countdownText(for: kind)
         }
@@ -118,6 +119,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         menuStateItem = add(menu, display.menuStateText, nil)
         menuRoundItem = model.settings.timingModel == .rounds && model.engine.roundRestKind != nil
             ? add(menu, L10n.text("plan.focus_state", model.engine.focusRound, model.settings.rounds), nil) : nil
+        if let item = menuRoundItem { item.isHidden = item.title == display.menuStateText }
         if !model.engine.isResting {
             for kind in model.engine.displayKinds {
                 menuCountdownItems[kind] = add(menu, display.countdownText(for: kind), nil)

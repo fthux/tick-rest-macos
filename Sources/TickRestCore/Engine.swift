@@ -302,7 +302,9 @@ public final class Engine {
         if case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false); phase = .deferred(r, 0) }
         if case .waiting(let r) = phase { phase = .deferred(r, 0) }
         if case .warning = phase { phase = .working }
-        pause = mode; grace = 30; warnedKind = nil; effects.append(.hide)
+        // Manual pause/resume freezes the current cycle, including any existing
+        // recovery grace and prewarning identity; it must not create a new delay.
+        pause = mode; effects.append(.hide)
     }
     public func setSuppressed(_ value: Bool) {
         guard value != suppressed else { return }

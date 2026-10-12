@@ -127,7 +127,7 @@ struct ExtendedFunctionalAuditTests {
         if resting { engine.startNow(.short, now: time) }
         else {
             step(engine, 60, &time); engine.skip(now: time)
-            engine.setPause(nil, now: time)
+            engine.setSuppressed(true); engine.setSuppressed(false)
             step(engine, 60, &time)
             #expect(engine.effects.contains(.warning(.short)))
         }

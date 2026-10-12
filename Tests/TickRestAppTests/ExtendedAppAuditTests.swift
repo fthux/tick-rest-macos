@@ -150,6 +150,38 @@ extension AppIntegrationTests {
         }
     }
 
+    func testRoundMenuShowsFocusOnceAfterEarlyEndAndUpdatesWhileOpen() async throws {
+        try await withDelegate { delegate, model, status, _ in
+            model.applyPlan(.preset(.pomodoro))
+            model.action { engine in
+                engine.tick(seconds: 1500, now: Date())
+                engine.startNow(.short, now: Date())
+                engine.finish(now: Date())
+            }
+            XCTAssertNotNil(model.engine.roundRestKind)
+            XCTAssertGreaterThan(model.engine.remaining(.short), 0)
+            let menu = try XCTUnwrap(status.menu)
+            for language in ["en", "zh-Hans", "zh-Hant", "ja", "ko"] {
+                model.update { $0.language = language }
+                delegate.menuWillOpen(menu)
+                let focus = L10n.text("plan.focus_state", 1, 4)
+                XCTAssertEqual(menu.items.filter { !$0.isHidden && $0.title == focus }.count, 1)
+                XCTAssertTrue(menu.items.contains {
+                    !$0.isHidden && $0.title == ReminderDisplay(engine: model.engine).countdownText(for: .short)
+                })
+                model.action { $0.setPause(.indefinite, now: Date()) }
+                try await Task.sleep(nanoseconds: 100_000_000)
+                XCTAssertEqual(menu.items.first?.title, L10n.text("state.paused"))
+                XCTAssertEqual(menu.items.filter { !$0.isHidden && $0.title == focus }.count, 1)
+                model.resume()
+                try await Task.sleep(nanoseconds: 100_000_000)
+                XCTAssertEqual(menu.items.first?.title, focus)
+                XCTAssertEqual(menu.items.filter { !$0.isHidden && $0.title == focus }.count, 1)
+                delegate.menuDidClose(menu)
+            }
+        }
+    }
+
     func testOpenMenuUpdatesTimeStateActionsAndEveryLanguage() async throws {
         try await withDelegate { delegate, model, status, _ in
             let menu = try XCTUnwrap(status.menu); delegate.menuWillOpen(menu)
