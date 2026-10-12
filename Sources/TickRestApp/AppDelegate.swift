@@ -1,5 +1,6 @@
 import AppKit
 import Combine
+import QuartzCore
 import SwiftUI
 import TickRestCore
 
@@ -207,6 +208,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
               let split = findSplitViewController(in: window.contentView) else { return }
         settingsSplitController = split
         split.splitViewItems.first?.allowsFullHeightLayout = true
+        // Keep sidebar changes inside the window instead of preserving detail width.
+        split.splitViewItems.first?.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
         // Use the titlebar background and safe area as the visual boundary.
         for item in split.splitViewItems.dropFirst() {
             item.titlebarSeparatorStyle = .none
@@ -228,6 +231,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         window.titlebarSeparatorStyle = .none
     }
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        // Keep the control against the sidebar's right edge, inside its divider.
         [.flexibleSpace, sidebarToolbarIdentifier, separatorToolbarIdentifier, titleToolbarIdentifier, .flexibleSpace]
     }
     func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -239,12 +243,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         }
         let item = NSToolbarItem(itemIdentifier: identifier)
         if identifier == sidebarToolbarIdentifier {
-            item.image = NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: nil)
+            item.visibilityPriority = .high
             item.target = self
             item.action = #selector(toggleSettingsSidebar)
             let label = sidebarToolbarLabel(settingsNavigation.columnVisibility)
             item.label = label
             item.toolTip = label
+            // Native image items reserve too much width beside the traffic lights.
+            let button = NSButton(image: NSImage(systemSymbolName: "sidebar.left", accessibilityDescription: nil)!,
+                                  target: self, action: #selector(toggleSettingsSidebar))
+            button.isBordered = false
+            button.imageScaling = .scaleProportionallyDown
+            button.toolTip = label
+            button.setAccessibilityLabel(label)
+            button.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: 24),
+                button.heightAnchor.constraint(equalToConstant: 24)
+            ])
+            item.view = button
             return item
         }
         if identifier == titleToolbarIdentifier {
@@ -260,11 +277,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         let item = settingsWindow?.toolbar?.items.first { $0.itemIdentifier == sidebarToolbarIdentifier }
         item?.label = sidebarToolbarLabel(visibility)
         item?.toolTip = sidebarToolbarLabel(visibility)
+        item?.view?.toolTip = sidebarToolbarLabel(visibility)
+        item?.view?.setAccessibilityLabel(sidebarToolbarLabel(visibility))
     }
     @objc private func toggleSettingsSidebar() {
+        guard let sidebar = settingsSplitController?.splitViewItems.first else { return }
         let visibility: NavigationSplitViewVisibility = settingsNavigation.columnVisibility == .detailOnly ? .all : .detailOnly
-        let animation: Animation? = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion ? nil : .easeInOut(duration: 0.25)
-        withAnimation(animation) { settingsNavigation.columnVisibility = visibility }
+        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        // Animate the native split once. A SwiftUI animation on columnVisibility
+        // also animates the hosted List/Form layout while AppKit resizes its panes.
+        var transaction = Transaction(animation: nil)
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            NSAnimationContext.runAnimationGroup { context in
+                context.duration = reduceMotion ? 0 : 0.25
+                context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+                if reduceMotion { sidebar.isCollapsed = visibility == .detailOnly }
+                else { sidebar.animator().isCollapsed = visibility == .detailOnly }
+            }
+            settingsNavigation.columnVisibility = visibility
+        }
     }
 
     private func findSplitViewController(in view: NSView?) -> NSSplitViewController? {
@@ -323,17 +355,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
 /// Keep one native toolbar owner when SwiftUI updates the split view's columns.
 private final class SettingsWindow: NSWindow {
     var managedToolbar: NSToolbar?
-    // SwiftUI also recomputes minimum sizes after navigation and layout changes.
-    override var minSize: NSSize {
-        get { super.minSize }
-        set { super.minSize = NSSize(width: max(720, newValue.width), height: max(540, newValue.height)) }
-    }
-    override var contentMinSize: NSSize {
-        get { super.contentMinSize }
-        set {
-            super.contentMinSize = NSSize(width: max(720, newValue.width), height: max(540, newValue.height))
-        }
-    }
     override var toolbar: NSToolbar? {
         get { super.toolbar }
         set { super.toolbar = managedToolbar ?? newValue }

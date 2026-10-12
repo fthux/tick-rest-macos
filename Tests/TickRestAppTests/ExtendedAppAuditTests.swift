@@ -244,6 +244,121 @@ extension AppIntegrationTests {
         }
     }
 
+    func testSettingsSidebarTogglePreservesWindowFrameAfterFreshLaunch() async throws {
+        // Each delegate creates a fresh settings host, as quitting and relaunching does.
+        for _ in 0..<2 {
+            try await withDelegate { delegate, _, _, _ in
+                delegate.openSettings()
+                try await Task.sleep(nanoseconds: 400_000_000)
+                let window: NSWindow = try self.field("settingsWindow", of: delegate)
+                let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+                let toggle = try XCTUnwrap(window.toolbar?.items.first {
+                    $0.itemIdentifier.rawValue == AppIdentity.identifier("sidebar")
+                })
+                let button = try XCTUnwrap(toggle.view as? NSButton)
+                for width: CGFloat in [window.frame.width, 720, 1000] {
+                    var frame = window.frame
+                    frame.size.width = width
+                    window.setFrame(frame, display: true)
+                    try await Task.sleep(nanoseconds: 300_000_000)
+                    let original = window.frame
+                    for _ in 0..<3 {
+                        for visibility: NavigationSplitViewVisibility in [.detailOnly, .all] {
+                            button.performClick(nil)
+                            try await Task.sleep(nanoseconds: 400_000_000)
+                            XCTAssertEqual(navigation.columnVisibility, visibility)
+                            XCTAssertTrue(window.toolbar?.visibleItems?.contains { $0 === toggle } == true,
+                                          "The sidebar control must stay visible in both states")
+                            let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
+                            XCTAssertEqual(split.splitViewItems.first?.isCollapsed, visibility == .detailOnly)
+                            if visibility == .all {
+                                let buttonFrame = button.convert(button.bounds, to: nil)
+                                let sidebarWidth = try XCTUnwrap(split.splitView.arrangedSubviews.first).frame.width
+                                XCTAssertLessThanOrEqual(buttonFrame.maxX, sidebarWidth)
+                                XCTAssertGreaterThanOrEqual(buttonFrame.minX, sidebarWidth - 50)
+                                XCTAssertGreaterThan(buttonFrame.width, 0)
+                            }
+                            self.assertSettingsMinimum(window)
+                            XCTAssertEqual(window.frame.width, original.width, accuracy: 1)
+                            XCTAssertEqual(window.frame.height, original.height, accuracy: 1)
+                            XCTAssertEqual(window.frame.minX, original.minX, accuracy: 1)
+                            XCTAssertEqual(window.frame.maxY, original.maxY, accuracy: 1)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    func testSidebarAnimationKeepsWindowStableAndSettlesAfterRapidToggle() async throws {
+        try await withDelegate { delegate, _, _, _ in
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
+            let sidebar = try XCTUnwrap(split.splitViewItems.first)
+            let toggle = try XCTUnwrap(window.toolbar?.items.first {
+                $0.itemIdentifier.rawValue == AppIdentity.identifier("sidebar")
+            })
+            let action = try XCTUnwrap(toggle.action)
+            let original = window.frame
+            let expandedX = try XCTUnwrap(split.splitView.arrangedSubviews.last).frame.minX
+            var samples: [[String: Any]] = []
+            for page in [SettingsPage.general, .appearance, .overview] {
+                navigation.page = page
+                try await Task.sleep(nanoseconds: 200_000_000)
+                for visibility: NavigationSplitViewVisibility in [.detailOnly, .all] {
+                    let start = ProcessInfo.processInfo.systemUptime
+                    var positions: [CGFloat] = []
+                    XCTAssertTrue(NSApp.sendAction(action, to: toggle.target, from: toggle))
+                    for _ in 0..<30 {
+                        try await Task.sleep(nanoseconds: 16_000_000)
+                        let position = try XCTUnwrap(split.splitView.arrangedSubviews.last).frame.minX
+                        let hostX = sidebar.viewController.view.convert(sidebar.viewController.view.bounds, to: nil).minX
+                        positions.append(position)
+                        samples.append(["page": page.rawValue, "expanded": visibility == .all,
+                            "elapsed": ProcessInfo.processInfo.systemUptime - start,
+                            "sidebarContentX": hostX,
+                            "splitWidth": split.splitView.frame.width,
+                            "detailX": split.splitView.arrangedSubviews.last?.frame.minX ?? -1,
+                            "detailWidth": split.splitView.arrangedSubviews.last?.frame.width ?? -1,
+                            "sidebarWidth": split.splitView.arrangedSubviews.first?.frame.width ?? -1])
+                        XCTAssertEqual(window.frame.width, original.width, accuracy: 1)
+                        XCTAssertEqual(window.frame.minX, original.minX, accuracy: 1)
+                        XCTAssertEqual(hostX, 0, accuracy: 1, "Sidebar content must stay anchored to the window's left edge")
+                    }
+                    XCTAssertEqual(sidebar.isCollapsed, visibility == .detailOnly)
+                    XCTAssertEqual(navigation.columnVisibility, visibility)
+                    XCTAssertEqual(try XCTUnwrap(positions.last), visibility == .all ? expandedX : 0, accuracy: 1)
+                    if !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion {
+                        // Keep an actual transition, and reject a layout reversal or snap.
+                        XCTAssertGreaterThan(positions.filter { $0 > 1 && $0 < expandedX - 1 }.count, 1)
+                        for (previous, next) in zip(positions, positions.dropFirst()) {
+                            if visibility == .all { XCTAssertGreaterThanOrEqual(next + 1, previous) }
+                            else { XCTAssertLessThanOrEqual(next, previous + 1) }
+                        }
+                    }
+                }
+            }
+            // Reverse direction before the first animation finishes.
+            for _ in 0..<4 {
+                XCTAssertTrue(NSApp.sendAction(action, to: toggle.target, from: toggle))
+                try await Task.sleep(nanoseconds: 60_000_000)
+            }
+            try await Task.sleep(nanoseconds: 400_000_000)
+            XCTAssertEqual(navigation.columnVisibility, .all)
+            XCTAssertFalse(sidebar.isCollapsed)
+            XCTAssertEqual(window.frame.width, original.width, accuracy: 1)
+            XCTAssertTrue(window.toolbar?.items.contains { $0 === toggle } == true)
+            let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+                .deletingLastPathComponent().deletingLastPathComponent()
+            let output = project.appendingPathComponent(".build/native-ui-audit/sidebar-motion.json")
+            try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONSerialization.data(withJSONObject: samples, options: [.prettyPrinted, .sortedKeys]).write(to: output)
+        }
+    }
+
     func testActualToolbarToggleAndAllPageTitlesAtMinimumWindowSize() async throws {
         try await withDelegate { delegate, model, _, _ in
             delegate.openSettings()
@@ -252,6 +367,8 @@ extension AppIntegrationTests {
             let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
             let toolbar = try XCTUnwrap(window.toolbar)
             let toggle = try XCTUnwrap(toolbar.items.first { $0.itemIdentifier.rawValue == AppIdentity.identifier("sidebar") })
+            XCTAssertTrue(toolbar.visibleItems?.contains { $0 === toggle } == true,
+                          "The sidebar button must be visible, not just present in the toolbar")
             XCTAssertTrue(NSApp.sendAction(try XCTUnwrap(toggle.action), to: toggle.target, from: toggle))
             XCTAssertEqual(navigation.columnVisibility, .detailOnly)
             XCTAssertEqual(toggle.label, L10n.text("settings.sidebar.show"))
@@ -261,6 +378,7 @@ extension AppIntegrationTests {
             print("AUDIT environment: connected screens=\(NSScreen.screens.count), settings minSize=\(window.minSize)")
             window.setContentSize(window.minSize)
             try await Task.sleep(nanoseconds: 200_000_000)
+            XCTAssertTrue(toolbar.visibleItems?.contains { $0 === toggle } == true)
             let content = try XCTUnwrap(window.contentView)
             content.layoutSubtreeIfNeeded()
             let bitmap = try XCTUnwrap(content.bitmapImageRepForCachingDisplay(in: content.bounds))
@@ -270,6 +388,11 @@ extension AppIntegrationTests {
             let output = project.appendingPathComponent(".build/native-ui-audit/settings-actual-minimum.png")
             try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
             try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output)
+            let frameView = try XCTUnwrap(content.superview)
+            let windowBitmap = try XCTUnwrap(frameView.bitmapImageRepForCachingDisplay(in: frameView.bounds))
+            frameView.cacheDisplay(in: frameView.bounds, to: windowBitmap)
+            try XCTUnwrap(windowBitmap.representation(using: .png, properties: [:])).write(
+                to: output.deletingLastPathComponent().appendingPathComponent("settings-toolbar-placement.png"))
             print("AUDIT minimum resize: content=\(content.bounds.size), frame=\(window.frame.size)")
             for page in SettingsPage.allCases {
                 navigation.page = page
@@ -279,6 +402,7 @@ extension AppIntegrationTests {
                 let title: NSTextField = try self.field("settingsTitleField", of: delegate)
                 XCTAssertEqual(title.stringValue, page.title)
                 XCTAssertTrue(window.toolbar === toolbar)
+                XCTAssertTrue(toolbar.visibleItems?.contains { $0 === toggle } == true)
                 XCTAssertTrue(self.containsText(page.title, in: window))
             }
             model.update { $0.language = "ja" }

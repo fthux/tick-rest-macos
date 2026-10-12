@@ -74,7 +74,7 @@ struct SettingsView: View {
                 }
                 navigation.page = SettingsPage.allCases[next]
             }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 206, max: 260)
+            .navigationSplitViewColumnWidth(min: 130, ideal: 148, max: 184)
             // Native List rows can retain labels when their stable IDs do not change.
             .id(model.interfaceLanguage)
         } detail: {
@@ -88,6 +88,11 @@ struct SettingsView: View {
             .clipped()
             .background(Color(nsColor: .windowBackgroundColor), ignoresSafeAreaEdges: [])
         }
+        // Constrain the whole split view so AppKit does not add the sidebar width
+        // to a minimum that was imposed on the window while the sidebar was hidden.
+        // Anchor the leading edge while AppKit reconciles the split width during
+        // a reveal; centering temporarily wider content moves the menu text left.
+        .frame(minWidth: 720, minHeight: 540, alignment: .leading)
         .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
         .confirmationDialog(L10n.text("data.clear_title"), isPresented: $confirmClear) {
