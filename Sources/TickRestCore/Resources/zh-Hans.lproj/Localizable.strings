@@ -166,6 +166,7 @@
 "overview.title" = "查看使用与休息统计。";
 "overview.usage" = "估算电脑使用时长";
 "validation.duration" = "起身活动的时长不能短于护眼休息的时长。";
+"validation.round_duration" = "长休息的时长不能短于短休息的时长。";
 "validation.interval" = "同时开启两种休息时，起身活动的间隔不能短于护眼休息的间隔。";
 "validation.range" = "请将间隔和时长设置在允许的范围内。";
 "validation.prewarning" = "提前提醒的时间须短于每种已开启休息的间隔，也可以关闭提前提醒。";

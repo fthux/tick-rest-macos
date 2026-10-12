@@ -166,6 +166,7 @@
 "overview.title" = "Review your usage and break statistics.";
 "overview.usage" = "Estimated computer use";
 "validation.duration" = "Movement breaks cannot be shorter than eye breaks.";
+"validation.round_duration" = "Long breaks cannot be shorter than short breaks.";
 "validation.interval" = "When both break types are enabled, the movement break interval cannot be shorter than the eye break interval.";
 "validation.range" = "Keep intervals and durations within the allowed ranges.";
 "validation.prewarning" = "Turn off advance reminders or set the lead time shorter than the interval for each enabled break type.";

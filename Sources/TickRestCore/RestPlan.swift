@@ -84,7 +84,9 @@ public struct RestPlan: Codable, Equatable {
               [shortPostpone, longPostpone, singlePostpone].allSatisfy({ $0.isFinite && (60...1800).contains($0) })
         else { return "validation.range" }
         if model == .dual && shortEnabled && longEnabled && longInterval < shortInterval { return "validation.interval" }
-        if model != .single && enabled(.short) && enabled(.long) && longDuration < shortDuration { return "validation.duration" }
+        if model != .single && enabled(.short) && enabled(.long) && longDuration < shortDuration {
+            return model == .rounds ? "validation.round_duration" : "validation.duration"
+        }
         return nil
     }
 }

@@ -166,6 +166,7 @@
 "overview.title" = "パソコンの使用時間と休憩の記録を確認できます。";
 "overview.usage" = "推定パソコン使用時間";
 "validation.duration" = "体を動かす休憩の時間は、目の休憩と同じかそれ以上にしてください。";
+"validation.round_duration" = "長い休憩の時間は、短い休憩と同じかそれ以上にしてください。";
 "validation.interval" = "両方の休憩を有効にする場合、体を動かす休憩の間隔は目の休憩の間隔以上にしてください。";
 "validation.range" = "間隔と休憩時間を指定された範囲内に設定してください。";
 "validation.prewarning" = "休憩前の予告をオフにするか、予告の時間を有効な各休憩の間隔より短く設定してください。";

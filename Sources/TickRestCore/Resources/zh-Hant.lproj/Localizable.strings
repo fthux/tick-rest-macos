@@ -166,6 +166,7 @@
 "overview.title" = "查看使用與休息統計。";
 "overview.usage" = "估算電腦使用時間";
 "validation.duration" = "起身活動的時間不能短於護眼休息的時間。";
+"validation.round_duration" = "長休息的時間不能短於短休息的時間。";
 "validation.interval" = "同時開啟兩種休息時，起身活動的間隔不能短於護眼休息的間隔。";
 "validation.range" = "請在允許的範圍內設定休息間隔與時間。";
 "validation.prewarning" = "提前提醒的時間須短於每種已開啟休息的間隔，也可以關閉提前提醒。";

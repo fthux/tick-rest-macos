@@ -112,4 +112,16 @@ struct ProjectAuditTests {
         #expect(display.stateText == L10n.text("state.away"))
     }
 
+    @Test(arguments: ["en", "zh-Hans", "zh-Hant", "ja", "ko"])
+    func roundDurationValidationMustUseTheRoundPlansTerminology(_ language: String) throws {
+        var s = settings(.pomodoro); s.shortDuration = 300; s.longDuration = 60
+        let key = try #require(s.validationErrorKey)
+        let previous = L10n.language; L10n.language = language
+        defer { L10n.language = previous }
+        #expect(key == "validation.round_duration")
+        #expect(L10n.text(key).localizedCaseInsensitiveContains(L10n.text("plan.short_break"))
+                && L10n.text(key).localizedCaseInsensitiveContains(L10n.text("plan.long_break")),
+                "Pomodoro duration validation must explain long/short breaks instead of unrelated eye/movement labels")
+    }
+
 }
