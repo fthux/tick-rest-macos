@@ -123,16 +123,67 @@ struct RestCard: View {
     let size: GentleReminderSize
     let preview: Bool
     let previewEnd: () -> Void
+    var collapsed = false
+    var setCollapsed: ((Bool) -> Void)? = nil
     @State private var showingIdea = false
     private var layout: GentleCardLayout { GentleCardLayout(size: size) }
     private var r: Reminder { model.engine.reminder ?? model.settings.previewReminder }
     var body: some View {
+        Group {
+            if collapsed { collapsedCard }
+            else { expandedCard.frame(width: layout.width) }
+        }
+        .environment(\.locale, L10n.locale)
+        .onChange(of: collapsed) { value in
+            if value { showingIdea = false }
+        }
+    }
+    private var collapsedCard: some View {
+        let status = GentleReminderPresentation.status(preview: preview,
+            resting: model.engine.isResting, remaining: r.target - r.elapsed)
+        return Button { setCollapsed?(false) } label: {
+            HStack(spacing: 10) {
+                Image(systemName: r.kind == .short ? "eye" : "figure.walk")
+                    .font(.system(size: 17))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(r.title).font(.system(size: 12, weight: .semibold))
+                    Text(status).font(.system(size: 12)).monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }.lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 12))
+            }
+            .padding(.horizontal, 12)
+            .frame(width: GentleReminderPresentation.collapsedWidth - 2,
+                   height: GentleReminderPresentation.collapsedHeight - 2)
+            .foregroundStyle(.primary)
+            .contentShape(Capsule())
+            .background(.regularMaterial, in: Capsule())
+            .overlay(Capsule().stroke(.secondary.opacity(0.2)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(r.title + " · " + status + " · " + L10n.text("rest.expand"))
+        .help(L10n.text("rest.expand"))
+        .padding(1)
+    }
+    private var expandedCard: some View {
         VStack(spacing: layout.spacing) {
             HStack(spacing: 8) {
                 Label(r.title, systemImage: r.kind == .short ? "eye" : "figure.walk")
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if size == .mini { clock }
+                if let setCollapsed {
+                    Button { setCollapsed(true) } label: {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                            .font(.system(size: 12))
+                            .frame(width: 24, height: 24)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(L10n.text("rest.collapse"))
+                    .help(L10n.text("rest.collapse"))
+                }
             }.font((size == .mini ? Font.caption : Font.callout).bold())
             if !preview, model.settings.timingModel == .rounds {
                 Text(ReminderDisplay(engine: model.engine).roundRestText)

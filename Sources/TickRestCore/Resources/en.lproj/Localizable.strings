@@ -1,7 +1,7 @@
 /* English. Keep keys and format arguments consistent across locales. */
 "about.description" = "Take regular breaks from your computer to rest your eyes, relax, and move around.";
 "about.free" = "{appName} is currently free in your country";
-"about.free_country" = "{appName} is currently free in your country (%@)";
+"about.free_country" = "{appName} is currently free in your country (%@).";
 "about.health" = "These reminders help you build a break routine. The app does not provide medical advice or check whether you actually rested your eyes or stepped away from the screen.";
 "about.source" = "Source Code";
 "about.report_bug" = "Report a Bug";
@@ -106,6 +106,11 @@
 "rest.skip" = "Skip";
 "rest.start" = "Start break";
 "rest.waiting" = "Ready when you are. The timer has not started.";
+"rest.collapse" = "Collapse reminder";
+"rest.expand" = "Expand reminder";
+"rest.compact_waiting" = "Waiting to start";
+"rest.compact_running" = "Resting %@";
+"rest.compact_preview" = "Preview %@";
 "rhythm.duration_minutes" = "Break duration: %d min";
 "rhythm.duration_seconds" = "Break duration: %d sec";
 "rhythm.help" = "Intervals are based on accumulated computer use, excluding breaks, pauses, and time away.";

@@ -26,7 +26,7 @@ final class AboutCountryTests: XCTestCase {
         """)
         let country = try XCTUnwrap(result)
         XCTAssertEqual(country.name, "China")
-        XCTAssertEqual(country.availabilityText, "Tick Rest is currently free in your country (China 🇨🇳)")
+        XCTAssertEqual(country.availabilityText, "Tick Rest is currently free in your country (China 🇨🇳).")
     }
 
     @MainActor
@@ -39,7 +39,7 @@ final class AboutCountryTests: XCTestCase {
          "enrichment":{"countryOrRegion":{"name":"United States of America","flag":"🇺🇸"}}}
         """)
         let country = try XCTUnwrap(result)
-        XCTAssertEqual(country.availabilityText, "Tick Rest is currently free in your country (United States of America 🇺🇸)")
+        XCTAssertEqual(country.availabilityText, "Tick Rest is currently free in your country (United States of America 🇺🇸).")
     }
 
     @MainActor

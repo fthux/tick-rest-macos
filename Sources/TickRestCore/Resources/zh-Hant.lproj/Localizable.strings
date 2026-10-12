@@ -1,7 +1,7 @@
 /* Traditional Chinese. Keys are stable across all future locales. */
 "about.description" = "提醒你在使用電腦時，定時讓眼睛休息、放鬆身體並起身活動。";
 "about.free" = "{appName}目前在你所在的國家或地區免費。";
-"about.free_country" = "{appName}目前在你所在的國家或地區免費（%@）";
+"about.free_country" = "{appName}目前在你所在的國家或地區免費（%@）。";
 "about.health" = "本應用程式幫助你養成定時休息的習慣，不提供醫療建議，也無法確認你是否真的遠眺或離開了螢幕。";
 "about.source" = "專案原始碼";
 "about.report_bug" = "回報 Bug";
@@ -106,6 +106,11 @@
 "rest.skip" = "略過";
 "rest.start" = "開始休息";
 "rest.waiting" = "等待開始，尚未計時";
+"rest.collapse" = "收起提醒";
+"rest.expand" = "展開提醒";
+"rest.compact_waiting" = "待開始";
+"rest.compact_running" = "休息中 %@";
+"rest.compact_preview" = "預覽 %@";
 "rhythm.duration_minutes" = "休息時間：%d 分鐘";
 "rhythm.duration_seconds" = "休息時間：%d 秒";
 "rhythm.help" = "休息間隔依累計的電腦使用時間計算，不含休息、暫停和離席時間。";

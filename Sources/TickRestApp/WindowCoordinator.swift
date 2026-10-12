@@ -43,15 +43,17 @@ final class WindowCoordinator {
     private var displayObserver: NSObjectProtocol?
     private var isPreview = false
     private var shownStyle: ReminderStyle?
+    private var gentlePresentation = GentleReminderPresentation()
     init(model: AppController) {
         self.model = model
         displayObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
             guard let self, !self.panels.isEmpty, !self.isPreview, let r = self.model.engine.reminder else { return }
-            self.show(r, preview: false)
+            self.show(r, preview: false, rebuilding: true)
         }
     }
     func apply(_ effects: [EngineEffect]) {
         for effect in effects {
+            gentlePresentation.apply(effect, settings: model.settings)
             switch effect {
             case .warning(let kind): model.notifyWarning(kind) { [weak self] in self?.showWarning(kind) }
             case .show(let r): show(r, preview: false)
@@ -64,13 +66,13 @@ final class WindowCoordinator {
         if shownStyle == .overlay {
             panels.forEach { $0.backgroundColor = overlayBackgroundColor }
         }
-        // Keep the selected position as translated content changes height or the
-        // user adjusts the position, without reopening the reminder.
+        // Resize the actual panel in both dimensions, including its hit area.
         if shownStyle == .gentle, let panel = panels.first, let hosting = panel.contentView,
            let screen = panel.screen ?? currentScreen {
+            hosting.layoutSubtreeIfNeeded()
             let height = ceil(hosting.fittingSize.height)
             if height > 0 {
-                let frame = GentleReminderPlacement.frame(size: NSSize(width: panel.frame.width, height: height),
+                let frame = GentleReminderPlacement.frame(size: NSSize(width: gentlePresentation.width, height: height),
                     in: screen.visibleFrame, position: model.settings.gentleReminderPosition)
                 if panel.frame != frame { panel.setFrame(frame, display: true) }
             }
@@ -82,23 +84,25 @@ final class WindowCoordinator {
     private var currentScreen: NSScreen? { NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens.first }
     func preview() {
         guard model.engine.reminder == nil else { return }
+        if model.settings.style == .gentle { gentlePresentation.begin(size: model.settings.gentleReminderSize) }
+        else { gentlePresentation.end() }
         show(model.settings.previewReminder, preview: true)
         let task = DispatchWorkItem { [weak self] in self?.hide() }; previewWork = task
         DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: task)
     }
-    private func show(_ r: Reminder, preview: Bool) {
+    private func show(_ r: Reminder, preview: Bool, rebuilding: Bool = false) {
         let previous = priorApplication
-        hide(restoreFocus: false)
+        let previousScreen = rebuilding ? panels.first?.screen : nil
+        hide(restoreFocus: false, preservingGentlePresentation: true)
         isPreview = preview; shownStyle = model.settings.style
         priorApplication = previous ?? NSWorkspace.shared.frontmostApplication
-        guard let screen = currentScreen else { return }
+        guard let screen = previousScreen.flatMap({ NSScreen.screens.contains($0) ? $0 : nil }) ?? currentScreen else { return }
         if model.settings.style == .gentle {
             // Capture the size for this presentation; settings apply to the next card.
-            let cardSize = model.settings.gentleReminderSize
-            let width = GentleCardLayout(size: cardSize).width
-            let hosting = NSHostingView(rootView: RestCard(model: model, size: cardSize, preview: preview, previewEnd: { [weak self] in self?.hide() }).frame(width: width))
+            if gentlePresentation.expandedSize == nil { gentlePresentation.begin(size: model.settings.gentleReminderSize) }
+            let hosting = NSHostingView(rootView: gentleCard())
             hosting.sizingOptions = [.intrinsicContentSize]
-            let size = NSSize(width: width, height: ceil(hosting.fittingSize.height))
+            let size = NSSize(width: gentlePresentation.width, height: ceil(hosting.fittingSize.height))
             let rect = GentleReminderPlacement.frame(size: size, in: screen.visibleFrame,
                                                      position: model.settings.gentleReminderPosition)
             let panel = makePanel(frame: rect, overlay: false)
@@ -114,7 +118,22 @@ final class WindowCoordinator {
                 if target == screen { panel.makeKey() }
             }
         }
-        if model.settings.sound && !preview { model.playReminderSound() }
+        if model.settings.sound && !preview && !rebuilding { model.playReminderSound() }
+    }
+    private func gentleCard() -> RestCard {
+        RestCard(model: model, size: gentlePresentation.expandedSize ?? model.settings.gentleReminderSize,
+                 preview: isPreview, previewEnd: { [weak self] in self?.hide() },
+                 collapsed: gentlePresentation.isCollapsed,
+                 setCollapsed: { [weak self] value in self?.setGentleCollapsed(value) })
+    }
+    private func setGentleCollapsed(_ value: Bool) {
+        guard shownStyle == .gentle,
+              let hosting = panels.first?.contentView as? NSHostingView<RestCard> else { return }
+        gentlePresentation.setCollapsed(value)
+        hosting.rootView = gentleCard()
+        refresh()
+        // SwiftUI may commit intrinsic sizing after the click's transaction.
+        DispatchQueue.main.async { [weak self] in self?.refresh() }
     }
     private func makePanel(frame: NSRect, overlay: Bool) -> ReminderPanel {
         let panel = ReminderPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
@@ -138,10 +157,11 @@ final class WindowCoordinator {
         let task = DispatchWorkItem { [weak self] in self?.warning?.close(); self?.warning = nil }
         warningWork = task; DispatchQueue.main.asyncAfter(deadline: .now() + max(1, model.settings.prewarning), execute: task)
     }
-    func hide(restoreFocus: Bool = true) {
+    func hide(restoreFocus: Bool = true, preservingGentlePresentation: Bool = false) {
         warningWork?.cancel(); previewWork?.cancel(); warning?.close(); warning = nil
         let hadOverlay = shownStyle == .overlay && !panels.isEmpty
         panels.forEach { $0.close() }; panels = []; isPreview = false; shownStyle = nil
+        if !preservingGentlePresentation { gentlePresentation.end() }
         if restoreFocus && hadOverlay, let prior = priorApplication, !prior.isTerminated,
            NSWorkspace.shared.frontmostApplication?.processIdentifier == ProcessInfo.processInfo.processIdentifier {
             prior.activate(options: [])

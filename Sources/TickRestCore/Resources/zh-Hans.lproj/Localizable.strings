@@ -1,7 +1,7 @@
 /* Simplified Chinese. Keys are stable across all future locales. */
 "about.description" = "帮助你在使用电脑时，定期远眺、放松和起身活动。";
 "about.free" = "{appName}目前在你所在的国家或地区免费。";
-"about.free_country" = "{appName}目前在你所在的国家或地区免费（%@）";
+"about.free_country" = "{appName}目前在你所在的国家或地区免费（%@）。";
 "about.health" = "本应用帮助你养成定时休息的习惯，不提供医疗建议，也无法确认你是否真的远眺或离开了屏幕。";
 "about.source" = "项目开源地址";
 "about.report_bug" = "报告 Bug";
@@ -106,6 +106,11 @@
 "rest.skip" = "跳过";
 "rest.start" = "开始休息";
 "rest.waiting" = "等待开始，尚未计时";
+"rest.collapse" = "收起提醒";
+"rest.expand" = "展开提醒";
+"rest.compact_waiting" = "待开始";
+"rest.compact_running" = "休息中 %@";
+"rest.compact_preview" = "预览 %@";
 "rhythm.duration_minutes" = "休息时长：%d 分钟";
 "rhythm.duration_seconds" = "休息时长：%d 秒";
 "rhythm.help" = "间隔按累计电脑使用时间计算，不包含休息、暂停与离席。";
