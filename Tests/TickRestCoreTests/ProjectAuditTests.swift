@@ -183,4 +183,24 @@ struct ProjectAuditTests {
         #expect(records.count == 3 && records.map(\.seconds) == [5, 5, 5])
         #expect(records.map(\.date) == [now, later.date, earlier.date])
     }
+    @Test(arguments: [RestPlanID.tickrest, .eye202020, .fiftyTen, .pomodoro], BreakStartMode.allCases)
+    func postponementBudgetAndIdentitySurviveEachDiskRoundtrip(_ plan: RestPlanID, _ mode: BreakStartMode) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tickrest-project-audit-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let store = DataStore(url: directory.appendingPathComponent("state.json"))
+        let s = settings(plan, mode: mode); var engine = Engine(settings: s); var time = now
+        step(engine, s.shortInterval, &time)
+        let id = try #require(engine.reminder?.id)
+        for budget in 1...s.postponeLimit {
+            engine.postpone(now: time)
+            var saved = SavedData(); saved.settings = s; saved.snapshot = engine.snapshot(now: time)
+            try store.save(saved); let loaded = store.load()
+            #expect(store.loadErrorKey == nil)
+            engine = Engine(settings: loaded.settings, snapshot: loaded.snapshot, now: time)
+            step(engine, s.postponement(.short), &time); step(engine, 1, &time)
+            #expect(engine.reminder?.id == id && engine.reminder?.postponements == budget)
+        }
+        engine.postpone(now: time)
+        #expect(engine.reminder?.postponements == s.postponeLimit)
+    }
 }

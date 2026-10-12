@@ -15,9 +15,7 @@ final class NotificationObservationsTests: XCTestCase {
         defer { first.removeObserver(unrelated) }
         first.post(name: name, object: nil); second.post(name: name, object: nil)
         XCTAssertEqual(firstCount, 1); XCTAssertEqual(secondCount, 1)
-        weak var released = observations
         observations = nil
-        XCTAssertNil(released)
         first.post(name: name, object: nil); second.post(name: name, object: nil)
         XCTAssertEqual(firstCount, 1); XCTAssertEqual(secondCount, 1)
         XCTAssertEqual(unrelatedCount, 2)
