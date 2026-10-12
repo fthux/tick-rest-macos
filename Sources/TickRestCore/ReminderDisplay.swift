@@ -6,8 +6,9 @@ public struct ReminderDisplay {
     public init(engine: Engine) { self.engine = engine }
 
     public var statusDotState: StatusDotState {
-        if engine.pause != nil || engine.away || engine.outsideSchedule { return .inactive }
+        if engine.pause != nil || engine.away { return .inactive }
         if engine.isResting { return .resting }
+        if engine.outsideSchedule { return .inactive }
         guard let kind = engine.nextKind else { return .inactive }
         if engine.suppressed { return .deferred }
         if case .deferred = engine.phase { return .deferred }
@@ -19,6 +20,12 @@ public struct ReminderDisplay {
             return .attention
         }
         return .working
+    }
+
+    public var statusSymbolName: String {
+        if engine.pause != nil || engine.away { return "pause.circle" }
+        if engine.isResting { return "leaf.fill" }
+        return engine.outsideSchedule ? "pause.circle" : "leaf"
     }
 
     public var menuBarText: String {
@@ -40,7 +47,7 @@ public struct ReminderDisplay {
             }
         }
         if engine.away { return L10n.text("state.away") }
-        if engine.outsideSchedule { return L10n.text("state.outside") }
+        if engine.outsideSchedule && !engine.isResting { return L10n.text("state.outside") }
         if engine.nextKind == nil && !engine.isResting { return L10n.text("state.reminders_off") }
         if engine.suppressed && !engine.isResting { return L10n.text("state.fullscreen") }
         switch engine.phase {

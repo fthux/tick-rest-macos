@@ -94,4 +94,22 @@ struct ProjectAuditTests {
                 "The per-break countdown promises 10 seconds while actual recovery grace is 30 seconds")
     }
 
+    @Test(arguments: [RestPlanID.tickrest, .eye202020, .fiftyTen, .pomodoro])
+    func manualRestOutsideScheduleMustDisplayItsRunningState(_ plan: RestPlanID) {
+        let previous = L10n.language; L10n.language = "en"
+        defer { L10n.language = previous }
+        var s = settings(plan); s.scheduleEnabled = true
+        var time = Calendar.current.date(from: DateComponents(year: 2026, month: 10, day: 12, hour: 8))!
+        let engine = Engine(settings: s); engine.tick(seconds: 0, now: time)
+        engine.startNow(.short, now: time); step(engine, 1, &time)
+        #expect(engine.isResting && engine.reminder?.elapsed == 1)
+        let display = ReminderDisplay(engine: engine)
+        #expect(display.statusSymbolName == "leaf.fill")
+        #expect(display.statusDotState == .resting && display.stateText != L10n.text("state.outside"),
+                "A running manual break must not be described as paused outside work hours")
+        engine.beginAway(at: time)
+        #expect(display.statusDotState == .inactive && display.statusSymbolName == "pause.circle")
+        #expect(display.stateText == L10n.text("state.away"))
+    }
+
 }

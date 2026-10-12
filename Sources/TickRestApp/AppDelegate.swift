@@ -84,10 +84,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private func updateStatus() {
         guard model != nil, let button = status?.button else { return }
         let engine = model.engine
-        let paused = engine.pause != nil || engine.away || engine.outsideSchedule
-        let symbol = paused ? "pause.circle" : engine.isResting ? "leaf.fill" : "leaf"
-        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: L10n.text("app.name"))
         let display = ReminderDisplay(engine: engine)
+        let symbol = display.statusSymbolName
+        button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: L10n.text("app.name"))
         let title = display.menuBarText
         button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
         button.attributedTitle = statusDotRenderer.title(
