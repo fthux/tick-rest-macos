@@ -262,7 +262,7 @@ struct FunctionalAuditTests {
 
     // AUDIT-04: changing a visual preference must not delay a due rest, the same
     // contract already covered for status-dot preferences in StatusDotTests.
-    @Test(arguments: ["theme", "language", "countdown", "size", "sound", "scope", "style", "tone", "onboarding"])
+    @Test(arguments: ["theme", "language", "countdown", "size", "sound", "scope", "style", "tone", "onboarding", "selected-display"])
     func presentationPreferenceEditsDoNotDelayDueReminder(_ preference: String) {
         let s = settings(.eye202020); let engine = Engine(settings: s); var time = now
         step(engine, s.shortInterval - 1, &time)
@@ -276,6 +276,7 @@ struct FunctionalAuditTests {
         case "style": edited.style = .overlay
         case "tone": edited.reminderSound = .hero
         case "onboarding": edited.onboardingComplete = true
+        case "selected-display": edited.selectedDisplayID = "external-display-uuid"
         default: edited.displayScope = .current
         }
         engine.updateSettings(edited); step(engine, 1, &time)

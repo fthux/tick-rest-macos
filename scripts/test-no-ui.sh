@@ -25,7 +25,7 @@ run_check localization python3 scripts/check-localizations.py
 # Explicit allow-list excludes AppIntegrationTests and ExtendedAppAuditTests,
 # whose fixtures call NSApplication.finishLaunching and order windows front.
 run_check tests bash scripts/test.sh --no-parallel --enable-code-coverage --filter \
-    'TickRestCoreTests|AppBuildInfoTests|AboutCountryTests|ReminderAppearanceTests|GentleReminderPresentationTests|ProjectHeadlessAuditTests|NotificationObservationsTests'
+    'TickRestCoreTests|AppBuildInfoTests|AboutCountryTests|ReminderAppearanceTests|GentleReminderPresentationTests|ProjectHeadlessAuditTests|NotificationObservationsTests|ReminderScreenSelectionTests|DisplayIdentificationTests'
 binary_dir="$(xcrun swift build --show-bin-path)"
 app_name="$(python3 -c 'import json; print(json.load(open("Sources/TickRestCore/Resources/AppIdentity.json"))["name"])')"
 test_binary="$binary_dir/${app_name}PackageTests.xctest/Contents/MacOS/${app_name}PackageTests"

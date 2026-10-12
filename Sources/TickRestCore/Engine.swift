@@ -73,6 +73,7 @@ public final class Engine {
         appearanceOnly.gentleReminderSize = value.gentleReminderSize
         appearanceOnly.gentleReminderPosition = value.gentleReminderPosition
         appearanceOnly.displayScope = value.displayScope
+        appearanceOnly.selectedDisplayID = value.selectedDisplayID
         appearanceOnly.sound = value.sound
         appearanceOnly.reminderSound = value.reminderSound
         appearanceOnly.showCountdown = value.showCountdown

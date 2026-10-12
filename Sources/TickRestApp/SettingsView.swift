@@ -44,6 +44,8 @@ struct SettingsView: View {
     @State private var confirmClear = false
     @State private var recordsCleared = false
     @State private var aboutCountry: AboutCountry?
+    @State private var connectedDisplays = ConnectedDisplay.current
+    @State private var displayIdentification = DisplayIdentificationController()
     var body: some View {
         NavigationSplitView(columnVisibility: $navigation.columnVisibility) {
             // Draw the selected background ourselves: native sidebar selection
@@ -102,6 +104,13 @@ struct SettingsView: View {
         .frame(minWidth: 720, minHeight: 540, alignment: .leading)
         .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
+            displayIdentification.clear()
+            connectedDisplays = ConnectedDisplay.current
+        }
+        .onChange(of: page) { _ in displayIdentification.clear() }
+        .onChange(of: model.settings.selectedDisplayID) { _ in displayIdentification.clear() }
+        .onDisappear { displayIdentification.clear() }
         .confirmationDialog(L10n.text("data.clear_title"), isPresented: $confirmClear) {
             Button(L10n.text("data.clear"), role: .destructive) { recordsCleared = model.clearRecords() }
             Button(L10n.text("common.cancel"), role: .cancel) {}
@@ -359,16 +368,50 @@ struct SettingsView: View {
         Group {
             Section {
                 row("displays.scope") {
-                    Picker(L10n.text("displays.scope"), selection: binding(\.displayScope)) {
+                    Picker(L10n.text("displays.scope"), selection: Binding(get: { model.settings.displayScope }, set: { scope in
+                        model.update {
+                            $0.displayScope = scope
+                            if scope == .selected, $0.selectedDisplayID == nil {
+                                $0.selectedDisplayID = connectedDisplays.first?.id
+                            }
+                        }
+                    })) {
                         ForEach(DisplayScope.allCases, id: \.self) { Text(L10n.text("display.\($0.rawValue)")).tag($0) }
                     }.labelsHidden()
+                }
+                if model.settings.displayScope == .selected {
+                    row("displays.selected") {
+                        HStack {
+                            Picker(L10n.text("displays.selected"), selection: binding(\.selectedDisplayID)) {
+                                if model.settings.selectedDisplayID == nil {
+                                    Text(L10n.text("displays.choose")).tag(nil as String?)
+                                } else if !connectedDisplays.contains(where: { $0.id == model.settings.selectedDisplayID }) {
+                                    Text(L10n.text("displays.disconnected")).tag(model.settings.selectedDisplayID)
+                                }
+                                ForEach(connectedDisplays) { display in
+                                    Text(display.name).tag(Optional(display.id))
+                                }
+                            }.labelsHidden()
+                            Button(L10n.text("displays.identify")) {
+                                displayIdentification.identify(model.settings.selectedDisplayID)
+                            }
+                            .disabled(!connectedDisplays.contains { $0.id == model.settings.selectedDisplayID })
+                            .help(L10n.text("displays.identify_help"))
+                        }
+                    }
+                    Text(L10n.text("displays.selected_help")).font(.caption).foregroundStyle(.secondary)
                 }
                 Text(L10n.text("displays.help")).font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                Text(L10n.text("displays.connected", NSScreen.screens.count)).font(.callout)
-                ForEach(Array(NSScreen.screens.enumerated()), id: \.offset) { _, screen in
-                    Label(screen.localizedName, systemImage: "display").font(.callout)
+                Text(L10n.text("displays.connected", connectedDisplays.count)).font(.callout)
+                ForEach(connectedDisplays) { display in
+                    HStack {
+                        Label(display.name, systemImage: "display").font(.callout)
+                        Spacer()
+                        Button(L10n.text("displays.identify")) { displayIdentification.identify(display.id) }
+                            .help(L10n.text("displays.identify_help"))
+                    }
                 }
             }
             Text(L10n.text("displays.limitations")).font(.caption).foregroundStyle(.secondary)

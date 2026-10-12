@@ -14,7 +14,7 @@ public enum GentleReminderPosition: String, Codable, CaseIterable {
     public var title: String { L10n.text("reminder.position.\(rawValue)") }
 }
 public enum BreakStartMode: String, Codable, CaseIterable { case automatic, manual }
-public enum DisplayScope: String, Codable, CaseIterable { case all, current }
+public enum DisplayScope: String, Codable, CaseIterable { case all, current, selected }
 public enum AppTheme: String, Codable, CaseIterable { case system, light, dark }
 public enum ReminderSound: String, Codable, CaseIterable {
     case glass = "Glass", ping = "Ping", pop = "Pop", tink = "Tink", purr = "Purr", hero = "Hero"
@@ -44,6 +44,7 @@ public struct Settings: Codable, Equatable {
     public var overlayBackgroundColor = Settings.defaultOverlayBackgroundColor
     public var breakStartMode: BreakStartMode = .automatic
     public var displayScope: DisplayScope = .all
+    public var selectedDisplayID: String?
     public var sound = false
     public var reminderSound: ReminderSound = .glass
     public var detectIdle = false
@@ -67,6 +68,7 @@ public struct Settings: Codable, Equatable {
         case scheduleEnabled, weekdays, scheduleStart, scheduleEnd, showCountdown, theme, language, onboardingComplete
         case showStatusDot, statusDotPalette
         case overlayBackgroundColor
+        case selectedDisplayID
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -84,6 +86,7 @@ public struct Settings: Codable, Equatable {
         // Existing configurations adopt automatic starts without losing other preferences.
         breakStartMode = try values.decodeIfPresent(BreakStartMode.self, forKey: .breakStartMode) ?? .automatic
         displayScope = try values.decode(DisplayScope.self, forKey: .displayScope)
+        selectedDisplayID = try values.decodeIfPresent(String.self, forKey: .selectedDisplayID)
         sound = try values.decode(Bool.self, forKey: .sound)
         // Preserve the existing tone when loading settings saved before sound selection.
         reminderSound = try values.decodeIfPresent(ReminderSound.self, forKey: .reminderSound) ?? .glass

@@ -80,13 +80,13 @@ final class WindowCoordinator {
     private var warningWork: DispatchWorkItem?
     private var previewWork: DispatchWorkItem?
     private var priorApplication: NSRunningApplication?
-    private var displayObserver: NSObjectProtocol?
+    private let observations = NotificationObservations()
     private var isPreview = false
     private var shownStyle: ReminderStyle?
     private var gentlePresentation = GentleReminderPresentation()
     init(model: AppController) {
         self.model = model
-        displayObserver = NotificationCenter.default.addObserver(forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main) { [weak self] _ in
+        observations.observe(NotificationCenter.default, name: NSApplication.didChangeScreenParametersNotification) { [weak self] _ in
             guard let self, !self.panels.isEmpty, !self.isPreview, let r = self.model.engine.reminder else { return }
             self.show(r, preview: false, rebuilding: true)
         }
@@ -148,12 +148,18 @@ final class WindowCoordinator {
             panel.setContentSize(rect.size)
             panel.orderFrontRegardless(); panels = [panel]
         } else {
-            let screens = model.settings.displayScope == .all ? NSScreen.screens : [screen]
-            for target in screens {
+            let screens = NSScreen.screens
+            // On disconnection, fall back to the pointer rather than the old panel's screen.
+            let fallback = model.settings.displayScope == .selected ? currentScreen : screen
+            let selection = ReminderScreenSelection.resolve(settings: model.settings,
+                displayIDs: screens.map { ConnectedDisplay.identifier(for: $0) },
+                currentIndex: fallback.flatMap { screens.firstIndex(of: $0) })
+            for index in selection.targets {
+                let target = screens[index]
                 let panel = makePanel(frame: target.frame, overlay: true)
-                panel.contentView = NSHostingView(rootView: OverlayView(model: model, preview: preview, primary: target == screen, previewEnd: { [weak self] in self?.hide() }))
+                panel.contentView = NSHostingView(rootView: OverlayView(model: model, preview: preview, primary: index == selection.primary, previewEnd: { [weak self] in self?.hide() }))
                 panel.orderFrontRegardless(); panels.append(panel)
-                if target == screen { panel.makeKey() }
+                if index == selection.primary { panel.makeKey() }
             }
         }
         if model.settings.sound && !preview && !rebuilding { model.playReminderSound() }
