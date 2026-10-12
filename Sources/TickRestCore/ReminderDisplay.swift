@@ -47,7 +47,8 @@ public struct ReminderDisplay {
         case .resting(let r): return L10n.text("state.resting", r.title, L10n.clock(r.target - r.elapsed))
         case .waiting(let r): return L10n.text("state.waiting", r.title)
         case .deferred(let r, let seconds):
-            if seconds > 0 { return L10n.text("state.deferred", r.title, L10n.clock(seconds)) }
+            let remaining = max(seconds, engine.graceRemaining)
+            if remaining > 0 { return L10n.text("state.deferred", r.title, L10n.clock(remaining)) }
             return dueText(r.kind)
         default:
             if let kind = engine.nextKind, engine.remaining(kind) == 0 { return dueText(kind) }
@@ -96,7 +97,8 @@ public struct ReminderDisplay {
 
     public func countdownText(for kind: BreakKind) -> String {
         if case .deferred(let r, let seconds) = engine.phase, r.kind == kind {
-            if seconds > 0 { return L10n.text("state.deferred", engine.settings.breakTitle(kind), L10n.clock(seconds)) }
+            let remaining = max(seconds, engine.graceRemaining)
+            if remaining > 0 { return L10n.text("state.deferred", engine.settings.breakTitle(kind), L10n.clock(remaining)) }
             return L10n.text("menu.due", engine.settings.breakTitle(kind))
         }
         if case .waiting(let r) = engine.phase, r.kind == kind { return L10n.text("menu.due", engine.settings.breakTitle(kind)) }

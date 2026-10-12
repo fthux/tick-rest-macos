@@ -80,4 +80,18 @@ struct ProjectAuditTests {
                 "The 09:00 schedule renders as 10:00 on spring-forward and 08:00 on fall-back days")
     }
 
+    @Test func deferredCountdownMustIncludeLongerStartupGrace() throws {
+        let s = settings(.eye202020, mode: .manual); let engine = Engine(settings: s); var time = now
+        step(engine, s.shortInterval, &time); engine.postpone(now: time)
+        step(engine, s.singlePostpone - 10, &time)
+        let restored = Engine(settings: s, snapshot: engine.snapshot(now: time), now: time)
+        let previous = L10n.language; L10n.language = "en"
+        defer { L10n.language = previous }
+        let display = ReminderDisplay(engine: restored)
+        #expect(display.stateText.contains(L10n.clock(restored.graceRemaining)))
+        #expect(display.menuStateText.contains(L10n.clock(restored.graceRemaining)))
+        #expect(display.countdownText(for: .short).contains(L10n.clock(restored.graceRemaining)),
+                "The per-break countdown promises 10 seconds while actual recovery grace is 30 seconds")
+    }
+
 }
