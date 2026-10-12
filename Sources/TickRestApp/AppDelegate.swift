@@ -91,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         button.attributedTitle = statusDotRenderer.title(
             text: model.settings.showCountdown ? title : "",
             color: model.settings.showStatusDot ? model.settings.statusDotPalette[display.statusDotState] : nil,
-            appearance: button.effectiveAppearance, font: button.font!
+            font: button.font!
         )
         button.toolTip = L10n.text("app.name") + " — " + model.stateText
         button.setAccessibilityLabel(button.toolTip)
