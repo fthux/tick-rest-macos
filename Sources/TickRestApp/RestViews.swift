@@ -125,13 +125,14 @@ struct RestCard: View {
     let previewEnd: () -> Void
     var collapsed = false
     var setCollapsed: ((Bool) -> Void)? = nil
+    var maximumWidth: CGFloat? = nil
     @State private var showingIdea = false
     private var layout: GentleCardLayout { GentleCardLayout(size: size) }
     private var r: Reminder { model.engine.reminder ?? model.settings.previewReminder }
     var body: some View {
         Group {
             if collapsed { collapsedCard }
-            else { expandedCard.frame(width: layout.width) }
+            else { expandedCard.frame(width: min(layout.width, maximumWidth ?? layout.width)) }
         }
         .environment(\.locale, L10n.locale)
         .onChange(of: collapsed) { value in
@@ -154,7 +155,8 @@ struct RestCard: View {
                     .font(.system(size: 12))
             }
             .padding(.horizontal, 12)
-            .frame(width: GentleReminderPresentation.collapsedWidth - 2,
+            .frame(width: max(0, min(GentleReminderPresentation.collapsedWidth,
+                                    maximumWidth ?? GentleReminderPresentation.collapsedWidth) - 2),
                    height: GentleReminderPresentation.collapsedHeight - 2)
             .foregroundStyle(.primary)
             .contentShape(Capsule())

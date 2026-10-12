@@ -8,7 +8,13 @@ final class ReminderPanel: NSPanel {
 }
 
 enum GentleReminderPlacement {
+    static func fittedSize(_ size: NSSize, in available: NSSize) -> NSSize {
+        NSSize(width: max(0, min(size.width, available.width)),
+               height: max(0, min(size.height, available.height)))
+    }
+
     static func frame(size: NSSize, in visibleFrame: NSRect, position: GentleReminderPosition) -> NSRect {
+        let size = fittedSize(size, in: visibleFrame.size)
         // Reduce margins on small displays and respect displays with nonzero origins.
         let horizontalSpace = max(0, visibleFrame.width - size.width)
         let verticalSpace = max(0, visibleFrame.height - size.height)
@@ -28,7 +34,41 @@ enum GentleReminderPlacement {
         }
         // AppKit rounds window origins to whole points; use the same coordinates
         // so refresh does not repeatedly try to move a centered card by half a point.
-        return NSRect(origin: NSPoint(x: floor(x), y: floor(y)), size: size)
+        let origin = NSPoint(x: max(visibleFrame.minX, min(visibleFrame.maxX - size.width, floor(x))),
+                             y: max(visibleFrame.minY, min(visibleFrame.maxY - size.height, floor(y))))
+        return NSRect(origin: origin, size: size)
+    }
+}
+
+/// Keeps the entire card scrollable when its natural height exceeds the work area.
+final class GentleCardViewport: NSScrollView {
+    let hosting: NSHostingView<RestCard>
+    private var fitted = NSSize.zero
+    override var fittingSize: NSSize { fitted }
+
+    init(card: RestCard) {
+        hosting = NSHostingView(rootView: card)
+        super.init(frame: .zero)
+        hosting.sizingOptions = [.intrinsicContentSize]
+        drawsBackground = false
+        borderType = .noBorder
+        hasVerticalScroller = true
+        autohidesScrollers = true
+        scrollerStyle = .overlay
+        documentView = hosting
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    func fit(preferredWidth: CGFloat, in available: NSSize) -> NSSize {
+        let width = GentleReminderPlacement.fittedSize(NSSize(width: preferredWidth, height: 0), in: available).width
+        if hosting.rootView.maximumWidth != width { hosting.rootView.maximumWidth = width }
+        hosting.setFrameSize(NSSize(width: width, height: hosting.frame.height))
+        hosting.layoutSubtreeIfNeeded()
+        let height = ceil(hosting.fittingSize.height)
+        hosting.setFrameSize(NSSize(width: width, height: height))
+        fitted = GentleReminderPlacement.fittedSize(NSSize(width: width, height: height), in: available)
+        return fitted
     }
 }
 
@@ -67,12 +107,11 @@ final class WindowCoordinator {
             panels.forEach { $0.backgroundColor = overlayBackgroundColor }
         }
         // Resize the actual panel in both dimensions, including its hit area.
-        if shownStyle == .gentle, let panel = panels.first, let hosting = panel.contentView,
+        if shownStyle == .gentle, let panel = panels.first, let viewport = panel.contentView as? GentleCardViewport,
            let screen = panel.screen ?? currentScreen {
-            hosting.layoutSubtreeIfNeeded()
-            let height = ceil(hosting.fittingSize.height)
-            if height > 0 {
-                let frame = GentleReminderPlacement.frame(size: NSSize(width: gentlePresentation.width, height: height),
+            let size = viewport.fit(preferredWidth: gentlePresentation.width, in: screen.visibleFrame.size)
+            if size.height > 0 {
+                let frame = GentleReminderPlacement.frame(size: size,
                     in: screen.visibleFrame, position: model.settings.gentleReminderPosition)
                 if panel.frame != frame { panel.setFrame(frame, display: true) }
             }
@@ -100,14 +139,13 @@ final class WindowCoordinator {
         if model.settings.style == .gentle {
             // Capture the size for this presentation; settings apply to the next card.
             if gentlePresentation.expandedSize == nil { gentlePresentation.begin(size: model.settings.gentleReminderSize) }
-            let hosting = NSHostingView(rootView: gentleCard())
-            hosting.sizingOptions = [.intrinsicContentSize]
-            let size = NSSize(width: gentlePresentation.width, height: ceil(hosting.fittingSize.height))
+            let viewport = GentleCardViewport(card: gentleCard())
+            let size = viewport.fit(preferredWidth: gentlePresentation.width, in: screen.visibleFrame.size)
             let rect = GentleReminderPlacement.frame(size: size, in: screen.visibleFrame,
                                                      position: model.settings.gentleReminderPosition)
             let panel = makePanel(frame: rect, overlay: false)
-            panel.contentView = hosting
-            panel.setContentSize(size)
+            panel.contentView = viewport
+            panel.setContentSize(rect.size)
             panel.orderFrontRegardless(); panels = [panel]
         } else {
             let screens = model.settings.displayScope == .all ? NSScreen.screens : [screen]
@@ -128,9 +166,9 @@ final class WindowCoordinator {
     }
     private func setGentleCollapsed(_ value: Bool) {
         guard shownStyle == .gentle,
-              let hosting = panels.first?.contentView as? NSHostingView<RestCard> else { return }
+              let viewport = panels.first?.contentView as? GentleCardViewport else { return }
         gentlePresentation.setCollapsed(value)
-        hosting.rootView = gentleCard()
+        viewport.hosting.rootView = gentleCard()
         refresh()
         // SwiftUI may commit intrinsic sizing after the click's transaction.
         DispatchQueue.main.async { [weak self] in self?.refresh() }
