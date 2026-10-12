@@ -408,7 +408,7 @@ extension EngineTests {
             Record(date: now, kind: nil, outcome: .usage, seconds: 3)
         ]
         DataStore.append([], to: &records, now: now)
-        #expect(records.count == 2 && records.first?.seconds == 2)
+        #expect(records.count == 2 && records.first?.seconds == 0)
     }
 
     @Test func functionalSummaryFiltersDayAndOutcome() {

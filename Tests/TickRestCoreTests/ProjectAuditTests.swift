@@ -148,4 +148,39 @@ struct ProjectAuditTests {
         #expect(engine.records.filter { $0.outcome == .natural }.map(\.seconds) == [30, 10])
         #expect(engine.records.filter { $0.outcome == .restarted }.count == 1)
     }
+    @Test func rollingRetentionMustExcludeExpiredSecondsInsideAMergedUsageRecord() {
+        var records: [Record] = []
+        for second in stride(from: 5, through: 3600, by: 5) {
+            let end = now.addingTimeInterval(Double(second))
+            DataStore.append([Record(date: end, kind: nil, outcome: .usage, seconds: 5)], to: &records, now: end)
+        }
+        let checkTime = now.addingTimeInterval(DataStore.recordRetention + 1800)
+        DataStore.append([], to: &records, now: checkTime)
+        #expect(records.map(\.seconds).reduce(0, +) == 1800,
+                "Only the last 30 minutes of this one-hour record lie within the rolling 90-day retention window")
+    }
+
+    @Test func retentionTrimsRestAndNaturalDurationsWithoutChangingEventCounts() {
+        let cutoff = now.addingTimeInterval(-DataStore.recordRetention)
+        let completed = Record(date: cutoff, kind: .short, outcome: .completed, seconds: 300)
+        var records = [
+            Record(date: cutoff.addingTimeInterval(10), kind: .short, outcome: .usage, seconds: 20, reminderID: UUID()),
+            Record(date: cutoff.addingTimeInterval(30), kind: nil, outcome: .natural, seconds: 60),
+            completed
+        ]
+        DataStore.append([], to: &records, now: now)
+        #expect(records.map(\.seconds) == [10, 30, 300])
+        #expect(records.last?.id == completed.id)
+        let summary = StatisticsSummary(records: records, range: StatisticsDateRange(start: cutoff, end: now))
+        #expect(summary.rest == 10 && summary.natural == 30 && summary.completed == 1)
+    }
+
+    @Test func usageMergingDoesNotHideGapsOrReorderRecords() {
+        var records = [Record(date: now, kind: nil, outcome: .usage, seconds: 5)]
+        let later = Record(date: now.addingTimeInterval(8), kind: nil, outcome: .usage, seconds: 5)
+        let earlier = Record(date: now.addingTimeInterval(6), kind: nil, outcome: .usage, seconds: 5)
+        DataStore.append([later, earlier], to: &records, now: now.addingTimeInterval(10))
+        #expect(records.count == 3 && records.map(\.seconds) == [5, 5, 5])
+        #expect(records.map(\.date) == [now, later.date, earlier.date])
+    }
 }

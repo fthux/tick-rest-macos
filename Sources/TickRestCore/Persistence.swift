@@ -92,13 +92,21 @@ public final class DataStore {
         for item in additions {
             if item.outcome == .usage, let last = records.last,
                last.outcome == .usage, last.day == item.day, last.kind == item.kind,
-               last.reminderID == item.reminderID, last.planID == item.planID, last.timingModel == item.timingModel, last.basePlanID == item.basePlanID, item.date.timeIntervalSince(last.date) <= 10 {
+               last.reminderID == item.reminderID, last.planID == item.planID,
+               last.timingModel == item.timingModel, last.basePlanID == item.basePlanID,
+               item.date >= last.date,
+               abs(item.date.timeIntervalSince(last.date) - item.seconds) < 0.002 {
                 records[records.count - 1].seconds += item.seconds
                 records[records.count - 1].date = item.date
             } else { records.append(item) }
         }
         let oldest = now.addingTimeInterval(-recordRetention)
         records.removeAll { $0.date < oldest }
+        for index in records.indices where records[index].outcome == .usage || records[index].outcome == .natural {
+            // Duration records end at `date`; trim the part before the cutoff.
+            // Point events at the exact cutoff retain their identity and counts.
+            records[index].seconds = min(records[index].seconds, max(0, records[index].date.timeIntervalSince(oldest)))
+        }
     }
 }
 
