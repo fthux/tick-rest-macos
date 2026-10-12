@@ -27,6 +27,7 @@ struct PlanEditor: View {
                 )) {
                     ForEach(RestPlanID.allCases) { plan in Text(plan.title).tag(plan) }
                 }
+                Text(L10n.text("plan.preset_help")).font(.caption).foregroundStyle(.secondary)
                 Text(draft.title).font(.headline)
                 Text(L10n.text("plan.reference")).font(.caption).foregroundStyle(.secondary)
                 Text((draft.baseID ?? draft.id).description).font(.callout).foregroundStyle(.secondary)
@@ -36,9 +37,15 @@ struct PlanEditor: View {
                 Text(L10n.text("plan.health_note")).font(.caption).foregroundStyle(.secondary)
             }
             Section {
-                Picker(L10n.text("plan.model"), selection: binding(\.model)) {
-                    ForEach(TimingModel.allCases) { timing in Text(timing.title).tag(timing) }
+                if draft.id == .custom {
+                    Picker(L10n.text("plan.model"), selection: binding(\.model)) {
+                        ForEach(TimingModel.allCases) { timing in Text(timing.title).tag(timing) }
+                    }
+                } else {
+                    LabeledContent(L10n.text("plan.model"), value: draft.model.title)
                 }
+                Text(L10n.text(draft.id == .custom ? "plan.custom_edit_help" : "plan.preset_edit_help"))
+                    .font(.caption).foregroundStyle(.secondary)
                 if draft.model == .dual {
                     Toggle(L10n.text("break.short"), isOn: binding(\.shortEnabled))
                     duration("rhythm.interval_minutes", \.shortInterval, range: 60...7200, step: 60, minutes: true)

@@ -42,7 +42,9 @@ fi
 
 package_app() {
     local output_architecture="$1"
-    local app_dir="$PWD/dist/$app_name-macOS-$output_architecture-$configuration.app"
+    local configuration_suffix=""
+    if [ "$configuration" = "debug" ]; then configuration_suffix="-debug"; fi
+    local app_dir="$PWD/dist/$app_name-$output_architecture$configuration_suffix.app"
     # Recreate only this variant so rebuilds cannot retain stale resources/signatures.
     rm -rf "$app_dir"
     mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"

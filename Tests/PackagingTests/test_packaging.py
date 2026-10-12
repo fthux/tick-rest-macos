@@ -24,7 +24,8 @@ class PackagingTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.app = ROOT / "dist" / f"{IDENTITY['name']}-macOS-{cls.architecture}-{CONFIGURATION}.app"
+        configuration_suffix = "-debug" if CONFIGURATION == "debug" else ""
+        cls.app = ROOT / "dist" / f"{IDENTITY['name']}-{cls.architecture}{configuration_suffix}.app"
         if not cls.app.is_dir():
             raise RuntimeError(f"Build the app first: bash scripts/build-app.sh {CONFIGURATION} {cls.architecture}")
         cls.info = plistlib.loads((cls.app / "Contents/Info.plist").read_bytes())

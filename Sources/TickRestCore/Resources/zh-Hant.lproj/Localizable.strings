@@ -223,7 +223,10 @@
 "plan.pomodoro.description" = "時間管理方法。預設專注 25 分鐘，短休息 5 分鐘；完成第 4 段專注後，改為長休息 15 分鐘。";
 "plan.custom.description" = "選擇計時方式，自行調整時長、輪數與延後規則。";
 "plan.based_on" = "自訂 · 以「%@」為基礎";
-"plan.choose" = "休息方案";
+"plan.choose" = "預設方案";
+"plan.preset_help" = "選擇預設方案會填入計時方式、時間、輪數與延後規則。";
+"plan.preset_edit_help" = "修改參數會轉為自訂，按下「套用方案」後生效。若要更換計時方式，請先選擇「自訂」。";
+"plan.custom_edit_help" = "調整計時方式與各項參數後，按下「套用方案」生效。";
 "plan.active" = "目前方案";
 "plan.model" = "計時方式";
 "plan.health_note" = "這些方案提供不同的使用起點，不代表健康效果的排名。計時器無法確認你是否真的遠眺或起身活動。";

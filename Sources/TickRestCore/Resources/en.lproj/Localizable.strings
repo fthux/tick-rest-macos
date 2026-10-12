@@ -223,7 +223,10 @@
 "plan.pomodoro.description" = "A time-management method. Defaults: focus for 25 minutes, then rest for 5 minutes. After the fourth focus session, take a 15-minute break instead.";
 "plan.custom.description" = "Choose a timing model and adjust its durations, rounds, and postponement settings.";
 "plan.based_on" = "Custom · Based on %@";
-"plan.choose" = "Break routine";
+"plan.choose" = "Preset routine";
+"plan.preset_help" = "Choosing a preset fills in its timing model, durations, rounds, and postponement settings.";
+"plan.preset_edit_help" = "Editing a setting switches to Custom. Click Apply routine to use your changes. To change the timing model, choose Custom first.";
+"plan.custom_edit_help" = "Adjust the timing model and settings, then click Apply routine to use your changes.";
 "plan.active" = "Current routine";
 "plan.model" = "Timing model";
 "plan.health_note" = "These routines offer different starting points, not a ranking of health benefits. A timer cannot verify that you looked away or moved around.";

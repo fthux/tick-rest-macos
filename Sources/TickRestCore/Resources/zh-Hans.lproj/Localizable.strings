@@ -223,7 +223,10 @@
 "plan.pomodoro.description" = "时间管理方法。默认专注 25 分钟，短休息 5 分钟；完成第 4 段专注后，改为长休息 15 分钟。";
 "plan.custom.description" = "选择计时方式，自行调整时长、轮数和延后规则。";
 "plan.based_on" = "自定义 · 基于%@";
-"plan.choose" = "休息方案";
+"plan.choose" = "预设方案";
+"plan.preset_help" = "选择预设会填入计时方式、时长、轮数和延后规则。";
+"plan.preset_edit_help" = "修改参数会转为自定义，点击「应用方案」后生效。要更换计时方式，请先选择「自定义」。";
+"plan.custom_edit_help" = "调整计时方式和各项参数后，点击「应用方案」生效。";
 "plan.active" = "当前方案";
 "plan.model" = "计时方式";
 "plan.health_note" = "这些方案是不同的使用起点，不代表健康效果的排名。计时器无法确认你是否真正远眺或起身活动。";
