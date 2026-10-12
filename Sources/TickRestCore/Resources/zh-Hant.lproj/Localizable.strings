@@ -84,7 +84,7 @@
 "reminder.preview" = "預覽 5 秒";
 "reminder.prewarning" = "提前提醒";
 "reminder.sound" = "提示音";
-"reminder.sound_help" = "休息開始和完成時各播放一次，預設關閉。";
+"reminder.sound_help" = "提醒出現和休息完成時各播放一次，預設關閉。";
 "reminder.style" = "提醒樣式";
 "reminder.style_help" = "提醒小卡不會中斷目前應用程式的鍵盤輸入；全螢幕提醒會遮住所選螢幕。休息計時的開始方式可另外設定。";
 "reminder.sound_type" = "提示音類型";

@@ -84,7 +84,7 @@
 "reminder.preview" = "5초 미리 보기";
 "reminder.prewarning" = "휴식 전 미리 알림";
 "reminder.sound" = "알림 소리";
-"reminder.sound_help" = "휴식이 시작될 때와 끝날 때 한 번씩 재생합니다. 기본 설정은 꺼짐입니다.";
+"reminder.sound_help" = "알림이 표시될 때와 휴식이 완료될 때 한 번씩 재생합니다. 기본 설정은 꺼짐입니다.";
 "reminder.style" = "알림 표시 방식";
 "reminder.style_help" = "작은 알림 창은 현재 앱의 키보드 입력을 방해하지 않습니다. 전체 화면 알림은 선택한 화면을 가립니다. 타이머 시작 방식은 따로 설정할 수 있습니다.";
 "reminder.sound_type" = "알림 소리 종류";

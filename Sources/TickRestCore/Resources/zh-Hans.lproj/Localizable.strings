@@ -84,7 +84,7 @@
 "reminder.preview" = "预览 5 秒";
 "reminder.prewarning" = "提前提醒";
 "reminder.sound" = "提示音";
-"reminder.sound_help" = "休息开始和完成时各播放一次，默认关闭。";
+"reminder.sound_help" = "提醒出现和休息完成时各播放一次，默认关闭。";
 "reminder.style" = "提醒样式";
 "reminder.style_help" = "小窗提醒不会打断当前应用的键盘输入；全屏提醒会覆盖所选屏幕。休息计时的开始方式可单独设置。";
 "reminder.sound_type" = "提示音类型";

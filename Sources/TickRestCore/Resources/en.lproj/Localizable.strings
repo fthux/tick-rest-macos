@@ -84,7 +84,7 @@
 "reminder.preview" = "Preview for 5 seconds";
 "reminder.prewarning" = "Notify before a break";
 "reminder.sound" = "Reminder sound";
-"reminder.sound_help" = "Plays once when a break starts and once when it finishes. Off by default.";
+"reminder.sound_help" = "Plays when a reminder appears and when a break completes. Off by default.";
 "reminder.style" = "Reminder style";
 "reminder.style_help" = "Reminder cards let you keep working in the current app without interrupting keyboard input. Fullscreen overlays cover the selected displays. The timer start mode is a separate setting.";
 "reminder.sound_type" = "Sound";

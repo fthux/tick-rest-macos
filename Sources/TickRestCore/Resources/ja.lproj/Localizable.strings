@@ -84,7 +84,7 @@
 "reminder.preview" = "5秒間プレビュー";
 "reminder.prewarning" = "休憩前の予告";
 "reminder.sound" = "通知音";
-"reminder.sound_help" = "休憩の開始時と完了時に1回ずつ再生します。初期設定ではオフです。";
+"reminder.sound_help" = "リマインダーの表示時と休憩の完了時に1回ずつ再生します。初期設定ではオフです。";
 "reminder.style" = "通知の表示方法";
 "reminder.style_help" = "カード通知なら、現在のアプリでのキー入力を中断せずに作業を続けられます。全画面通知は選択した画面を覆います。タイマーの開始方法は別に設定できます。";
 "reminder.sound_type" = "通知音の種類";
