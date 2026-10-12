@@ -27,6 +27,7 @@ public final class Engine {
     private var awayStarted: Date?
     private var awayObservedAt: Date?
     private var interruptedReminder: Reminder?
+    private var pausedRestID: UUID?
     private var warnedKind: BreakKind?
     private var lastIdea: [BreakKind: Int] = [:]
     public init(settings: Settings, snapshot: Snapshot? = nil, now: Date = Date()) {
@@ -93,7 +94,7 @@ public final class Engine {
     public func applyPlan(_ plan: RestPlan, now: Date) {
         var candidate = settings; candidate.restPlan = plan
         guard candidate.validationErrorKey == nil else { return }
-        if isResting { pendingPlan = plan }
+        if isResting || reminder.map({ $0.elapsed > 0 || $0.id == pausedRestID }) == true { pendingPlan = plan }
         else { installPlan(plan, now: now) }
     }
     public func cancelPendingPlan() { pendingPlan = nil }
@@ -237,6 +238,7 @@ public final class Engine {
         }
     }
     private func present(_ value: Reminder) {
+        pausedRestID = nil
         if settings.breakStartMode == .automatic { phase = .resting(value) }
         else { phase = .waiting(value) }
         effects.append(.show(value))
@@ -274,6 +276,7 @@ public final class Engine {
     }
     public func postpone(now: Date) {
         guard var r = reminder, r.postponements < settings.postponeLimit else { return }
+        pausedRestID = nil
         if r.elapsed > 0 {
             // Per-segment duration has already been recorded; only emit the outcome here.
             record(r, .postponed, now, includeDuration: false)
@@ -310,7 +313,10 @@ public final class Engine {
         phase = .working; warnedKind = nil; effects.append(.hide); applyPending(now: now)
     }
     public func setPause(_ mode: PauseMode?, now: Date) {
-        if case .resting(let r) = phase { record(r, .interrupted, now, includeDuration: false); phase = .deferred(r, 0) }
+        if case .resting(let r) = phase {
+            pausedRestID = r.id
+            record(r, .interrupted, now, includeDuration: false); phase = .deferred(r, 0)
+        }
         if case .waiting(let r) = phase { phase = .deferred(r, 0) }
         if case .warning = phase { phase = .working }
         // Manual pause/resume freezes the current cycle, including any existing
