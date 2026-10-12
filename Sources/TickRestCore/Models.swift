@@ -42,6 +42,7 @@ public struct Settings: Codable, Equatable {
     public var gentleReminderPosition: GentleReminderPosition = .topCenter
     public static let defaultOverlayBackgroundColor = SRGBColor(red: 0.10, green: 0.18, blue: 0.15)
     public var overlayBackgroundColor = Settings.defaultOverlayBackgroundColor
+    public var overlayBackground = OverlayBackground()
     public var breakStartMode: BreakStartMode = .automatic
     public var displayScope: DisplayScope = .all
     public var selectedDisplayID: String?
@@ -68,6 +69,7 @@ public struct Settings: Codable, Equatable {
         case scheduleEnabled, weekdays, scheduleStart, scheduleEnd, showCountdown, theme, language, onboardingComplete
         case showStatusDot, statusDotPalette
         case overlayBackgroundColor
+        case overlayBackground
         case selectedDisplayID
     }
     public init(from decoder: Decoder) throws {
@@ -83,6 +85,7 @@ public struct Settings: Codable, Equatable {
         gentleReminderSize = try values.decodeIfPresent(GentleReminderSize.self, forKey: .gentleReminderSize) ?? .normal
         gentleReminderPosition = (try? values.decode(GentleReminderPosition.self, forKey: .gentleReminderPosition)) ?? .topCenter
         overlayBackgroundColor = (try? values.decode(SRGBColor.self, forKey: .overlayBackgroundColor)) ?? Self.defaultOverlayBackgroundColor
+        overlayBackground = ((try? values.decode(OverlayBackground.self, forKey: .overlayBackground)) ?? OverlayBackground()).normalized
         // Existing configurations adopt automatic starts without losing other preferences.
         breakStartMode = try values.decodeIfPresent(BreakStartMode.self, forKey: .breakStartMode) ?? .automatic
         displayScope = try values.decode(DisplayScope.self, forKey: .displayScope)

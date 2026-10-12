@@ -231,6 +231,7 @@ struct RestCard: View {
 
 struct OverlayPalette {
     let background: SRGBColor
+    var protected = false
     private func luminance(_ color: SRGBColor) -> Double {
         func linear(_ value: Double) -> Double {
             value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
@@ -238,6 +239,7 @@ struct OverlayPalette {
         return 0.2126 * linear(color.red) + 0.7152 * linear(color.green) + 0.0722 * linear(color.blue)
     }
     var usesDarkText: Bool {
+        if protected { return false }
         let brightness = luminance(background)
         return (brightness + 0.05) / 0.05 >= 1.05 / (brightness + 0.05)
     }
@@ -269,8 +271,16 @@ struct OverlayView: View {
     let preview: Bool
     let primary: Bool
     let previewEnd: () -> Void
+    var wallpaperScreen: NSScreen? = nil
+    var maximumImagePixels: Int? = nil
+    var backgroundRefreshToken = 0
+    var onWallpaperResolved: ((ResolvedWallpaper) -> Void)? = nil
     private var r: Reminder { model.engine.reminder ?? model.settings.previewReminder }
-    private var palette: OverlayPalette { OverlayPalette(background: model.settings.overlayBackgroundColor) }
+    private var background: OverlayBackground { model.settings.overlayBackground.normalized }
+    private var palette: OverlayPalette {
+        OverlayPalette(background: background.kind == .solid ? model.settings.overlayBackgroundColor : .init(red: 0, green: 0, blue: 0),
+                       protected: background.kind != .solid)
+    }
     var body: some View {
         VStack(spacing: 25) {
             if primary { Image(systemName: r.kind == .short ? "leaf" : "figure.walk").font(.system(size: 40)).accessibilityHidden(true) }
@@ -288,10 +298,23 @@ struct OverlayView: View {
                     .font(.title3).multilineTextAlignment(.center).frame(maxWidth: 600)
                 RestActions(model: model, reminder: r, preview: preview, previewEnd: previewEnd, palette: palette)
             }
-        }.padding(40).frame(maxWidth: .infinity, maxHeight: .infinity)
+        }.padding(28)
+            .background {
+                if background.kind != .solid {
+                    RoundedRectangle(cornerRadius: 28).fill(.black.opacity(background.activeProtection))
+                        .shadow(color: .black.opacity(background.activeProtection * 0.7), radius: 28)
+                }
+            }
+            .padding(40).frame(maxWidth: .infinity, maxHeight: .infinity)
             .foregroundStyle(palette.foreground)
-            .background(palette.backgroundColor)
-            .preferredColorScheme(palette.colorScheme)
+            .background {
+                OverlayBackgroundView(library: model.wallpapers, background: background, solid: model.settings.overlayBackgroundColor,
+                                      screen: wallpaperScreen, maximumPixels: maximumImagePixels,
+                                      refreshToken: backgroundRefreshToken, onResolved: onWallpaperResolved)
+            }
+            // A preview shares the settings window. Keep its palette local to
+            // this subtree instead of publishing a preference to that window.
+            .environment(\.colorScheme, palette.colorScheme)
             .environment(\.locale, L10n.locale)
     }
 }

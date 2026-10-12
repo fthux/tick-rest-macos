@@ -81,6 +81,7 @@ public final class Engine {
         appearanceOnly.showStatusDot = value.showStatusDot
         appearanceOnly.statusDotPalette = value.statusDotPalette
         appearanceOnly.overlayBackgroundColor = value.overlayBackgroundColor
+        appearanceOnly.overlayBackground = value.overlayBackground
         if appearanceOnly == value { settings = value; return }
         if let pending = pendingPlan {
             var future = value; future.restPlan = pending

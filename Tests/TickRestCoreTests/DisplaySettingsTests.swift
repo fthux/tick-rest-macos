@@ -36,11 +36,13 @@ struct DisplaySettingsTests {
         engine.startNow(.short, now: now)
         engine.tick(seconds: 3, now: now.addingTimeInterval(3))
         let reminder = try #require(engine.reminder)
-        let records = try JSONEncoder().encode(engine.records)
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let records = try encoder.encode(engine.records)
         settings.displayScope = .selected
         settings.selectedDisplayID = "external-display-uuid"
         engine.updateSettings(settings)
         #expect(engine.reminder == reminder)
-        #expect(try JSONEncoder().encode(engine.records) == records)
+        #expect(try encoder.encode(engine.records) == records)
     }
 }

@@ -68,7 +68,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             self?.updateStatus()
         }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(openSettings), name: NSNotification.Name(AppIdentity.identifier("showSettings")), object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(previewRest), name: .previewRest, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(previewRest(_:)), name: .previewRest, object: nil)
         model.begin(); updateStatus()
         // Published emits before mutation; refresh on the main queue after the engine/settings commit.
         // Revisions include each scheduler tick and explicit actions, so no second UI timer is needed.
@@ -182,7 +182,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     @objc private func startShort() { model.action { $0.startNow(.short, now: Date()) } }
     @objc private func startLong() { model.action { $0.startNow(.long, now: Date()) } }
     @objc private func skipRest() { model.action { $0.skip(now: Date()) } }
-    @objc private func previewRest() { windows.preview() }
+    @objc private func previewRest(_ notification: Notification) {
+        let id = notification.userInfo?["screenID"] as? String
+        windows.preview(screen: id.flatMap { id in NSScreen.screens.first { ConnectedDisplay.identifier(for: $0) == id } })
+    }
     @objc private func resume() { model.resume() }
     @objc private func pause15() { model.pauseMinutes(15) }
     @objc private func pause60() { model.pauseMinutes(60) }
@@ -191,14 +194,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     @objc private func openAbout() { settingsNavigation.page = .about; openSettings() }
     @objc func openSettings() {
         if settingsWindow == nil {
-            settingsWindow = makeWindow(title: settingsNavigation.page.title, size: NSSize(width: 860, height: 640), content: SettingsView(model: model, navigation: settingsNavigation), managesToolbar: true)
+            settingsWindow = makeWindow(title: settingsNavigation.page.title, size: NSSize(width: 920, height: 680), content: SettingsView(model: model, navigation: settingsNavigation), managesToolbar: true)
             settingsWindow?.styleMask.insert(.fullSizeContentView)
             // A hosting controller lets NavigationSplitView install its native toolbar.
             settingsWindow?.contentViewController = NSHostingController(
                 rootView: SettingsView(model: model, navigation: settingsNavigation)
             )
             // Hosting installs its own sizing constraints; apply ours afterward.
-            settingsWindow?.minSize = NSSize(width: 720, height: 540)
+            settingsWindow?.minSize = NSSize(width: 780, height: 580)
         }
         model.refreshLogin(); model.refreshNotificationStatus(); show(settingsWindow!)
         DispatchQueue.main.async { [weak self] in self?.configureSettingsToolbar() }

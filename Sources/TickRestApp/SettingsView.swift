@@ -84,7 +84,7 @@ struct SettingsView: View {
             // A non-scrolling container keeps the Form's viewport inside the
             // detail safe area, including during scroll rubber-banding.
             ZStack(alignment: .top) {
-                settingsForm(for: page)
+                settingsContent(for: page)
                     .padding(.top, 16)
                     // A new page gets its own scroll viewport. Passing the page
                     // explicitly also keeps outgoing content stable as it fades.
@@ -101,7 +101,7 @@ struct SettingsView: View {
         // to a minimum that was imposed on the window while the sidebar was hidden.
         // Anchor the leading edge while AppKit reconciles the split width during
         // a reveal; centering temporarily wider content moves the menu text left.
-        .frame(minWidth: 720, minHeight: 540, alignment: .leading)
+        .frame(minWidth: 780, minHeight: 580, alignment: .leading)
         .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
@@ -121,6 +121,54 @@ struct SettingsView: View {
             insertion: .opacity.combined(with: .offset(y: 8)),
             removal: .opacity
         )
+    }
+    @ViewBuilder private func settingsContent(for page: SettingsPage) -> some View {
+        if page == .appearance {
+            VStack(spacing: 12) {
+                SettingsSectionCard {
+                    HStack {
+                        Text(L10n.text("reminder.style"))
+                        Spacer(minLength: 20)
+                        Picker(L10n.text("reminder.style"), selection: binding(\.style)) {
+                            ForEach(ReminderStyle.allCases, id: \.self) {
+                                Text(L10n.text("style.\($0.rawValue)")).tag($0)
+                            }
+                        }
+                        .pickerStyle(.menu).labelsHidden().fixedSize().buttonStyle(.borderless)
+                    }.frame(maxWidth: .infinity)
+                    Text(L10n.text("reminder.style_help")).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 20)
+                if model.settings.style == .overlay {
+                    fullscreenAppearance
+                } else {
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            appearanceError
+                            appearance
+                        }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+        } else { settingsForm(for: page) }
+    }
+    private var fullscreenAppearance: some View {
+        BackgroundSettingsView(model: model) {
+            appearanceError
+            appearance
+        }.id(model.interfaceLanguage)
+    }
+    @ViewBuilder private var appearanceError: some View {
+        if let error = model.errorMessage {
+            HStack(alignment: .top) {
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                Text(error).font(.callout)
+                Spacer()
+                Button { model.dismissError() } label: { Image(systemName: "xmark") }
+                    .accessibilityLabel(L10n.text("common.dismiss"))
+            }
+        }
     }
     private func settingsForm(for page: SettingsPage) -> some View {
         Form {
@@ -235,81 +283,87 @@ struct SettingsView: View {
         })
     }
     private var rhythm: some View { PlanEditor(model: model) }
-    private var overlayBackgroundColor: Binding<Color> {
-        Binding(get: {
-            let color = model.settings.overlayBackgroundColor
-            return Color(.sRGB, red: color.red, green: color.green, blue: color.blue, opacity: 1)
-        }, set: { value in
-            guard let color = NSColor(value).usingColorSpace(.sRGB) else { return }
-            model.update {
-                $0.overlayBackgroundColor = SRGBColor(red: color.redComponent, green: color.greenComponent, blue: color.blueComponent)
-            }
-        })
-    }
     private var appearance: some View {
         Group {
-            Section {
-                row("reminder.style") {
-                    Picker(L10n.text("reminder.style"), selection: binding(\.style)) {
-                        ForEach(ReminderStyle.allCases, id: \.self) { Text(L10n.text("style.\($0.rawValue)")).tag($0) }
-                    }.labelsHidden()
+            appearanceCard { appearanceControls }
+            appearanceCard {
+                appearanceSoundControls
+                Divider()
+                Text(L10n.text("plan.actions_help")).font(.caption).foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+    private func appearanceCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        SettingsSectionCard(content: content)
+            .buttonStyle(.bordered)
+            .pickerStyle(.menu)
+    }
+    private func appearanceRow<Content: View>(_ title: String, _ description: String? = nil,
+                                             @ViewBuilder content: () -> Content) -> some View {
+        HStack(spacing: 20) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text(L10n.text(title))
+                if let description {
+                    Text(L10n.text(description)).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                Text(L10n.text("reminder.style_help")).font(.caption).foregroundStyle(.secondary)
-                if model.settings.style == .gentle {
-                    row("reminder.size", "reminder.size_help") {
-                        Picker(L10n.text("reminder.size"), selection: binding(\.gentleReminderSize)) {
-                            ForEach(GentleReminderSize.allCases, id: \.self) {
-                                Text(L10n.text("reminder.size.\($0.rawValue)")).tag($0)
-                            }
-                        }.labelsHidden()
-                    }
-                    LabeledContent {
-                        gentlePositionPicker
-                            .help(L10n.text("reminder.position_help"))
-                    } label: {
-                        VStack(alignment: .leading, spacing: 5) {
-                            Text(L10n.text("reminder.position"))
-                            Text(model.settings.gentleReminderPosition.title)
-                                .font(.caption).foregroundStyle(.secondary)
-                            Text(L10n.text("reminder.position_help"))
-                                .font(.caption).foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            content().fixedSize()
+        }.frame(maxWidth: .infinity)
+    }
+    private var appearanceControls: some View {
+        Group {
+            if model.settings.style == .gentle {
+                appearanceRow("reminder.size", "reminder.size_help") {
+                    Picker(L10n.text("reminder.size"), selection: binding(\.gentleReminderSize)) {
+                        ForEach(GentleReminderSize.allCases, id: \.self) {
+                            Text(L10n.text("reminder.size.\($0.rawValue)")).tag($0)
                         }
-                    }
-                } else {
-                    row("reminder.background_color", "reminder.background_color_help") {
-                        AnchoredColorPicker(selection: overlayBackgroundColor, label: L10n.text("reminder.background_color"))
-                            .frame(width: 44, height: 22)
-                    }
-                    Button(L10n.text("reminder.background_color_reset")) {
-                        model.update { $0.overlayBackgroundColor = TickRestCore.Settings.defaultOverlayBackgroundColor }
-                    }
+                    }.labelsHidden().buttonStyle(.borderless)
                 }
-                row("reminder.start_mode", "reminder.start_mode_help") {
-                    Picker(L10n.text("reminder.start_mode"), selection: binding(\.breakStartMode)) {
-                        ForEach(BreakStartMode.allCases, id: \.self) { Text(L10n.text("start_mode.\($0.rawValue)")).tag($0) }
-                    }.labelsHidden()
-                }
+                HStack(spacing: 20) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text(L10n.text("reminder.position"))
+                        Text(model.settings.gentleReminderPosition.title)
+                            .font(.caption).foregroundStyle(.secondary)
+                        Text(L10n.text("reminder.position_help"))
+                            .font(.caption).foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: 0)
+                    gentlePositionPicker.fixedSize()
+                        .help(L10n.text("reminder.position_help"))
+                }.frame(maxWidth: .infinity)
+            }
+            appearanceRow("reminder.start_mode", "reminder.start_mode_help") {
+                Picker(L10n.text("reminder.start_mode"), selection: binding(\.breakStartMode)) {
+                    ForEach(BreakStartMode.allCases, id: \.self) { Text(L10n.text("start_mode.\($0.rawValue)")).tag($0) }
+                }.labelsHidden().buttonStyle(.borderless)
+            }
+            if model.settings.style == .gentle {
                 Button(L10n.text("reminder.preview")) { NotificationCenter.default.post(name: .previewRest, object: nil) }.disabled(model.engine.reminder != nil)
             }
-            Section {
-                row("reminder.prewarning") {
-                    Picker(L10n.text("reminder.prewarning"), selection: binding(\.prewarning)) {
-                        Text(L10n.text("common.off")).tag(0.0)
-                        ForEach([10, 30, 60], id: \.self) { Text(L10n.text("duration.seconds", $0)).tag(Double($0)) }
-                    }.labelsHidden()
-                }
-                row("reminder.sound", "reminder.sound_help") { toggle("reminder.sound", \.sound) }
-                row("reminder.sound_type") {
-                    Picker(L10n.text("reminder.sound_type"), selection: binding(\.reminderSound)) {
-                        ForEach(ReminderSound.allCases, id: \.self) { sound in
-                            Text(sound.title).tag(sound)
-                        }
-                    }.labelsHidden()
-                }
-                Button(L10n.text("reminder.test_sound")) { model.playReminderSound() }
+        }
+    }
+    private var appearanceSoundControls: some View {
+        Group {
+            appearanceRow("reminder.prewarning") {
+                Picker(L10n.text("reminder.prewarning"), selection: binding(\.prewarning)) {
+                    Text(L10n.text("common.off")).tag(0.0)
+                    ForEach([10, 30, 60], id: \.self) { Text(L10n.text("duration.seconds", $0)).tag(Double($0)) }
+                }.labelsHidden().buttonStyle(.borderless)
             }
-            Text(L10n.text("plan.actions_help")).font(.caption).foregroundStyle(.secondary)
+            appearanceRow("reminder.sound", "reminder.sound_help") { toggle("reminder.sound", \.sound) }
+            appearanceRow("reminder.sound_type") {
+                Picker(L10n.text("reminder.sound_type"), selection: binding(\.reminderSound)) {
+                    ForEach(ReminderSound.allCases, id: \.self) { sound in
+                        Text(sound.title).tag(sound)
+                    }
+                }.labelsHidden().buttonStyle(.borderless)
+            }
+            Button(L10n.text("reminder.test_sound")) { model.playReminderSound() }
         }
     }
     private var gentlePositionPicker: some View {
@@ -523,6 +577,22 @@ struct SettingsExternalLink: View {
         .focused($isFocused)
         .onHover { isHovered = $0 }
         .help(destination.absoluteString)
+    }
+}
+
+/// Shared grouping for settings rendered outside the native grouped Form.
+struct SettingsSectionCard<Content: View>: View {
+    let content: Content
+    init(@ViewBuilder content: () -> Content) { self.content = content() }
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) { content }
+            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                    .allowsHitTesting(false)
+            }
     }
 }
 

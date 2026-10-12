@@ -16,6 +16,7 @@ struct AnchoredColorPicker: NSViewRepresentable {
         well.pulldownAction = #selector(AnchoredColorWell.showPanel)
         well.target = context.coordinator
         well.action = #selector(Coordinator.changeColor(_:))
+        well.isContinuous = true
         if #available(macOS 14, *) { well.supportsAlpha = false }
         return well
     }
@@ -52,6 +53,7 @@ final class AnchoredColorWell: NSColorWell {
         guard isEnabled, let window else { return }
         super.activate(exclusive)
         let panel = NSColorPanel.shared
+        panel.isContinuous = true
         panel.showsAlpha = false
         let anchor = window.convertToScreen(convert(bounds, to: nil))
         let screen = NSScreen.screens.first { $0.frame.contains(NSPoint(x: anchor.midX, y: anchor.midY)) } ?? window.screen

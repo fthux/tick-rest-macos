@@ -22,6 +22,8 @@ final class AppController: ObservableObject {
     @Published var fullscreenUnavailable = false
     let engine: Engine
     let store: DataStore
+    private lazy var stateWriter = DebouncedStateWriter { [store] in try store.save($0) }
+    lazy var wallpapers = WallpaperLibrary(directory: store.url.deletingLastPathComponent().appendingPathComponent("Wallpapers", isDirectory: true))
     var saved: SavedData
     var onEffects: (([EngineEffect]) -> Void)?
     private var timer: Timer?
@@ -130,16 +132,24 @@ final class AppController: ObservableObject {
         idleAtSystemAway = false; lastTick = ProcessInfo.processInfo.systemUptime
         consume(); persist()
     }
-    func update(_ mutate: (inout Settings) -> Void) {
+    func update(deferPersistence: Bool = false, _ mutate: (inout Settings) -> Void) {
         var candidate = settings; mutate(&candidate)
+        guard candidate != settings else { return }
         if let key = candidate.validationErrorKey { showError(key); return }
         if let pending = engine.pendingPlan {
             var future = candidate; future.restPlan = pending
             if let key = future.validationErrorKey { showError(key); return }
         }
+        let themeChanged = candidate.theme != settings.theme
         L10n.language = candidate.language; settings = candidate; engine.updateSettings(candidate)
         interfaceLanguage = L10n.resolvedLanguage
-        applyAppearance(); consume(); persist(); revision += 1
+        if themeChanged { applyAppearance() }
+        consume()
+        if deferPersistence {
+            captureSavedState()
+            stateWriter.schedule(saved) { [weak self] _ in self?.showError("error.save") }
+        } else { persist() }
+        revision += 1
     }
     func applyPlan(_ plan: RestPlan) {
         var candidate = settings; candidate.restPlan = plan
@@ -178,8 +188,11 @@ final class AppController: ObservableObject {
         onEffects?(effects)
     }
     func persist() {
+        captureSavedState()
+        do { try stateWriter.flush(saved) } catch { showError("error.save") }
+    }
+    private func captureSavedState() {
         saved.settings = settings; saved.snapshot = engine.snapshot(now: Date())
-        do { try store.save(saved) } catch { showError("error.save") }
     }
     @discardableResult func clearRecords() -> Bool {
         var cleared = saved
@@ -187,7 +200,7 @@ final class AppController: ObservableObject {
         cleared.settings = settings
         cleared.snapshot = engine.snapshot(now: Date())
         do {
-            try store.save(cleared)
+            try stateWriter.flush(cleared)
             saved = cleared
             revision += 1
             return true

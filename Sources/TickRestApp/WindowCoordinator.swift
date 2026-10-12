@@ -82,6 +82,7 @@ final class WindowCoordinator {
     private var priorApplication: NSRunningApplication?
     private let observations = NotificationObservations()
     private var isPreview = false
+    private var presentationID = UUID()
     private var shownStyle: ReminderStyle?
     private var gentlePresentation = GentleReminderPresentation()
     init(model: AppController) {
@@ -121,21 +122,29 @@ final class WindowCoordinator {
         }
     }
     private var currentScreen: NSScreen? { NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main ?? NSScreen.screens.first }
-    func preview() {
+    func preview(screen: NSScreen? = nil) {
         guard model.engine.reminder == nil else { return }
         if model.settings.style == .gentle { gentlePresentation.begin(size: model.settings.gentleReminderSize) }
         else { gentlePresentation.end() }
-        show(model.settings.previewReminder, preview: true)
+        show(model.settings.previewReminder, preview: true, preferredScreen: screen)
+        if model.settings.style != .overlay || model.settings.overlayBackground.kind != .wallpaper {
+            startPreviewCountdown()
+        }
+    }
+    private func startPreviewCountdown() {
+        guard isPreview, !panels.isEmpty, previewWork == nil else { return }
         let task = DispatchWorkItem { [weak self] in self?.hide() }; previewWork = task
         DispatchQueue.main.asyncAfter(deadline: .now() + 5, execute: task)
     }
-    private func show(_ r: Reminder, preview: Bool, rebuilding: Bool = false) {
+    private func show(_ r: Reminder, preview: Bool, rebuilding: Bool = false, preferredScreen: NSScreen? = nil) {
         let previous = priorApplication
         let previousScreen = rebuilding ? panels.first?.screen : nil
         hide(restoreFocus: false, preservingGentlePresentation: true)
         isPreview = preview; shownStyle = model.settings.style
+        let presentation = presentationID
         priorApplication = previous ?? NSWorkspace.shared.frontmostApplication
-        guard let screen = previousScreen.flatMap({ NSScreen.screens.contains($0) ? $0 : nil }) ?? currentScreen else { return }
+        guard let screen = preferredScreen.flatMap({ NSScreen.screens.contains($0) ? $0 : nil })
+                ?? previousScreen.flatMap({ NSScreen.screens.contains($0) ? $0 : nil }) ?? currentScreen else { return }
         if model.settings.style == .gentle {
             // Capture the size for this presentation; settings apply to the next card.
             if gentlePresentation.expandedSize == nil { gentlePresentation.begin(size: model.settings.gentleReminderSize) }
@@ -151,13 +160,20 @@ final class WindowCoordinator {
             let screens = NSScreen.screens
             // On disconnection, fall back to the pointer rather than the old panel's screen.
             let fallback = model.settings.displayScope == .selected ? currentScreen : screen
-            let selection = ReminderScreenSelection.resolve(settings: model.settings,
+            let normalSelection = ReminderScreenSelection.resolve(settings: model.settings,
                 displayIDs: screens.map { ConnectedDisplay.identifier(for: $0) },
                 currentIndex: fallback.flatMap { screens.firstIndex(of: $0) })
+            let previewIndex = preferredScreen.flatMap { screens.firstIndex(of: $0) }
+            let selection = preview && previewIndex != nil
+                ? ReminderScreenSelection(targets: [previewIndex!], primary: previewIndex) : normalSelection
             for index in selection.targets {
                 let target = screens[index]
                 let panel = makePanel(frame: target.frame, overlay: true)
-                panel.contentView = NSHostingView(rootView: OverlayView(model: model, preview: preview, primary: index == selection.primary, previewEnd: { [weak self] in self?.hide() }))
+                panel.contentView = NSHostingView(rootView: OverlayView(model: model, preview: preview, primary: index == selection.primary,
+                    previewEnd: { [weak self] in self?.hide() }, wallpaperScreen: target,
+                    onWallpaperResolved: { [weak self] _ in
+                        if preview && index == selection.primary && self?.presentationID == presentation { self?.startPreviewCountdown() }
+                    }))
                 panel.orderFrontRegardless(); panels.append(panel)
                 if index == selection.primary { panel.makeKey() }
             }
@@ -203,6 +219,7 @@ final class WindowCoordinator {
     }
     func hide(restoreFocus: Bool = true, preservingGentlePresentation: Bool = false) {
         warningWork?.cancel(); previewWork?.cancel(); warning?.close(); warning = nil
+        previewWork = nil; presentationID = UUID()
         let hadOverlay = shownStyle == .overlay && !panels.isEmpty
         panels.forEach { $0.close() }; panels = []; isPreview = false; shownStyle = nil
         if !preservingGentlePresentation { gentlePresentation.end() }
