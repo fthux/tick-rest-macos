@@ -51,4 +51,23 @@ struct ProjectAuditTests {
         #expect(engine.settings.planID == replacement && engine.pendingPlan == nil)
     }
 
+    @Test(arguments: [RestPlanID.tickrest, .eye202020, .fiftyTen, .pomodoro], BreakStartMode.allCases)
+    func changingCardPositionMustPreserveTheNextReminderDeadline(_ plan: RestPlanID, _ mode: BreakStartMode) {
+        let s = settings(plan, mode: mode); let engine = Engine(settings: s); var time = now
+        step(engine, s.shortInterval - 1, &time)
+        var edited = s; edited.gentleReminderPosition = .bottomRight
+        engine.updateSettings(edited); step(engine, 1, &time)
+        #expect(engine.reminder != nil, "Changing card position must not add 30 seconds of recovery grace")
+    }
+
+    @Test func changingCardPositionMustNotRepeatAnAlreadyDeliveredWarning() {
+        var s = settings(.eye202020); s.prewarning = 10
+        let engine = Engine(settings: s); var time = now
+        step(engine, 1190, &time)
+        var edited = s; edited.gentleReminderPosition = .center
+        engine.updateSettings(edited); step(engine, 20, &time)
+        #expect(engine.effects.filter { $0 == .warning(.short) }.count == 1,
+                "Moving the card must not deliver the same cycle's warning twice")
+    }
+
 }

@@ -71,6 +71,7 @@ public final class Engine {
         appearanceOnly.language = value.language
         appearanceOnly.style = value.style
         appearanceOnly.gentleReminderSize = value.gentleReminderSize
+        appearanceOnly.gentleReminderPosition = value.gentleReminderPosition
         appearanceOnly.displayScope = value.displayScope
         appearanceOnly.sound = value.sound
         appearanceOnly.reminderSound = value.reminderSound
