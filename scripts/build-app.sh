@@ -10,6 +10,21 @@ if [ "$#" -gt 2 ] || [[ "$configuration" != "debug" && "$configuration" != "rele
     exit 1
 fi
 if [ "$architecture" = "native" ]; then architecture="$(uname -m)"; fi
+if [[ "$architecture" = "all" || "$architecture" = "universal" ]]; then
+    # SwiftPM's multi-architecture backend requires full Xcode, not Command Line Tools.
+    if ! xcrun --find xcodebuild >/dev/null 2>&1; then
+        if [[ -z "${DEVELOPER_DIR:-}" && -d /Applications/Xcode.app/Contents/Developer ]]; then
+            export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+            printf 'Using Xcode for multi-architecture build: %s\n' "$DEVELOPER_DIR"
+        fi
+        if ! xcrun --find xcodebuild >/dev/null 2>&1; then
+            printf 'Multi-architecture builds require full Xcode. Set DEVELOPER_DIR to its Contents/Developer directory, or build with: bash scripts/build-app.sh %s native\n' "$configuration" >&2
+            exit 1
+        fi
+    fi
+fi
+# Resolve Swift from the selected developer directory, including the fallback above.
+swift_command=(xcrun swift)
 build_args=(-c "$configuration" --disable-sandbox)
 if [[ "$architecture" = "all" || "$architecture" = "universal" ]]; then
     build_args+=(--arch arm64 --arch x86_64)
@@ -19,8 +34,8 @@ fi
 identity_file="Sources/TickRestCore/Resources/AppIdentity.json"
 app_name="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["name"])' "$identity_file")"
 resource_bundle="${app_name}_TickRestCore"
-swift build "${build_args[@]}"
-binary_dir="$(swift build "${build_args[@]}" --show-bin-path)"
+"${swift_command[@]}" build "${build_args[@]}"
+binary_dir="$("${swift_command[@]}" build "${build_args[@]}" --show-bin-path)"
 if [[ "$architecture" = "all" || "$architecture" = "universal" ]]; then
     lipo "$binary_dir/$app_name" -verify_arch arm64 x86_64
 fi
