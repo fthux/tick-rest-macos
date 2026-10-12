@@ -25,6 +25,7 @@ public final class Engine {
     private var longCooldown: Double = 0
     private var priorWorkingTime: Bool?
     private var awayStarted: Date?
+    private var awayObservedAt: Date?
     private var interruptedReminder: Reminder?
     private var warnedKind: BreakKind?
     private var lastIdea: [BreakKind: Int] = [:]
@@ -331,26 +332,30 @@ public final class Engine {
             if case .waiting = phase { phase = .working }
         }
     }
-    public func beginAway(at start: Date) {
+    public func beginAway(at start: Date, observedAt: Date? = nil) {
         guard !away else { return }
         away = true; awayStarted = start
+        // Retroactive idle detection must not reclassify already recorded usage.
+        // Keep the true start for qualification, and the observation for statistics.
+        awayObservedAt = max(start, observedAt ?? start)
         if case .resting(let r) = phase { interruptedReminder = r }
         effects.append(.hide)
     }
     public func endAway(now: Date, minimumShort: Double) {
         guard away else { return }
         let seconds = max(0, now.timeIntervalSince(awayStarted ?? now))
+        let measuredSeconds = max(0, now.timeIntervalSince(awayObservedAt ?? now))
         // A pause already recorded the interruption, but its deferred reminder
         // still carries measured rest that qualifies together with time away.
         let interrupted = interruptedReminder ?? reminder.flatMap { $0.elapsed > 0 ? $0 : nil }
         let combined = seconds + (interrupted?.elapsed ?? 0)
-        away = false; awayStarted = nil
+        away = false; awayStarted = nil; awayObservedAt = nil
         if let r = interruptedReminder { record(r, .interrupted, now, includeDuration: false) }
         interruptedReminder = nil
         let qualifiesLong = combined >= settings.longDuration
         let qualifiesShort = combined >= (settings.timingModel == .dual ? minimumShort : settings.shortDuration)
-        if seconds == 0 { appendRecord(Record(date: now, kind: nil, outcome: .natural)) }
-        else { recordDurationSplit(seconds: seconds, ending: now, kind: nil, outcome: .natural, reminderID: nil, rest: false) }
+        if measuredSeconds == 0 { appendRecord(Record(date: now, kind: nil, outcome: .natural)) }
+        else { recordDurationSplit(seconds: measuredSeconds, ending: now, kind: nil, outcome: .natural, reminderID: nil, rest: false) }
         if case .deferred(var r, let delay) = phase, r.elapsed > 0 {
             r.elapsed = min(r.target, combined); phase = .deferred(r, delay)
         }

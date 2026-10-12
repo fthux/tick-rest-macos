@@ -85,7 +85,8 @@ final class AppController: ObservableObject {
         let systemIdle = CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: anyInputEvent)
         let idle = min(systemIdle, lastRestTick.map { max(0, Date().timeIntervalSince($0)) } ?? systemIdle)
         if settings.detectIdle && idle >= settings.idleTimeout && !idleAway {
-            idleAway = true; engine.beginAway(at: Date().addingTimeInterval(-idle)); consume()
+            let observedAt = Date()
+            idleAway = true; engine.beginAway(at: observedAt.addingTimeInterval(-idle), observedAt: observedAt); consume()
         } else if idleAway && (!settings.detectIdle || idle < settings.idleTimeout) {
             idleAway = false; engine.endAway(now: Date(), minimumShort: settings.timingModel == .dual ? max(60, settings.shortDuration) : settings.shortDuration); consume()
         }
