@@ -100,12 +100,11 @@ public final class Engine {
     }
     public func cancelPendingPlan() { pendingPlan = nil }
     private func installPlan(_ plan: RestPlan, now: Date) {
+        settleAwaySegment(now: now)
         appendRecord(Record(date: now, kind: nil, outcome: .planChanged))
         settings.restPlan = plan; pendingPlan = nil
         shortElapsed = 0; longElapsed = 0; shortCooldown = 0; longCooldown = 0
         completedRounds = 0; roundRestKind = nil; interruptedReminder = nil
-        // The new routine starts after the switch, even when the user is away.
-        if away { awayStarted = now }
         phase = .working; warnedKind = nil; grace = 0; effects.append(.hide)
     }
     private func applyPending(now: Date) {
@@ -113,6 +112,7 @@ public final class Engine {
     }
     public func restartFocus(group: Bool, now: Date) {
         guard settings.timingModel == .rounds else { return }
+        settleAwaySegment(now: now)
         if let r = reminder { record(r, .interrupted, now, includeDuration: false) }
         appendRecord(Record(date: now, kind: nil, outcome: .restarted))
         if group { completedRounds = 0 }
@@ -120,7 +120,7 @@ public final class Engine {
         if completedRounds >= settings.rounds { completedRounds = 0 }
         shortElapsed = 0; longElapsed = 0; shortCooldown = 0; longCooldown = 0
         roundRestKind = nil; phase = .working; warnedKind = nil; grace = 0
-        interruptedReminder = nil; if away { awayStarted = now }
+        interruptedReminder = nil
         effects.append(.hide); applyPending(now: now)
     }
     public var isMidFocusRest: Bool {
@@ -347,6 +347,14 @@ public final class Engine {
         awayObservedAt = max(start, observedAt ?? start)
         if case .resting(let r) = phase { interruptedReminder = r }
         effects.append(.hide)
+    }
+    private func settleAwaySegment(now: Date) {
+        guard away else { return }
+        let seconds = max(0, now.timeIntervalSince(awayObservedAt ?? now))
+        recordDurationSplit(seconds: seconds, ending: now, kind: nil, outcome: .natural, reminderID: nil, rest: false)
+        // Preserve the old plan's statistics, but qualify the new cycle only
+        // with time away after the switch or explicit restart.
+        awayStarted = now; awayObservedAt = now
     }
     public func endAway(now: Date, minimumShort: Double) {
         guard away else { return }

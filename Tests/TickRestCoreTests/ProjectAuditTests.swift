@@ -124,4 +124,28 @@ struct ProjectAuditTests {
                 "Pomodoro duration validation must explain long/short breaks instead of unrelated eye/movement labels")
     }
 
+    @Test(arguments: [RestPlanID.tickrest, .eye202020, .fiftyTen, .pomodoro])
+    func changingPlanWhileAwayMustNotEraseAlreadyObservedTimeAway(_ plan: RestPlanID) {
+        let engine = Engine(settings: settings(plan)); var time = now
+        step(engine, 100, &time); engine.beginAway(at: time)
+        time = time.addingTimeInterval(30)
+        engine.applyPlan(.preset(.fiftyTen), now: time)
+        time = time.addingTimeInterval(10)
+        engine.endAway(now: time, minimumShort: 600)
+        #expect(engine.records.filter { $0.outcome == .natural }.map(\.seconds).reduce(0, +) == 40,
+                "A routine switch must keep the 30 seconds away before the switch as well as the 10 after it")
+        let natural = engine.records.filter { $0.outcome == .natural }
+        #expect(natural.first?.planID == plan && natural.first?.seconds == 30)
+        #expect(natural.last?.planID == .fiftyTen && natural.last?.seconds == 10)
+    }
+
+    @Test(arguments: [false, true])
+    func restartingFocusWhileAwayPreservesEachObservedSegment(_ group: Bool) {
+        let engine = Engine(settings: settings(.pomodoro))
+        engine.beginAway(at: now, observedAt: now.addingTimeInterval(20))
+        engine.restartFocus(group: group, now: now.addingTimeInterval(50))
+        engine.endAway(now: now.addingTimeInterval(60), minimumShort: 300)
+        #expect(engine.records.filter { $0.outcome == .natural }.map(\.seconds) == [30, 10])
+        #expect(engine.records.filter { $0.outcome == .restarted }.count == 1)
+    }
 }
