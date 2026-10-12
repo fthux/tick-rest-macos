@@ -54,7 +54,6 @@
 "language.system" = "使用系統設定";
 "language.native_name" = "繁體中文";
 "menu.about" = "關於";
-"menu.end" = "結束本次休息";
 "menu.due" = "%@時間到了";
 "menu.due_short" = "該讓眼睛休息了";
 "menu.due_long" = "該起身活動了";
@@ -81,7 +80,7 @@
 "permission.unknown" = "尚未要求權限";
 "quit.body" = "結束應用程式會中斷本次計時，已記錄的休息時間會保留。";
 "quit.title" = "目前休息尚未結束";
-"reminder.defer_help" = "護眼休息可延後 2 分鐘，起身活動可延後 5 分鐘，每次提醒最多延後兩次。休息開始前和休息中皆可延後，達到次數上限後按鈕保留但無法使用。略過會重新計算休息間隔；提早結束則會在稍後再次提醒。";
+"reminder.defer_help" = "休息開始前和休息中均可延後，達到次數上限後按鈕保留但無法使用。略過會結束本次休息並繼續工作，已休息的實際時間仍計入統計。";
 "reminder.preview" = "預覽 5 秒";
 "reminder.prewarning" = "提前提醒";
 "reminder.sound" = "提示音";
@@ -99,7 +98,6 @@
 "rest.defer" = "%d 分鐘後提醒";
 "rest.defer_disabled" = "目前計畫未啟用延後";
 "rest.defer_limit" = "已達到延後次數上限";
-"rest.end" = "提早結束";
 "rest.long_idea" = "站起來走幾步，活動一下肩膀。不必一直看著倒數。";
 "rest.preview" = "提醒效果預覽，5 秒後自動關閉，不計入休息統計。";
 "rest.remaining" = "休息剩餘時間：%@";
@@ -242,16 +240,16 @@
 "plan.long_minutes" = "長休息：%d 分鐘";
 "plan.rounds" = "每組專注輪數：%d";
 "plan.rounds_help" = "完成一段專注只計一輪；每組最後一輪後安排長休息。延後或略過休息不會增加輪數。";
-"plan.actions_help" = "延後會記錄已休息時間並保留本次休息，再次提醒時重新開始完整休息。休息開始前和休息中皆可延後，受設定次數上限限制；達到上限後按鈕保留但無法使用。略過會推進計畫，但不記為完成。提早結束會記錄已休息時間，未完成的休息會稍後再次提醒。";
+"plan.actions_help" = "延後保留本次休息，再次提醒時重新開始完整休息，受設定次數上限限制。略過會結束本次休息並繼續工作，保留實際休息時間，但不計為完整完成。按輪次計時時，中途休息略過後繼續本輪剩餘專注時間；專注到期後的休息略過後開始下一輪，最後一輪後開始新一組。";
 "plan.away_help" = "偵測到離席後，離開時間足夠長即可抵扣休息。雙間隔模式中，達到短休息只重設短計時，達到長休息則重設兩者。鎖定螢幕與睡眠也會暫停計時。";
 "plan.rounds_away" = "離席不會增加專注輪數。專注途中離席達到短休息時間，會重新開始本輪並保留已完成輪數；達到長休息時間，則開始新一組。休息已到期時，足夠長的離席可完成對應休息。";
-"plan.switch_help" = "套用方案會開始新的計時週期。正在休息時，會等本次休息完成、略過或提早結束後生效；已暫停時維持暫停。其他偏好與歷史記錄會保留。";
+"plan.switch_help" = "套用方案會開始新的計時週期。正在休息時，等本次休息完成或略過後生效；已暫停時保持暫停。其他偏好和歷史紀錄會保留。";
 "plan.advanced" = "方案進階設定";
 "plan.postpone_minutes" = "延後時間：%d 分鐘";
 "plan.postpone_short" = "短休息延後：%d 分鐘";
 "plan.postpone_long" = "長休息延後：%d 分鐘";
 "plan.postpone_limit" = "每次提醒最多延後：%d 次";
-"plan.cooldown_help" = "提早結束後的等待時間採用上述延後時間。延後次數設為 0 會停用延後按鈕，但提早結束後仍需等待。每次重試都重新執行完整休息時間。";
+"plan.postpone_help" = "延後時間只用於稍後再次提醒。次數設為 0 會停用延後按鈕；略過隨時可用，點選後直接繼續工作。";
 "plan.restore" = "還原方案預設值";
 "plan.apply" = "套用方案";
 "plan.pending" = "將在本次休息結束後切換為「%@」。";
@@ -300,3 +298,10 @@
 "reminder.position.bottomLeft" = "左下";
 "reminder.position.bottomCenter" = "下方置中";
 "reminder.position.bottomRight" = "右下";
+"plan.rest_mid_focus" = "第 %d/%d 輪中途休息";
+"plan.rest_after_focus" = "第 %d/%d 輪結束後的休息";
+"plan.skip_resume_focus" = "返回第 %d 輪，繼續剩餘 %@";
+"plan.skip_next_focus" = "開始第 %d 輪，專注 %@";
+"plan.skip_new_group" = "開始新一組第 1 輪，專注 %@";
+"plan.skip_apply_plan" = "切換至%@，開始新的計時週期";
+"rest.skip_result" = "略過後：%@";

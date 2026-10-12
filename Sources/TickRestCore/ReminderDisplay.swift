@@ -71,6 +71,29 @@ public struct ReminderDisplay {
         return stateText
     }
 
+    public var roundRestText: String {
+        guard engine.roundRestKind != nil else {
+            return L10n.text("plan.focus_state", engine.focusRound, engine.settings.rounds)
+        }
+        return L10n.text(engine.isMidFocusRest ? "plan.rest_mid_focus" : "plan.rest_after_focus",
+                         engine.focusRound, engine.settings.rounds)
+    }
+
+    public var skipResultText: String? {
+        guard engine.reminder != nil else { return nil }
+        if let plan = engine.pendingPlan { return L10n.text("plan.skip_apply_plan", plan.title) }
+        guard engine.settings.timingModel == .rounds else { return nil }
+        if engine.isMidFocusRest {
+            return L10n.text("plan.skip_resume_focus", engine.focusRound,
+                             L10n.clock(max(0, engine.settings.shortInterval - engine.shortElapsed)))
+        }
+        if engine.completedRounds >= engine.settings.rounds {
+            return L10n.text("plan.skip_new_group", L10n.clock(engine.settings.shortInterval))
+        }
+        return L10n.text("plan.skip_next_focus", engine.completedRounds + 1,
+                         L10n.clock(engine.settings.shortInterval))
+    }
+
     public func countdownText(for kind: BreakKind) -> String {
         if case .deferred(let r, let seconds) = engine.phase, r.kind == kind {
             if seconds > 0 { return L10n.text("state.deferred", engine.settings.breakTitle(kind), L10n.clock(seconds)) }

@@ -81,7 +81,7 @@ struct PlanEditor: View {
                         duration("plan.postpone_long", \.longPostpone, range: 60...1800, step: 60, minutes: true)
                     }
                     Stepper(value: binding(\.postponeLimit), in: 0...10) { Text(L10n.text("plan.postpone_limit", draft.postponeLimit)) }
-                    Text(L10n.text("plan.cooldown_help")).font(.caption).foregroundStyle(.secondary)
+                    Text(L10n.text("plan.postpone_help")).font(.caption).foregroundStyle(.secondary)
                 }.controlSize(.small)
             }
             Section {

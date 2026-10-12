@@ -109,7 +109,7 @@ extension AppIntegrationTests {
         }
     }
 
-    func testActualMenuStartEndPauseResumeAndRoundRestartActions() async throws {
+    func testActualMenuStartSkipPauseResumeAndRoundRestartActions() async throws {
         try await withDelegate { delegate, model, status, _ in
             let menu = try XCTUnwrap(status.menu)
             for kind in BreakKind.allCases {
@@ -118,7 +118,7 @@ extension AppIntegrationTests {
                 XCTAssertEqual(model.engine.reminder?.kind, kind)
                 XCTAssertTrue(model.engine.isResting)
                 delegate.menuWillOpen(menu)
-                try self.activateMenu(L10n.text("menu.end"), in: menu)
+                try self.activateMenu(L10n.text("rest.skip"), in: menu)
                 XCTAssertFalse(model.engine.isResting)
             }
             for (key, expectedSeconds) in [("menu.pause_15", 900.0), ("menu.pause_60", 3600.0), ("menu.pause_today", -1.0), ("menu.pause_indefinite", -2.0)] {
@@ -147,6 +147,44 @@ extension AppIntegrationTests {
             XCTAssertEqual(model.saved.records.filter { $0.outcome == .restarted }.count, 2)
             XCTAssertEqual(menu.item(withTitle: L10n.text("menu.settings"))?.keyEquivalent, ",")
             XCTAssertEqual(menu.item(withTitle: L10n.text("menu.quit"))?.keyEquivalent, "q")
+        }
+    }
+
+    func testNormalFocusMenuCombinesRoundAndCountdownWhileKeepingPauseVisible() async throws {
+        try await withDelegate { delegate, model, status, _ in
+            let timer: Timer? = try self.field("timer", of: model, as: Timer?.self)
+            timer?.invalidate() // Advance time explicitly, independently of the live scheduler.
+            model.applyPlan(.preset(.pomodoro))
+            let menu = try XCTUnwrap(status.menu)
+            func information() -> [NSMenuItem] {
+                Array(menu.items.prefix { !$0.isSeparatorItem }).filter { !$0.isHidden }
+            }
+            for language in ["en", "zh-Hans", "zh-Hant", "ja", "ko"] {
+                model.update { $0.language = language }
+                delegate.menuWillOpen(menu)
+                XCTAssertEqual(information().map(\.title), [L10n.text("plan.focus_remaining", 1, 4,
+                    L10n.clock(model.engine.remaining(.short)))])
+                model.action { $0.tick(seconds: 10, now: Date()) }
+                try await Task.sleep(nanoseconds: 100_000_000)
+                XCTAssertEqual(information().map(\.title), [L10n.text("plan.focus_remaining", 1, 4,
+                    L10n.clock(model.engine.remaining(.short)))])
+                model.action { $0.setPause(.indefinite, now: Date()) }
+                try await Task.sleep(nanoseconds: 100_000_000)
+                XCTAssertEqual(information().count, 2)
+                XCTAssertEqual(information().first?.title, L10n.text("state.paused"))
+                model.resume()
+                try await Task.sleep(nanoseconds: 100_000_000)
+                XCTAssertEqual(information().map(\.title), [L10n.text("plan.focus_remaining", 1, 4,
+                    L10n.clock(model.engine.remaining(.short)))])
+                delegate.menuDidClose(menu)
+            }
+            for (plan, count) in [(RestPlanID.tickrest, 3), (.fiftyTen, 2)] {
+                model.applyPlan(.preset(plan))
+                delegate.menuWillOpen(menu)
+                XCTAssertEqual(information().count, count)
+                XCTAssertEqual(information().first?.title, L10n.text("state.running"))
+                delegate.menuDidClose(menu)
+            }
         }
     }
 
@@ -198,7 +236,7 @@ extension AppIntegrationTests {
             }
             model.action { $0.startNow(.short, now: Date()) }
             try await Task.sleep(nanoseconds: 100_000_000)
-            XCTAssertNotNil(menu.item(withTitle: L10n.text("menu.end")))
+            XCTAssertNotNil(menu.item(withTitle: L10n.text("rest.skip")))
             model.engine.tick(seconds: 20, now: Date()); model.consume(); model.revision += 1
             try await Task.sleep(nanoseconds: 100_000_000)
             XCTAssertNotNil(menu.item(withTitle: L10n.text("menu.start_short")))

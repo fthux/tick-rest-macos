@@ -81,29 +81,39 @@ private struct RestActions: View {
     private var spacing: CGFloat { palette == nil ? 8 : 16 }
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .top, spacing: spacing) { primaryAction; secondaryActions }
-            VStack(spacing: 8) {
-                primaryAction
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .top, spacing: spacing) { secondaryActions }
-                    VStack(spacing: 8) { secondaryActions }
+        VStack(spacing: 8) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: spacing) { primaryAction; secondaryActions }
+                VStack(spacing: 8) {
+                    primaryAction
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .top, spacing: spacing) { secondaryActions }
+                        VStack(spacing: 8) { secondaryActions }
+                    }
                 }
+            }
+            if !preview, let result = ReminderDisplay(engine: model.engine).skipResultText {
+                Text(L10n.text("rest.skip_result", result))
+                    .font(.caption).foregroundStyle(palette?.foreground ?? .secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }.buttonStyle(RestActionButtonStyle(compact: compact, palette: palette))
     }
     private var primaryAction: some View {
-        Button(L10n.text(preview ? "common.close" : model.engine.isResting ? "rest.end" : "rest.start")) {
+        Button(L10n.text(preview ? "common.close" : model.engine.isResting ? "rest.skip" : "rest.start")) {
             if preview { previewEnd() }
             else {
-                model.action { if $0.isResting { $0.finish(now: Date()) } else { $0.start(now: Date()) } }
+                model.action { if $0.isResting { $0.skip(now: Date()) } else { $0.start(now: Date()) } }
             }
         }.buttonStyle(RestActionButtonStyle(prominent: palette != nil, compact: compact, palette: palette))
     }
     @ViewBuilder private var secondaryActions: some View {
         if !preview {
             RestPostponeButton(model: model, reminder: reminder)
-            Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
+            if !model.engine.isResting {
+                Button(L10n.text("rest.skip")) { model.action { $0.skip(now: Date()) } }
+            }
         }
     }
 }
@@ -125,7 +135,7 @@ struct RestCard: View {
                 if size == .mini { clock }
             }.font((size == .mini ? Font.caption : Font.callout).bold())
             if !preview, model.settings.timingModel == .rounds {
-                Text(L10n.text("plan.focus_state", model.engine.focusRound, model.settings.rounds))
+                Text(ReminderDisplay(engine: model.engine).roundRestText)
                     .font(.caption).foregroundStyle(.secondary)
             }
             if size != .mini { clock }
@@ -213,7 +223,7 @@ struct OverlayView: View {
             if primary { Image(systemName: r.kind == .short ? "leaf" : "figure.walk").font(.system(size: 40)).accessibilityHidden(true) }
             Text(r.title).font(.title2)
             if !preview, model.settings.timingModel == .rounds {
-                Text(L10n.text("plan.focus_state", model.engine.focusRound, model.settings.rounds)).font(.callout)
+                Text(ReminderDisplay(engine: model.engine).roundRestText).font(.callout)
             }
             Text(preview ? "00:05" : L10n.clock(r.target - r.elapsed)).font(.system(size: primary ? 88 : 52, weight: .light, design: .rounded)).monospacedDigit()
             if primary {

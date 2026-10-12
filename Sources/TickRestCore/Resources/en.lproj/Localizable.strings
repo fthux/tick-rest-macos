@@ -54,7 +54,6 @@
 "language.system" = "Follow system";
 "language.native_name" = "English";
 "menu.about" = "About";
-"menu.end" = "End this break";
 "menu.due" = "%@ is due";
 "menu.due_short" = "Eye break due";
 "menu.due_long" = "Movement break due";
@@ -81,7 +80,7 @@
 "permission.unknown" = "Permission not requested";
 "quit.body" = "Quitting will interrupt this timer. Break time already recorded will be kept.";
 "quit.title" = "Your break is still in progress";
-"reminder.defer_help" = "You can postpone an eye break by 2 minutes or a movement break by 5 minutes, up to twice per reminder. You can postpone before or during a break. At the limit, the button stays visible but is disabled. Skipping resets the cycle; ending early brings back the reminder later.";
+"reminder.defer_help" = "You can postpone before or during a break. The button stays visible but disabled at the limit. Skip ends this break and returns to work, keeping actual rest time in your statistics.";
 "reminder.preview" = "Preview for 5 seconds";
 "reminder.prewarning" = "Notify before a break";
 "reminder.sound" = "Reminder sound";
@@ -99,7 +98,6 @@
 "rest.defer" = "Remind in %d min";
 "rest.defer_disabled" = "Postponement is disabled for this plan";
 "rest.defer_limit" = "Postponement limit reached";
-"rest.end" = "End early";
 "rest.long_idea" = "Stand up, take a few steps, and relax your shoulders. You do not need to watch the countdown.";
 "rest.preview" = "Reminder preview. Closes after 5 seconds and is not included in break statistics.";
 "rest.remaining" = "Break time remaining: %@";
@@ -242,16 +240,16 @@
 "plan.long_minutes" = "Long break: %d min";
 "plan.rounds" = "Focus sessions per set: %d";
 "plan.rounds_help" = "A full focus session counts once. The last session in a set is followed by a long break. Postponing or skipping a break never adds another session.";
-"plan.actions_help" = "Postpone records the time already taken and keeps the same break due; the next reminder restarts the full break duration. You can postpone before or during a break, up to the configured limit. At the limit, the button stays visible but is disabled. Skip moves on without marking the break completed. Ending early records the time taken and retries an unfinished break after a waiting period.";
+"plan.actions_help" = "Postponing keeps this break and restarts its full duration when the reminder returns, up to the configured limit. Skip ends this break and returns to work, keeping actual rest time without counting a completed break. In round-based plans, skipping a mid-focus break resumes the remaining focus time; skipping a break after focus ends starts the next round, or a new group after the final round.";
 "plan.away_help" = "When time away is detected, a long enough absence can satisfy a break. In the dual-interval model, a short absence resets only the short timer; a long one resets both. Locking or sleeping also pauses timing.";
 "plan.rounds_away" = "Time away never completes a focus session. If you step away for at least the short break duration, the current focus session restarts and earlier sessions are kept. An absence as long as a long break starts a new set. During a due break, time away can satisfy that break.";
-"plan.switch_help" = "Applying a routine starts fresh timers. During a break, the change waits until the break finishes, is skipped, or ends early. Paused timers stay paused. Other preferences and past records are kept.";
+"plan.switch_help" = "Applying a plan starts a new timing cycle. During a break, the plan takes effect when the break completes or is skipped. A paused timer stays paused. Other preferences and history are preserved.";
 "plan.advanced" = "Advanced routine settings";
 "plan.postpone_minutes" = "Postpone by: %d min";
 "plan.postpone_short" = "Postpone a short break by: %d min";
 "plan.postpone_long" = "Postpone a long break by: %d min";
 "plan.postpone_limit" = "Maximum postponements per reminder: %d";
-"plan.cooldown_help" = "After a break ends early, the waiting period uses the postponement durations above. A limit of zero disables Postpone, but the waiting period still applies. Each retry starts the full break duration again.";
+"plan.postpone_help" = "Postponement durations only control when to remind you again. A limit of zero disables Postpone. Skip stays available and returns you to work immediately.";
 "plan.restore" = "Restore preset defaults";
 "plan.apply" = "Apply routine";
 "plan.pending" = "Will switch to %@ after this break.";
@@ -300,3 +298,10 @@
 "reminder.position.bottomLeft" = "Lower left";
 "reminder.position.bottomCenter" = "Lower center";
 "reminder.position.bottomRight" = "Lower right";
+"plan.rest_mid_focus" = "Break during round %d/%d";
+"plan.rest_after_focus" = "Break after round %d/%d";
+"plan.skip_resume_focus" = "Return to round %d with %@ remaining";
+"plan.skip_next_focus" = "Start round %d with %@ of focus";
+"plan.skip_new_group" = "Start round 1 of a new group with %@ of focus";
+"plan.skip_apply_plan" = "Switch to %@ and start a new cycle";
+"rest.skip_result" = "After skipping: %@";

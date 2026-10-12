@@ -13,7 +13,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var menuLanguage: String?
     private var menuKinds: [BreakKind] = []
     private var menuResting = false
+    private var menuHasReminder = false
     private var menuRoundItem: NSMenuItem?
+    private var menuSkipItem: NSMenuItem?
     private var menuStateItem: NSMenuItem?
     private var menuCountdownItems: [BreakKind: NSMenuItem] = [:]
     private var settingsWindow: NSWindow?
@@ -97,10 +99,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         button.setAccessibilityLabel(button.toolTip)
         if menuStateItem != nil, let menu = status.menu,
            menuPlan != model.settings.restPlan || menuKinds != engine.displayKinds
-           || menuResting != engine.isResting || menuLanguage != L10n.language { menuWillOpen(menu) }
-        menuRoundItem?.title = L10n.text("plan.focus_state", engine.focusRound, model.settings.rounds)
+           || menuResting != engine.isResting || menuHasReminder != (engine.reminder != nil)
+           || menuLanguage != L10n.language { menuWillOpen(menu) }
+        menuRoundItem?.title = display.roundRestText
+        menuSkipItem?.toolTip = display.skipResultText
         menuStateItem?.title = display.menuStateText
-        if let item = menuRoundItem { item.isHidden = item.title == display.menuStateText }
+        updateMenuStatusVisibility(display)
         for (kind, item) in menuCountdownItems {
             item.title = display.countdownText(for: kind)
         }
@@ -114,25 +118,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         menu.removeAllItems(); menuPlan = model.settings.restPlan
         menuLanguage = L10n.language
         menuKinds = model.engine.displayKinds; menuResting = model.engine.isResting
+        menuHasReminder = model.engine.reminder != nil
         menuCountdownItems.removeAll()
         let display = ReminderDisplay(engine: model.engine)
         menuStateItem = add(menu, display.menuStateText, nil)
         menuRoundItem = model.settings.timingModel == .rounds && model.engine.roundRestKind != nil
-            ? add(menu, L10n.text("plan.focus_state", model.engine.focusRound, model.settings.rounds), nil) : nil
-        if let item = menuRoundItem { item.isHidden = item.title == display.menuStateText }
+            ? add(menu, display.roundRestText, nil) : nil
+        updateMenuStatusVisibility(display)
         if !model.engine.isResting {
             for kind in model.engine.displayKinds {
                 menuCountdownItems[kind] = add(menu, display.countdownText(for: kind), nil)
             }
         }
         menu.addItem(.separator())
-        if model.engine.isResting { add(menu, L10n.text("menu.end"), #selector(endRest)) }
-        else {
+        if !model.engine.isResting {
             if model.settings.timingModel == .dual {
                 if model.settings.shortEnabled { add(menu, L10n.text("menu.start_short"), #selector(startShort)) }
                 if model.settings.longEnabled { add(menu, L10n.text("menu.start_long"), #selector(startLong)) }
             } else { add(menu, L10n.text("plan.start_now"), #selector(startCurrentBreak)) }
         }
+        menuSkipItem = model.engine.reminder != nil ? add(menu, L10n.text("rest.skip"), #selector(skipRest)) : nil
+        menuSkipItem?.toolTip = display.skipResultText
         if model.engine.pause != nil { add(menu, L10n.text("menu.resume"), #selector(resume)) }
         else {
             let item = add(menu, L10n.text("menu.pause"), nil)
@@ -156,8 +162,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         add(menu, L10n.text("menu.quit"), #selector(quit), key: "q")
             .image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
     }
+    private func updateMenuStatusVisibility(_ display: ReminderDisplay) {
+        // The focus countdown already includes the round; keep separate exceptional states visible.
+        menuStateItem?.isHidden = model.settings.timingModel == .rounds
+            && model.engine.roundRestKind == nil && display.statusDotState == .working
+        if let item = menuRoundItem { item.isHidden = item.title == display.menuStateText }
+    }
     func menuDidClose(_ menu: NSMenu) {
-        menuStateItem = nil; menuPlan = nil; menuLanguage = nil; menuRoundItem = nil
+        menuStateItem = nil; menuPlan = nil; menuLanguage = nil; menuRoundItem = nil; menuSkipItem = nil
         menuCountdownItems.removeAll()
     }
     @discardableResult private func add(_ menu: NSMenu, _ title: String, _ action: Selector?, key: String = "") -> NSMenuItem {
@@ -169,7 +181,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     @objc private func startCurrentBreak() { model.action { $0.startNow($0.roundRestKind ?? .short, now: Date()) } }
     @objc private func startShort() { model.action { $0.startNow(.short, now: Date()) } }
     @objc private func startLong() { model.action { $0.startNow(.long, now: Date()) } }
-    @objc private func endRest() { model.action { $0.finish(now: Date()) } }
+    @objc private func skipRest() { model.action { $0.skip(now: Date()) } }
     @objc private func previewRest() { windows.preview() }
     @objc private func resume() { model.resume() }
     @objc private func pause15() { model.pauseMinutes(15) }

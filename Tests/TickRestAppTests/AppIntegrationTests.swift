@@ -228,7 +228,7 @@ final class AppIntegrationTests: XCTestCase {
                 XCTAssertEqual(model.engine.reminder?.elapsed, runningReminder.elapsed)
                 XCTAssertEqual(model.saved.records.map(\.id), beforeRunning)
                 try await Task.sleep(nanoseconds: 150_000_000)
-                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.end"), in: runningPanel)))
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.skip"), in: runningPanel)))
                 XCTAssertFalse(runningPanel.isVisible)
                 XCTAssertFalse(model.engine.isResting)
 
@@ -327,7 +327,7 @@ final class AppIntegrationTests: XCTestCase {
         }
     }
 
-    func testRealCardButtonsStartPostponeSkipAndEnd() async throws {
+    func testRealCardButtonsStartPostponeAndSkip() async throws {
         try await withFixture { model, _, _ in
             model.update { $0.breakStartMode = .manual }
             model.engine.tick(seconds: 1200, now: Date()); model.engine.tick(seconds: 1, now: Date()); model.consume()
@@ -353,10 +353,10 @@ final class AppIntegrationTests: XCTestCase {
             panel = try XCTUnwrap(self.panels.first)
             try await Task.sleep(nanoseconds: 100_000_000)
             XCTAssertNil(self.findButton(named: L10n.text("common.close"), in: panel))
-            let end = try self.button(named: L10n.text("rest.end"), in: panel)
-            XCTAssertTrue(self.press(end))
+            let runningSkip = try self.button(named: L10n.text("rest.skip"), in: panel)
+            XCTAssertTrue(self.press(runningSkip))
             XCTAssertFalse(panel.isVisible)
-            XCTAssertEqual(model.saved.records.filter { $0.outcome == .ended }.count, 1)
+            XCTAssertEqual(model.saved.records.filter { $0.outcome == .skipped }.count, 2)
         }
     }
 
@@ -373,9 +373,9 @@ final class AppIntegrationTests: XCTestCase {
                         try await Task.sleep(nanoseconds: 150_000_000)
                         let panel = try XCTUnwrap(self.panels.first)
                         let reminder = try XCTUnwrap(model.engine.reminder)
-                        let titles = [L10n.text(running ? "rest.end" : "rest.start"),
-                                      L10n.text("rest.defer", Int(model.settings.postponement(reminder.kind) / 60)),
-                                      L10n.text("rest.skip")]
+                        var titles = [L10n.text(running ? "rest.skip" : "rest.start"),
+                                      L10n.text("rest.defer", Int(model.settings.postponement(reminder.kind) / 60))]
+                        if !running { titles.append(L10n.text("rest.skip")) }
                         let frames = try titles.map { title -> NSRect in
                             let button = try self.button(named: title, in: panel)
                             let selector = NSSelectorFromString("accessibilityFrame")
@@ -543,7 +543,7 @@ final class AppIntegrationTests: XCTestCase {
                 XCTAssertEqual(panel.frame, screen.frame)
                 XCTAssertEqual(panel.backingScaleFactor, screen.backingScaleFactor)
                 try await Task.sleep(nanoseconds: 150_000_000)
-                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.end"), in: panel)))
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.skip"), in: panel)))
                 XCTAssertTrue(self.panels.isEmpty)
                 XCTAssertFalse(model.engine.isResting)
             }
@@ -559,14 +559,14 @@ final class AppIntegrationTests: XCTestCase {
                 XCTAssertEqual(open.count, NSScreen.screens.count)
                 try await Task.sleep(nanoseconds: 150_000_000)
                 for panel in open {
-                    XCTAssertEqual(self.findButton(named: L10n.text("rest.end"), in: panel) != nil, panel.frame == screen.frame,
+                    XCTAssertEqual(self.findButton(named: L10n.text("rest.skip"), in: panel) != nil, panel.frame == screen.frame,
                                    "Only the pointer display may have action buttons")
                     XCTAssertEqual(panel.backingScaleFactor, panel.screen?.backingScaleFactor)
                 }
                 let primary = try XCTUnwrap(open.first { $0.frame == screen.frame })
-                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.end"), in: primary)))
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.skip"), in: primary)))
                 XCTAssertTrue(open.allSatisfy { !$0.isVisible })
-                XCTAssertEqual(model.saved.records.filter { $0.outcome == .ended }.count,
+                XCTAssertEqual(model.saved.records.filter { $0.outcome == .skipped }.count,
                                NSScreen.screens.first == screen ? 1 : 2)
             }
         }
@@ -586,7 +586,7 @@ final class AppIntegrationTests: XCTestCase {
                 XCTAssertEqual(model.saved.records.map(\.id), before)
                 let primary = try XCTUnwrap(open.first { $0.frame == screen.frame })
                 try await Task.sleep(nanoseconds: 150_000_000)
-                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.end"), in: primary)))
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("rest.skip"), in: primary)))
                 XCTAssertTrue(open.allSatisfy { !$0.isVisible })
                 XCTAssertFalse(model.engine.isResting)
             }

@@ -119,7 +119,7 @@ final class SystemAudit: NSObject, NSApplicationDelegate {
             }
         case "sleep-rest", "sleep-work":
             coordinator.hide(restoreFocus: false)
-            if model.engine.reminder != nil { model.action { $0.finish(now: Date()) } }
+            if model.engine.reminder != nil { model.action { $0.skip(now: Date()) } }
             model.clearRecords(); model.resume()
             initialRecords = Set(model.saved.records.map(\.id)); scenario = value
             sleepAt = nil; wakeAt = nil
@@ -129,7 +129,7 @@ final class SystemAudit: NSObject, NSApplicationDelegate {
         case "hotplug-overlay":
             model.update { $0.style = .overlay; $0.displayScope = .all }
             model.action { $0.startNow(.long, now: Date()) }; logScreens("hotplug-armed")
-        case "end": model.action { $0.finish(now: Date()) }
+        case "end", "skip": model.action { $0.skip(now: Date()) }
         case "stop": NSApp.terminate(nil)
         default: log("unknown-command", ["value": value])
         }

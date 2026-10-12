@@ -42,7 +42,7 @@ public final class Engine {
             pause = saved.pause
             if let active = saved.activeReminder {
                 appendRecord(Record(date: now, kind: active.kind, outcome: .interrupted, seconds: active.elapsed, reminderID: active.id))
-                if active.elapsed >= settings.shortDuration { shortElapsed = 0 }
+                if settings.timingModel != .rounds && active.elapsed >= settings.shortDuration { shortElapsed = 0 }
             }
             if sameSession, let deferred = saved.deferredReminder, let remaining = saved.deferredRemaining {
                 phase = .deferred(deferred, remaining)
@@ -120,7 +120,13 @@ public final class Engine {
         interruptedReminder = nil; if away { awayStarted = now }
         effects.append(.hide); applyPending(now: now)
     }
-    public var focusRound: Int { max(1, min(settings.rounds, completedRounds + (roundRestKind == nil ? 1 : 0))) }
+    public var isMidFocusRest: Bool {
+        settings.timingModel == .rounds && roundRestKind != nil
+            && shortElapsed < settings.shortInterval && completedRounds < settings.rounds
+    }
+    public var focusRound: Int {
+        max(1, min(settings.rounds, completedRounds + ((roundRestKind == nil || isMidFocusRest) ? 1 : 0)))
+    }
     public var displayKinds: [BreakKind] {
         if settings.timingModel == .rounds { return [roundRestKind ?? (completedRounds + 1 >= settings.rounds ? .long : .short)] }
         return BreakKind.allCases.filter(settings.enabled)
@@ -276,9 +282,13 @@ public final class Engine {
     }
     public func skip(now: Date) {
         guard let r = reminder else { return }
-        // Explicit skips consume the reminder; closing a running timer uses finish instead.
+        // Both waiting and running reminders are skipped through the same user action.
         // Measured rest segments are already recorded, so do not add them again here.
-        record(r, .skipped, now, includeDuration: false); settleRest(r)
+        record(r, .skipped, now, includeDuration: false)
+        if isMidFocusRest {
+            // Resume the interrupted focus without discarding time already worked or advancing its round.
+            roundRestKind = nil; shortCooldown = 0; longCooldown = 0
+        } else { settleRest(r) }
         phase = .working; warnedKind = nil; effects.append(.hide); applyPending(now: now)
     }
     private func settleRest(_ r: Reminder) {

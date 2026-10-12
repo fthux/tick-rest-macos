@@ -54,7 +54,6 @@
 "language.system" = "跟随系统";
 "language.native_name" = "简体中文";
 "menu.about" = "关于";
-"menu.end" = "结束本次休息";
 "menu.due" = "%@时间到了";
 "menu.due_short" = "该让眼睛休息了";
 "menu.due_long" = "该起身活动了";
@@ -81,7 +80,7 @@
 "permission.unknown" = "尚未请求权限";
 "quit.body" = "退出将中断本次计时，已记录的休息时长会保留。";
 "quit.title" = "当前休息尚未结束";
-"reminder.defer_help" = "护眼休息可推迟 2 分钟，起身活动可推迟 5 分钟，每次提醒最多推迟两次。休息开始前和休息中均可推迟，达到次数上限后按钮保留但不可用。跳过会重新计算休息间隔；提前结束则会在稍后再次提醒。";
+"reminder.defer_help" = "休息开始前和休息中均可延后，达到次数上限后按钮保留但不可用。跳过会结束本次休息并继续工作，已休息的实际时长仍计入统计。";
 "reminder.preview" = "预览 5 秒";
 "reminder.prewarning" = "提前提醒";
 "reminder.sound" = "提示音";
@@ -99,7 +98,6 @@
 "rest.defer" = "%d 分钟后提醒";
 "rest.defer_disabled" = "当前计划未启用延后";
 "rest.defer_limit" = "已达到延后次数上限";
-"rest.end" = "提前结束";
 "rest.long_idea" = "可以站起来走几步，活动一下肩膀。不用一直盯着倒计时。";
 "rest.preview" = "提醒效果预览，5 秒后自动关闭，不计入休息统计。";
 "rest.remaining" = "休息剩余时间：%@";
@@ -242,16 +240,16 @@
 "plan.long_minutes" = "长休息：%d 分钟";
 "plan.rounds" = "每组专注轮数：%d";
 "plan.rounds_help" = "完成一段专注只计一轮；每组最后一轮后安排长休息。延后或跳过休息不会增加轮数。";
-"plan.actions_help" = "延后会记录已休息时长并保留本次休息，再次提醒时重新开始完整休息。休息开始前和休息中均可延后，受设定次数上限限制；达到上限后按钮保留但不可用。跳过会推进计划，但不记为完成。提前结束会记录已休息时长，未完成的休息会稍后重新提醒。";
+"plan.actions_help" = "延后保留本次休息，再次提醒时重新开始完整休息，受设定次数上限限制。跳过会结束本次休息并继续工作，保留实际休息时长，但不记为完整完成。按轮次计时时，中途休息跳过后继续本轮剩余专注时间；专注到期后的休息跳过后开始下一轮，最后一轮后开始新一组。";
 "plan.away_help" = "识别离席后，足够长的离开可以抵扣休息。双间隔模式中，满足短休息只清空短计时，满足长休息清空两个计时。锁屏和睡眠也会暂停计时。";
 "plan.rounds_away" = "离席不会增加专注轮数。专注途中离席达到短休息时长，会重新开始本轮并保留已完成轮数；达到长休息时长，会开始新一组。休息已到期时，足够长的离席可以完成对应休息。";
-"plan.switch_help" = "应用方案会开始新的计时周期。正在休息时，等本次休息完成、跳过或提前结束后生效；已暂停时保持暂停。其他偏好和历史记录会保留。";
+"plan.switch_help" = "应用方案会开始新的计时周期。正在休息时，等本次休息完成或跳过后生效；已暂停时保持暂停。其他偏好和历史记录会保留。";
 "plan.advanced" = "方案高级设置";
 "plan.postpone_minutes" = "延后时间：%d 分钟";
 "plan.postpone_short" = "短休息延后：%d 分钟";
 "plan.postpone_long" = "长休息延后：%d 分钟";
 "plan.postpone_limit" = "每次提醒最多延后：%d 次";
-"plan.cooldown_help" = "提前结束后的等待时间使用上述延后时长。延后次数设为 0 会禁用延后按钮，但提前结束后仍需等待。每次重试重新执行完整休息时长。";
+"plan.postpone_help" = "延后时间只用于稍后再次提醒。次数设为 0 会禁用延后按钮；跳过始终可用，点击后直接继续工作。";
 "plan.restore" = "恢复方案默认值";
 "plan.apply" = "应用方案";
 "plan.pending" = "将在本次休息结束后切换为%@。";
@@ -300,3 +298,10 @@
 "reminder.position.bottomLeft" = "左下";
 "reminder.position.bottomCenter" = "下方居中";
 "reminder.position.bottomRight" = "右下";
+"plan.rest_mid_focus" = "第 %d/%d 轮中途休息";
+"plan.rest_after_focus" = "第 %d/%d 轮结束后的休息";
+"plan.skip_resume_focus" = "返回第 %d 轮，继续剩余 %@";
+"plan.skip_next_focus" = "开始第 %d 轮，专注 %@";
+"plan.skip_new_group" = "开始新一组第 1 轮，专注 %@";
+"plan.skip_apply_plan" = "切换至%@，开始新的计时周期";
+"rest.skip_result" = "跳过后：%@";
