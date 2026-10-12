@@ -32,7 +32,7 @@ final class AppController: ObservableObject {
     private var awayReasons: Set<String> = []
     private var idleAway = false
     private var idleAtSystemAway = false
-    private var observers: [NSObjectProtocol] = []
+    private let observers = NotificationObservations()
     private var notificationEnabled = false
     private var lastRestTick: Date?
 
@@ -45,18 +45,18 @@ final class AppController: ObservableObject {
         errorKey = disk.loadErrorKey
         refreshLogin(); refreshNotificationStatus()
     }
-    deinit { timer?.invalidate(); observers.forEach { NotificationCenter.default.removeObserver($0) } }
+    deinit { timer?.invalidate() }
     func begin() {
         let center = NSWorkspace.shared.notificationCenter
         for (reason, begin, end) in [("power", NSWorkspace.willSleepNotification, NSWorkspace.didWakeNotification), ("session", NSWorkspace.sessionDidResignActiveNotification, NSWorkspace.sessionDidBecomeActiveNotification)] {
-            observers.append(center.addObserver(forName: begin, object: nil, queue: .main) { [weak self] _ in self?.beginSystemAway(reason: reason) })
-            observers.append(center.addObserver(forName: end, object: nil, queue: .main) { [weak self] _ in self?.endSystemAway(reason: reason) })
+            observers.observe(center, name: begin) { [weak self] _ in self?.beginSystemAway(reason: reason) }
+            observers.observe(center, name: end) { [weak self] _ in self?.endSystemAway(reason: reason) }
         }
         // Lock/unlock notifications supplement public workspace session/power events.
         // These notification names are best-effort and must be rechecked on supported OS versions.
         let distributed = DistributedNotificationCenter.default()
-        observers.append(distributed.addObserver(forName: NSNotification.Name("com.apple.screenIsLocked"), object: nil, queue: .main) { [weak self] _ in self?.beginSystemAway(reason: "lock") })
-        observers.append(distributed.addObserver(forName: NSNotification.Name("com.apple.screenIsUnlocked"), object: nil, queue: .main) { [weak self] _ in self?.endSystemAway(reason: "lock") })
+        observers.observe(distributed, name: NSNotification.Name("com.apple.screenIsLocked")) { [weak self] _ in self?.beginSystemAway(reason: "lock") }
+        observers.observe(distributed, name: NSNotification.Name("com.apple.screenIsUnlocked")) { [weak self] _ in self?.endSystemAway(reason: "lock") }
         timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(timer!, forMode: .common)
         RunLoop.main.add(timer!, forMode: .eventTracking)
