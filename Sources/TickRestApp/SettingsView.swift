@@ -331,7 +331,7 @@ struct SettingsView: View {
     }
     private func timeBinding(_ path: WritableKeyPath<TickRestCore.Settings, Int>) -> Binding<Date> {
         Binding(get: {
-            Calendar.current.date(byAdding: .minute, value: model.settings[keyPath: path], to: Calendar.current.startOfDay(for: Date()))!
+            ScheduleClockTime.date(minutes: model.settings[keyPath: path])
         }, set: { date in
             let minutes = Calendar.current.component(.hour, from: date) * 60 + Calendar.current.component(.minute, from: date)
             model.update { $0[keyPath: path] = minutes }

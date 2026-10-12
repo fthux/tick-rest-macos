@@ -70,4 +70,14 @@ struct ProjectAuditTests {
                 "Moving the card must not deliver the same cycle's warning twice")
     }
 
+    @Test(arguments: [(2026, 3, 8), (2026, 11, 1)], [0, 90, 150, 540, 1439])
+    func scheduleTimeBindingMustKeepTheStoredClockTimeOnDSTDays(_ day: (Int, Int, Int), _ storedMinutes: Int) throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: "America/Los_Angeles"))
+        let today = try #require(calendar.date(from: DateComponents(year: day.0, month: day.1, day: day.2, hour: 12)))
+        let displayed = ScheduleClockTime.date(minutes: storedMinutes, on: today, calendar: calendar)
+        #expect(calendar.component(.hour, from: displayed) * 60 + calendar.component(.minute, from: displayed) == storedMinutes,
+                "The 09:00 schedule renders as 10:00 on spring-forward and 08:00 on fall-back days")
+    }
+
 }
