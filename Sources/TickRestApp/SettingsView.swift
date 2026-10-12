@@ -38,6 +38,7 @@ final class SettingsNavigation: ObservableObject {
 struct SettingsView: View {
     @ObservedObject var model: AppController
     @ObservedObject var navigation: SettingsNavigation
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var buildInfo = AppBuildInfo.current
     private var page: SettingsPage { navigation.page }
     @State private var confirmClear = false
@@ -80,11 +81,17 @@ struct SettingsView: View {
         } detail: {
             // A non-scrolling container keeps the Form's viewport inside the
             // detail safe area, including during scroll rubber-banding.
-            VStack(spacing: 0) {
-                settingsForm
+            ZStack(alignment: .top) {
+                settingsForm(for: page)
                     .padding(.top, 16)
+                    // A new page gets its own scroll viewport. Passing the page
+                    // explicitly also keeps outgoing content stable as it fades.
+                    .id(page)
+                    .transition(pageTransition)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // Animate only page changes, leaving the sidebar and toolbar immediate.
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
             .clipped()
             .background(Color(nsColor: .windowBackgroundColor), ignoresSafeAreaEdges: [])
         }
@@ -100,7 +107,13 @@ struct SettingsView: View {
             Button(L10n.text("common.cancel"), role: .cancel) {}
         } message: { Text(L10n.text("data.clear_body")) }
     }
-    private var settingsForm: some View {
+    private var pageTransition: AnyTransition {
+        reduceMotion ? .identity : .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: 8)),
+            removal: .opacity
+        )
+    }
+    private func settingsForm(for page: SettingsPage) -> some View {
         Form {
             if let error = model.errorMessage {
                 Section {
