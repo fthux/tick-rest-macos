@@ -112,18 +112,22 @@ final class AppIntegrationTests: XCTestCase {
         return action(object, selector)
     }
 
-    @MainActor private func writeSnapshot<V: View>(_ root: V, name: String, size: NSSize) throws {
+    @MainActor private func writeSnapshot<V: View>(_ root: V, name: String, size: NSSize) async throws {
         let view = NSHostingView(rootView: root)
         let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
                               styleMask: [.titled, .closable], backing: .buffered, defer: false)
         window.isReleasedWhenClosed = false; window.contentView = view
         defer { window.close() }
-        view.frame = NSRect(origin: .zero, size: size)
+        window.orderFrontRegardless()
+        window.setContentSize(size)
+        try await Task.sleep(nanoseconds: 150_000_000)
         view.layoutSubtreeIfNeeded()
         let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
         view.cacheDisplay(in: view.bounds, to: bitmap)
         let bytes = try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
         XCTAssertGreaterThan(bytes.count, 5000, "A native view should render actual content")
+        XCTAssertGreaterThan(try XCTUnwrap(bitmap.colorAt(x: bitmap.pixelsWide / 2, y: bitmap.pixelsHigh / 2)).alphaComponent, 0.9,
+                             "The snapshot must contain laid-out content rather than a transparent viewport")
         XCTAssertEqual(bitmap.pixelsWide, Int(size.width * view.window!.backingScaleFactor))
         let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .deletingLastPathComponent().deletingLastPathComponent()
@@ -139,7 +143,7 @@ final class AppIntegrationTests: XCTestCase {
                 let navigation = SettingsNavigation()
                 for page in SettingsPage.allCases {
                     navigation.page = page
-                    try self.writeSnapshot(SettingsView(model: model, navigation: navigation),
+                    try await self.writeSnapshot(SettingsView(model: model, navigation: navigation),
                                            name: "settings-\(language)-\(page.rawValue)", size: NSSize(width: 860, height: 640))
                 }
             }
@@ -169,7 +173,7 @@ final class AppIntegrationTests: XCTestCase {
                 view.layoutSubtreeIfNeeded()
                 try await Task.sleep(nanoseconds: 150_000_000)
                 XCTAssertTrue(self.containsText(buildInfo.versionDescription, in: window), architecture)
-                try self.writeSnapshot(root, name: "about-build-\(architecture)", size: NSSize(width: 860, height: 640))
+                try await self.writeSnapshot(root, name: "about-build-\(architecture)", size: NSSize(width: 860, height: 640))
             }
         }
     }
@@ -195,7 +199,7 @@ final class AppIntegrationTests: XCTestCase {
                         let height = ceil(hosting.fittingSize.height)
                         XCTAssertGreaterThan(height, 80)
                         XCTAssertLessThan(height, NSScreen.main!.visibleFrame.height)
-                        try self.writeSnapshot(root, name: "card-\(language)-\(size.rawValue)-\(running ? "running" : "waiting")",
+                        try await self.writeSnapshot(root, name: "card-\(language)-\(size.rawValue)-\(running ? "running" : "waiting")",
                                                size: NSSize(width: width, height: height))
                     }
                     model.action { $0.skip(now: Date()) }
@@ -317,9 +321,9 @@ final class AppIntegrationTests: XCTestCase {
                     hosting.sizingOptions = [.intrinsicContentSize]
                     let height = ceil(hosting.fittingSize.height)
                     XCTAssertLessThan(height, NSScreen.main!.visibleFrame.height)
-                    try self.writeSnapshot(card, name: "postpone-mini-\(language)-limit\(limit)",
+                    try await self.writeSnapshot(card, name: "postpone-mini-\(language)-limit\(limit)",
                                            size: NSSize(width: width, height: height))
-                    try self.writeSnapshot(OverlayView(model: model, preview: false, primary: true, previewEnd: {}),
+                    try await self.writeSnapshot(OverlayView(model: model, preview: false, primary: true, previewEnd: {}),
                                            name: "postpone-overlay-\(language)-limit\(limit)",
                                            size: NSSize(width: 1000, height: 700))
                 }
@@ -460,7 +464,7 @@ final class AppIntegrationTests: XCTestCase {
             XCTAssertEqual(selected.blue, 0.6, accuracy: 0.001)
             model.persist()
             XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, selected)
-            try self.writeSnapshot(SettingsView(model: model, navigation: navigation),
+            try await self.writeSnapshot(SettingsView(model: model, navigation: navigation),
                                    name: "settings-zh-Hans-overlay-background", size: NSSize(width: 860, height: 640))
             XCTAssertTrue(self.press(try self.button(named: L10n.text("background.reset"), in: window)))
             XCTAssertEqual(model.settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
@@ -508,7 +512,7 @@ final class AppIntegrationTests: XCTestCase {
                         XCTAssertEqual(pixel.greenComponent, expected.greenComponent, accuracy: 0.02)
                         XCTAssertEqual(pixel.blueComponent, expected.blueComponent, accuracy: 0.02)
                     }
-                    try self.writeSnapshot(OverlayView(model: model, preview: preview, primary: true, previewEnd: {}),
+                    try await self.writeSnapshot(OverlayView(model: model, preview: preview, primary: true, previewEnd: {}),
                                            name: "overlay-background-\(index)-\(preview ? "preview" : "rest")", size: NSSize(width: 1000, height: 720))
                     if preview { windows.hide() }
                     else { model.action { $0.finish(now: Date()) } }

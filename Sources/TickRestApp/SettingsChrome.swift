@@ -4,11 +4,12 @@ import SwiftUI
 enum SettingsPalette {
     static let content = adaptiveColor(red: 234, green: 235, blue: 236)
     static let sidebar = adaptiveColor(red: 222, green: 223, blue: 224)
+    static let card = adaptiveColor(red: 230, green: 231, blue: 232, dark: .controlBackgroundColor)
 
-    private static func adaptiveColor(red: CGFloat, green: CGFloat, blue: CGFloat) -> NSColor {
+    private static func adaptiveColor(red: CGFloat, green: CGFloat, blue: CGFloat, dark: NSColor = .windowBackgroundColor) -> NSColor {
         NSColor(name: nil) { appearance in
             if appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua {
-                return .windowBackgroundColor
+                return dark
             }
             return NSColor(srgbRed: red / 255, green: green / 255, blue: blue / 255, alpha: 1)
         }

@@ -636,7 +636,7 @@ struct SettingsSectionCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) { content }
             .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color(nsColor: SettingsPalette.card), in: RoundedRectangle(cornerRadius: 10))
             .overlay {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
