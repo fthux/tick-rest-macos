@@ -55,10 +55,7 @@ final class AboutCountryTests: XCTestCase {
     }
 
     @MainActor
-    func testIncompleteEnrichmentKeepsDefaultMessage() async {
-        let previousLanguage = L10n.language
-        L10n.language = "en"
-        defer { L10n.language = previousLanguage }
+    func testIncompleteEnrichmentReturnsNoCountry() async {
         for enrichment in ["null", "{}", #"{"name":"Japan"}"#, #"{"flag":"🇯🇵"}"#,
                            #"{"name":"  ","flag":"🇯🇵"}"#, #"{"name":"Japan","flag":""}"#,
                            #"{"name":"Japan","flag":"JP"}"#, #"{"name":"Japan","flag":"🇨🇳"}"#] {
@@ -66,7 +63,6 @@ final class AboutCountryTests: XCTestCase {
             {"countryOrRegion":{"code":"JP"},"enrichment":{"countryOrRegion":\(enrichment)}}
             """)
             XCTAssertNil(result)
-            XCTAssertEqual(result?.availabilityText ?? L10n.text("about.free"), "Tick Rest is currently free in your country.")
         }
     }
 

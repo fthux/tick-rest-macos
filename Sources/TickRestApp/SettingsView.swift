@@ -554,13 +554,15 @@ struct SettingsView: View {
                     }
                 }
                 Text(L10n.text("about.description")).font(.callout)
-                HStack(alignment: .top, spacing: 8) {
-                    Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
-                    Text(aboutCountry?.availabilityText ?? L10n.text("about.free"))
-                        .fixedSize(horizontal: false, vertical: true)
+                if let aboutCountry {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
+                        Text(aboutCountry.availabilityText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(.callout.weight(.medium))
+                    .padding(.vertical, 4)
                 }
-                .font(.callout.weight(.medium))
-                .padding(.vertical, 4)
                 Text(L10n.text("about.health")).font(.caption).foregroundStyle(.secondary)
             }
             Section {
