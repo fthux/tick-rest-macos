@@ -134,7 +134,7 @@
 "schedule.fullscreen_unavailable" = "Fullscreen detection is unavailable. You can pause reminders from the menu.";
 "schedule.help" = "When this is off, reminders can appear at any time of day. Each new work period starts fresh break cycles.";
 "schedule.idle" = "Detect time away automatically";
-"schedule.idle_help" = "Pauses the timer after the set time with no keyboard or mouse activity (5 minutes by default). Being away long enough resets the break cycles. Reading, watching videos, or using a controller may be mistaken for being away. Turn this off if needed.";
+"schedule.idle_help" = "This feature infers absence from input inactivity and cannot guarantee complete accuracy. Pauses the timer after the set time with no keyboard or mouse activity (5 minutes by default). Being away long enough resets the break cycles. Reading, watching videos, or using a controller may be mistaken for being away. Turn this off if needed.";
 "schedule.idle_minutes" = "Detect time away after: %d min";
 "schedule.overnight" = "Work hours can extend past midnight and follow the schedule for the day they start. For example, Monday 22:00–02:00 runs into early Tuesday morning.";
 "schedule.start" = "Start time";
