@@ -23,9 +23,9 @@ public struct ReminderDisplay {
     }
 
     public var statusSymbolName: String {
-        if engine.pause != nil || engine.away { return "pause.circle" }
+        if engine.pause != nil || engine.away { return "pause.circle.fill" }
         if engine.isResting { return "leaf.fill" }
-        return engine.outsideSchedule ? "pause.circle" : "leaf"
+        return engine.outsideSchedule ? "pause.circle.fill" : "leaf.fill"
     }
 
     public var menuBarText: String {

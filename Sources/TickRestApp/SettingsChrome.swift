@@ -13,6 +13,8 @@ enum SettingsPalette {
     // Match the raised background of native grouped Form cards in dark mode.
     static let card = adaptiveColor(red: 230, green: 231, blue: 232,
                                     dark: NSColor(srgbRed: 53 / 255, green: 53 / 255, blue: 53 / 255, alpha: 1))
+    static let aboutCard = adaptiveColor(red: 255, green: 255, blue: 255,
+                                         dark: NSColor(srgbRed: 53 / 255, green: 53 / 255, blue: 53 / 255, alpha: 1))
 
     private static func adaptiveColor(red: CGFloat, green: CGFloat, blue: CGFloat, dark: NSColor = .windowBackgroundColor) -> NSColor {
         NSColor(name: nil) { appearance in

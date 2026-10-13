@@ -51,4 +51,10 @@ struct AppBuildInfo {
     var versionDescription: String {
         L10n.text("about.version", version, buildNumber, architecture.title, configuration.title)
     }
+
+    var shortVersionDescription: String {
+        L10n.text("about.version_short", version, buildNumber)
+    }
+
+    var packageDescription: String { "\(architecture.title) · \(configuration.title)" }
 }

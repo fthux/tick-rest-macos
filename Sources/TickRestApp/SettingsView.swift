@@ -160,7 +160,11 @@ struct SettingsView: View {
         )
     }
     @ViewBuilder private func settingsContent(for page: SettingsPage) -> some View {
-        if page == .appearance {
+        if page == .about {
+            AboutView(buildInfo: buildInfo, country: $aboutCountry,
+                      errorMessage: model.errorMessage, dismissError: { model.dismissError() })
+                .id(model.interfaceLanguage)
+        } else if page == .appearance {
             if model.settings.style == .overlay {
                 fullscreenAppearance
             } else {
@@ -234,7 +238,7 @@ struct SettingsView: View {
             case .schedule: schedule
             case .displays: displays
             case .privacy: privacy
-            case .about: about
+            case .about: EmptyView() // Rendered by the dedicated About scroll view.
             }
         }
         .formStyle(.grouped)
@@ -539,49 +543,6 @@ struct SettingsView: View {
                         .font(.callout).foregroundStyle(.green)
                 }
             }
-        }
-    }
-    private var about: some View {
-        Group {
-            Section {
-                HStack(spacing: 16) {
-                    Image(systemName: "leaf.fill").font(.system(size: 36)).foregroundStyle(.orange)
-                    VStack(alignment: .leading, spacing: 5) {
-                        Text(L10n.text("app.name")).font(.title2.bold())
-                        Text(buildInfo.versionDescription)
-                            .font(.caption).foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .textSelection(.enabled)
-                    }
-                }
-                Text(L10n.text("about.description")).font(.callout)
-                if let aboutCountry {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
-                        Text(aboutCountry.availabilityText)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .font(.callout.weight(.medium))
-                    .padding(.vertical, 4)
-                }
-                Text(L10n.text("about.health")).font(.caption).foregroundStyle(.secondary)
-            }
-            Section {
-                SettingsExternalLink(title: L10n.text("about.source"), systemImage: "chevron.left.forwardslash.chevron.right",
-                                     destination: URL(string: "https://github.com/fthux/tick-rest-macos")!)
-                SettingsExternalLink(title: L10n.text("about.website"), systemImage: "globe",
-                                     destination: URL(string: "https://tick-rest.fthux.com")!)
-                SettingsExternalLink(title: L10n.text("about.email"), systemImage: "envelope",
-                                     destination: URL(string: "mailto:penleymcleod@gmail.com")!)
-                SettingsExternalLink(title: L10n.text("about.report_bug"), systemImage: "ladybug",
-                                     destination: URL(string: "https://github.com/fthux/tick-rest-macos/issues")!)
-            }
-        }
-        .task {
-            guard aboutCountry == nil else { return }
-            let country = await AboutCountry.lookup()
-            guard !Task.isCancelled else { return }
-            aboutCountry = country
         }
     }
 }

@@ -108,7 +108,7 @@ struct ProjectAuditTests {
         #expect(display.statusDotState == .resting && display.stateText != L10n.text("state.outside"),
                 "A running manual break must not be described as paused outside work hours")
         engine.beginAway(at: time)
-        #expect(display.statusDotState == .inactive && display.statusSymbolName == "pause.circle")
+        #expect(display.statusDotState == .inactive && display.statusSymbolName == "pause.circle.fill")
         #expect(display.stateText == L10n.text("state.away"))
     }
 

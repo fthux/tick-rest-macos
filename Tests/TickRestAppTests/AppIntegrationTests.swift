@@ -178,7 +178,8 @@ final class AppIntegrationTests: XCTestCase {
                 window.orderFront(nil)
                 view.layoutSubtreeIfNeeded()
                 try await Task.sleep(nanoseconds: 150_000_000)
-                XCTAssertTrue(self.containsText(buildInfo.versionDescription, in: window), architecture)
+                XCTAssertTrue(self.containsText(buildInfo.shortVersionDescription, in: window), architecture)
+                XCTAssertTrue(self.containsText(buildInfo.packageDescription, in: window), architecture)
                 try await self.writeSnapshot(root, name: "about-build-\(architecture)", size: SettingsWindowLayout.minimumContentSize)
             }
         }

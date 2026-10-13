@@ -67,7 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             self?.updateSidebarToolbarLabel(visibility)
         }
         status = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        status.button?.image = NSImage(systemSymbolName: "leaf", accessibilityDescription: L10n.text("app.name"))
+        status.button?.image = NSImage(systemSymbolName: "leaf.fill", accessibilityDescription: L10n.text("app.name"))
         let menu = NSMenu(); menu.delegate = self; status.menu = menu
         languageSubscription = model.$interfaceLanguage.removeDuplicates().dropFirst().sink { [weak self] _ in
             self?.updateStatus()
