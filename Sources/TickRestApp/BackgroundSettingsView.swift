@@ -45,7 +45,11 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
                         SettingsSectionCard {
                             BackgroundMenuPicker(title: L10n.text("background.type"), selection: binding(\.kind),
                                                    choices: OverlayBackgroundKind.allCases) { L10n.text("background.type.\($0.rawValue)") }
-                            if background.kind != .solid { protectionControls }
+                            Divider()
+                            if background.kind != .solid {
+                                protectionControls
+                                Divider()
+                            }
                             switch background.kind {
                             case .solid: SolidBackgroundEditor(color: solid)
                             case .gradient: GradientBackgroundEditor(gradient: binding(\.gradient))
@@ -60,7 +64,7 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .buttonStyle(.borderless)
+        .buttonStyle(.bordered)
         .onAppear { updateScreens() }
         .onDisappear { model.persist() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in updateScreens() }
@@ -98,6 +102,7 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
                     ForEach(screens, id: \.self) { Text($0.localizedName).tag(ConnectedDisplay.identifier(for: $0)) }
                 }.pickerStyle(.menu).buttonStyle(.borderless)
             }
+            Divider()
             preview(height: height)
         }
     }
@@ -196,6 +201,7 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
         VStack(alignment: .leading, spacing: 12) {
             BackgroundMenuPicker(title: L10n.text("background.wallpaper_source"), selection: binding(\.wallpaper.source),
                                    choices: WallpaperSource.allCases) { L10n.text("background.source.\($0.rawValue)") }
+            Divider()
             if let warning = library.recoveryWarning {
                 Text(warning).font(.caption).foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
             }
@@ -224,13 +230,16 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
                 if background.wallpaper.selectedID != nil && usedFallback {
                     Text(L10n.text("background.image_fallback")).font(.caption).foregroundStyle(.orange)
                 }
+                Divider()
                 BackgroundMenuPicker(title: L10n.text("background.fit"), selection: binding(\.wallpaper.fit),
                                        choices: WallpaperFit.allCases) { L10n.text("background.fit.\($0.rawValue)") }
+                Divider()
                 BackgroundColorEditor(title: L10n.text("background.base_color"), color: binding(\.wallpaper.baseColor))
                 if background.wallpaper.fit == .stretch {
                     Text(L10n.text("background.stretch_help")).font(.caption).foregroundStyle(.secondary)
                 }
                 if background.wallpaper.fit == .fill {
+                    Divider()
                     BackgroundNumberControl(title: L10n.text("background.position_x"), value: percentBinding(\.wallpaper.position.x), range: 0...100, step: 1, suffix: "%")
                     BackgroundNumberControl(title: L10n.text("background.position_y"), value: percentBinding(\.wallpaper.position.y), range: 0...100, step: 1, suffix: "%")
                     Button(L10n.text("background.center")) { binding(\.wallpaper.position).wrappedValue = BackgroundPoint() }
@@ -420,6 +429,7 @@ private struct SolidBackgroundEditor: View {
                     }.buttonStyle(.plain).accessibilityAddTraits(color == preset.color ? .isSelected : [])
                 }
             }
+            Divider()
             BackgroundColorEditor(title: L10n.text("background.custom_color"), color: $color)
         }
     }
@@ -456,6 +466,10 @@ struct BackgroundNumberControl: View {
                 .labelsHidden()
                 .accessibilityLabel(title)
             if !suffix.isEmpty { Text(suffix).foregroundStyle(.secondary).fixedSize() }
+            Stepper(title, value: Binding(get: { value }, set: {
+                value = $0.isFinite ? min(range.upperBound, max(range.lowerBound, $0)) : range.lowerBound
+            }), in: range, step: step)
+                .labelsHidden()
         }.fixedSize()
     }
 }
@@ -538,20 +552,24 @@ private struct GradientBackgroundEditor: View {
             if !BackgroundPresets.gradients.contains(where: { gradient.matches($0.gradient) }) {
                 Text(L10n.text("background.custom_gradient")).font(.caption).foregroundStyle(.secondary)
             }
+            Divider()
             BackgroundChoicePicker(title: L10n.text("background.gradient_type"), selection: binding(\.kind),
                                    choices: BackgroundGradientKind.allCases) { L10n.text("background.gradient.\($0.rawValue)") }
+            Divider()
             colorRail
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) { stopActions }
                 VStack(alignment: .leading, spacing: 8) { stopActions }
             }
             Text(L10n.text("background.stops_help")).font(.caption).foregroundStyle(.secondary)
+            Divider()
             if let stop = selected {
                 BackgroundColorEditor(title: L10n.text("background.stop_color"), color: Binding(
                     get: { selected?.color ?? stop.color }, set: { value in editStop { $0.color = value } }))
                 BackgroundNumberControl(title: L10n.text("background.stop_position"), value: Binding(
                     get: { (selected?.location ?? stop.location) * 100 }, set: { value in editStop { $0.location = value / 100 } }), range: 0...100, suffix: "%")
             }
+            Divider()
             if gradient.kind == .linear {
                 BackgroundNumberControl(title: L10n.text("background.angle"), value: binding(\.angle), range: 0...360, suffix: "°")
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 48))], spacing: 8) {
@@ -583,7 +601,7 @@ private struct GradientBackgroundEditor: View {
                 .disabled(gradient.stops.count <= 2)
             Button { var next = gradient; next.reverse(); gradient = next.normalized }
                 label: { Text(L10n.text("background.reverse")).fixedSize() }
-        }.buttonStyle(.borderless)
+        }.buttonStyle(.bordered)
     }
     private var colorRail: some View {
         GeometryReader { geometry in

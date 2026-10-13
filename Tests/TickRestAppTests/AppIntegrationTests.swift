@@ -458,10 +458,11 @@ final class AppIntegrationTests: XCTestCase {
             XCTAssertEqual(selected.red, 0.8, accuracy: 0.001)
             XCTAssertEqual(selected.green, 0.7, accuracy: 0.001)
             XCTAssertEqual(selected.blue, 0.6, accuracy: 0.001)
+            model.persist()
             XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, selected)
             try self.writeSnapshot(SettingsView(model: model, navigation: navigation),
                                    name: "settings-zh-Hans-overlay-background", size: NSSize(width: 860, height: 640))
-            XCTAssertTrue(self.press(try self.button(named: L10n.text("reminder.background_color_reset"), in: window)))
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("background.reset"), in: window)))
             XCTAssertEqual(model.settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
             XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
         }

@@ -633,4 +633,54 @@ extension AppIntegrationTests {
         }
     }
 
+    func testFullscreenSteppersAndGradientButtonsUpdateSettings() async throws {
+        try await withDelegate { delegate, model, _, _ in
+            model.update {
+                $0.theme = .light; $0.language = "zh-Hans"; $0.style = .overlay
+                $0.overlayBackground.kind = .gradient
+                $0.overlayBackground.activeProtection = 0.65
+            }
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            navigation.page = .appearance
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            window.setContentSize(NSSize(width: 920, height: 850))
+            try await Task.sleep(nanoseconds: 300_000_000)
+            let root = try XCTUnwrap(window.contentView)
+            @MainActor func protectionStepper() throws -> NSObject {
+                let title = L10n.text("background.protection_scope", L10n.text("background.type.gradient"))
+                return try XCTUnwrap(self.elements(in: root).first {
+                    self.accessibilityValue($0, "accessibilityRole") as? String == NSAccessibility.Role.incrementor.rawValue &&
+                    self.accessibilityValue($0, "accessibilityLabel") as? String == title
+                })
+            }
+            _ = self.increment(try protectionStepper())
+            XCTAssertEqual(model.settings.overlayBackground.activeProtection, 0.66, accuracy: 0.001)
+            model.update { $0.overlayBackground.activeProtection = 0.90 }
+            try await Task.sleep(nanoseconds: 100_000_000)
+            _ = self.increment(try protectionStepper())
+            XCTAssertEqual(model.settings.overlayBackground.activeProtection, 0.90, accuracy: 0.001)
+            _ = self.increment(try protectionStepper(), direction: false)
+            XCTAssertEqual(model.settings.overlayBackground.activeProtection, 0.89, accuracy: 0.001)
+            let count = model.settings.overlayBackground.gradient.stops.count
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("background.add_stop"), in: root)))
+            XCTAssertEqual(model.settings.overlayBackground.gradient.stops.count, count + 1)
+            try await Task.sleep(nanoseconds: 100_000_000)
+            let colors = model.settings.overlayBackground.gradient.stops.map(\.color)
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("background.reverse"), in: root)))
+            XCTAssertEqual(model.settings.overlayBackground.gradient.stops.map(\.color), Array(colors.reversed()))
+            try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("background.remove_stop"), in: root)))
+            XCTAssertEqual(model.settings.overlayBackground.gradient.stops.count, count)
+            let frame = try XCTUnwrap(root.superview)
+            let bitmap = try XCTUnwrap(frame.bitmapImageRepForCachingDisplay(in: frame.bounds))
+            frame.cacheDisplay(in: frame.bounds, to: bitmap)
+            let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            let output = project.appendingPathComponent(".build/settings-review")
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent("overlay-gradient.png"))
+        }
+    }
+
 }

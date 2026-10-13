@@ -356,6 +356,7 @@ struct SettingsView: View {
                         }
                     }.labelsHidden().buttonStyle(.borderless)
                 }
+                Divider()
                 HStack(spacing: 20) {
                     VStack(alignment: .leading, spacing: 5) {
                         Text(L10n.text("reminder.position"))
@@ -369,6 +370,7 @@ struct SettingsView: View {
                     gentlePositionPicker.fixedSize()
                         .help(L10n.text("reminder.position_help"))
                 }.frame(maxWidth: .infinity)
+                Divider()
             }
             appearanceRow("reminder.start_mode", "reminder.start_mode_help") {
                 Picker(L10n.text("reminder.start_mode"), selection: binding(\.breakStartMode)) {
@@ -376,6 +378,7 @@ struct SettingsView: View {
                 }.labelsHidden().buttonStyle(.borderless)
             }
             if model.settings.style == .gentle {
+                Divider()
                 Button(L10n.text("reminder.preview")) { NotificationCenter.default.post(name: .previewRest, object: nil) }.disabled(model.engine.reminder != nil)
             }
         }
@@ -388,7 +391,9 @@ struct SettingsView: View {
                     ForEach([10, 30, 60], id: \.self) { Text(L10n.text("duration.seconds", $0)).tag(Double($0)) }
                 }.labelsHidden().buttonStyle(.borderless)
             }
+            Divider()
             appearanceRow("reminder.sound", "reminder.sound_help") { toggle("reminder.sound", \.sound) }
+            Divider()
             appearanceRow("reminder.sound_type") {
                 Picker(L10n.text("reminder.sound_type"), selection: binding(\.reminderSound)) {
                     ForEach(ReminderSound.allCases, id: \.self) { sound in
@@ -396,6 +401,7 @@ struct SettingsView: View {
                     }
                 }.labelsHidden().buttonStyle(.borderless)
             }
+            Divider()
             Button(L10n.text("reminder.test_sound")) { model.playReminderSound() }
         }
     }
