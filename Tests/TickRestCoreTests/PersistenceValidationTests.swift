@@ -9,7 +9,7 @@ struct PersistenceValidationTests {
         try body(DataStore(url: directory.appendingPathComponent("state.json")), directory)
     }
 
-    @Test(arguments: ["both-reminders", "orphan-delay", "negative-round", "bad-idea", "round-kind", "pending-warning", "invalid-leap-day"])
+    @Test(arguments: ["both-reminders", "orphan-delay", "negative-round", "bad-idea", "round-kind", "pending-warning", "invalid-leap-day", "orphan-paused-rest", "mismatched-paused-rest"])
     func inconsistentSavedStateIsRejectedAndPreserved(_ corruption: String) throws {
         try withStore { store, directory in
             var saved = SavedData()
@@ -28,6 +28,10 @@ struct PersistenceValidationTests {
                 saved.settings.prewarning = 60
                 var plan = RestPlan.preset(.eye202020); plan.shortInterval = 60; plan.markCustom()
                 saved.snapshot.pendingPlan = plan
+            case "orphan-paused-rest": saved.snapshot.pausedRestID = UUID()
+            case "mismatched-paused-rest":
+                saved.snapshot.deferredReminder = Reminder(kind: .short, target: 20)
+                saved.snapshot.deferredRemaining = 0; saved.snapshot.pausedRestID = UUID()
             default:
                 var record = Record(date: Date(), kind: nil, outcome: .usage, seconds: 1)
                 record.day = "2026-02-29"; saved.records = [record]

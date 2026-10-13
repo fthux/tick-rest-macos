@@ -52,6 +52,7 @@ public final class DataStore {
               (snapshot.deferredReminder == nil) == (snapshot.deferredRemaining == nil),
               snapshot.completedRounds.map({ (0...12).contains($0) }) ?? true else { return false }
         if let delay = snapshot.deferredRemaining, !delay.isFinite || delay < 0 { return false }
+        if let id = snapshot.pausedRestID, snapshot.deferredReminder?.id != id { return false }
         if case .until(let date) = snapshot.pause, !date.timeIntervalSinceReferenceDate.isFinite { return false }
         if let kind = snapshot.roundRestKind,
            settings.timingModel != .rounds || !settings.enabled(kind) { return false }

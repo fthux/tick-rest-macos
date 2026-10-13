@@ -48,6 +48,7 @@ public final class Engine {
             }
             if sameSession, let deferred = saved.deferredReminder, let remaining = saved.deferredRemaining {
                 phase = .deferred(deferred, remaining)
+                pausedRestID = saved.pausedRestID
             }
             if let pending = pendingPlan { installPlan(pending, now: now) }
             grace = 30
@@ -450,6 +451,9 @@ public final class Engine {
         // applies without losing the logical reminder or its postponement budget.
         if case .waiting(let r) = phase { result.deferredReminder = r; result.deferredRemaining = 0 }
         if case .deferred(let r, let remaining) = phase { result.deferredReminder = r; result.deferredRemaining = remaining }
+        // A started break can be paused before its first tick; elapsed alone
+        // cannot distinguish it from a reminder that has never started.
+        if result.deferredReminder?.id == pausedRestID { result.pausedRestID = pausedRestID }
         result.shortCooldown = shortCooldown; result.longCooldown = longCooldown
         result.completedRounds = completedRounds; result.roundRestKind = roundRestKind; result.pendingPlan = pendingPlan
         return result

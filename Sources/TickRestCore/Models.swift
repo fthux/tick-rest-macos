@@ -209,6 +209,7 @@ public struct Snapshot: Codable {
     public var activeReminder: Reminder?
     public var deferredReminder: Reminder?
     public var deferredRemaining: Double?
+    public var pausedRestID: UUID?
     public var shortCooldown: Double = 0
     public var longCooldown: Double = 0
     public var completedRounds: Int?
