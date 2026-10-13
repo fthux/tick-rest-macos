@@ -599,6 +599,9 @@ extension AppIntegrationTests {
             scroll.reflectScrolledClipView(scroll.contentView)
             try await Task.sleep(nanoseconds: 100_000_000)
             XCTAssertTrue(navigation.detailScrolled)
+            XCTAssertEqual(scroll.contentView.convert(scroll.contentView.bounds, to: nil).maxY,
+                           detail.convert(detail.bounds, to: nil).maxY, accuracy: 0.5,
+                           "Scrolled content must meet the titlebar without a fixed top gap")
             XCTAssertEqual(window.titlebarSeparatorStyle, .line)
             let downBitmap = try snapshot("scroll-down")
             let frame = try XCTUnwrap(window.contentView?.superview)
@@ -647,6 +650,9 @@ extension AppIntegrationTests {
             XCTAssertTrue(self.containsText(L10n.text("reminder.style"), in: window.contentView!))
             XCTAssertNotNil(self.findButton(named: L10n.text("reminder.test_sound"), in: window.contentView!))
             XCTAssertGreaterThan(document.bounds.height, scroll.contentView.bounds.height)
+            XCTAssertEqual(scroll.contentView.convert(scroll.contentView.bounds, to: nil).maxY,
+                           detail.convert(detail.bounds, to: nil).maxY, accuracy: 0.5,
+                           "The appearance scroll viewport must meet the titlebar")
             let bottom = document.isFlipped ? document.bounds.maxY - scroll.contentView.bounds.height : document.bounds.minY
             scroll.contentView.scroll(to: NSPoint(x: 0, y: bottom))
             scroll.reflectScrolledClipView(scroll.contentView)

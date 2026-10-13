@@ -109,7 +109,6 @@ struct SettingsView: View {
                     // detail safe area, including during scroll rubber-banding.
                     ZStack(alignment: .top) {
                         settingsContent(for: page)
-                            .padding(.top, 16)
                             // A new page gets its own scroll viewport. Passing the page
                             // explicitly also keeps outgoing content stable as it fades.
                             .id(page)
@@ -165,7 +164,8 @@ struct SettingsView: View {
                 VStack(spacing: 12) {
                     reminderStyleCard.padding(.horizontal, 20)
                     fullscreenAppearance
-                }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }.padding(.top, 16)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: 20) {
@@ -174,7 +174,7 @@ struct SettingsView: View {
                         appearance
                     }
                     .padding(.horizontal, 20)
-                    .padding(.top, 4)
+                    .padding(.top, 20)
                     .padding(.bottom, 32)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
