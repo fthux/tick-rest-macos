@@ -50,6 +50,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
 final class SettingsNavigation: ObservableObject {
     @Published var columnVisibility: NavigationSplitViewVisibility = .all
     @Published var page: SettingsPage = .general
+    @Published var detailScrolled = false
     @Published var overviewSelection = StatisticsSelection()
 }
 
@@ -97,7 +98,7 @@ struct SettingsView: View {
                 }
                 navigation.page = SettingsPage.allCases[next]
             }
-            .navigationSplitViewColumnWidth(min: 130, ideal: 148, max: 184)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 206, max: 260)
             // Native List rows can retain labels when their stable IDs do not change.
             .id(model.interfaceLanguage)
         } detail: {
@@ -116,6 +117,7 @@ struct SettingsView: View {
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
             .clipped()
             .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: .top)
+            .background(SettingsScrollObserver { navigation.detailScrolled = $0 })
         }
         // Constrain the whole split view so AppKit does not add the sidebar width
         // to a minimum that was imposed on the window while the sidebar was hidden.
@@ -128,7 +130,10 @@ struct SettingsView: View {
             displayIdentification.clear()
             connectedDisplays = ConnectedDisplay.current
         }
-        .onChange(of: page) { _ in displayIdentification.clear() }
+        .onChange(of: page) { _ in
+            displayIdentification.clear()
+            navigation.detailScrolled = false
+        }
         .onChange(of: model.settings.selectedDisplayID) { _ in displayIdentification.clear() }
         .onDisappear { displayIdentification.clear() }
         .confirmationDialog(L10n.text("data.clear_title"), isPresented: $confirmClear) {

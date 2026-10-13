@@ -22,6 +22,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var settingsWindow: NSWindow?
     private let settingsNavigation = SettingsNavigation()
     private var settingsPageSubscription: AnyCancellable?
+    private var settingsScrollSubscription: AnyCancellable?
     private var settingsVisibilitySubscription: AnyCancellable?
     private var languageSubscription: AnyCancellable?
     private weak var settingsSplitController: NSSplitViewController?
@@ -57,6 +58,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         settingsPageSubscription = settingsNavigation.$page.sink { [weak self] page in
             self?.settingsWindow?.title = page.title
             self?.settingsTitleField.stringValue = page.title
+        }
+        settingsScrollSubscription = settingsNavigation.$detailScrolled.removeDuplicates().sink { [weak self] scrolled in
+            self?.updateSettingsSeparator(scrolled: scrolled)
         }
         settingsVisibilitySubscription = settingsNavigation.$columnVisibility.sink { [weak self] visibility in
             self?.updateSidebarToolbarLabel(visibility)
@@ -233,6 +237,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         window.backgroundColor = SettingsPalette.content
         window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
+        updateSettingsSeparator(scrolled: settingsNavigation.detailScrolled)
+    }
+    private func updateSettingsSeparator(scrolled: Bool) {
+        let style: NSTitlebarSeparatorStyle = scrolled ? .line : .none
+        settingsWindow?.titlebarSeparatorStyle = style
+        for item in settingsSplitController?.splitViewItems.dropFirst() ?? [] {
+            item.titlebarSeparatorStyle = style
+        }
     }
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         // Keep the control against the sidebar's right edge, inside its divider.

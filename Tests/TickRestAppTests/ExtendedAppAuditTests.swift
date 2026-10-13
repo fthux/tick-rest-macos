@@ -566,4 +566,41 @@ extension AppIntegrationTests {
         }
     }
 
+    func testSettingsSeparatorTracksDetailScrollAndPageChanges() async throws {
+        try await withDelegate { delegate, _, _, _ in
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
+            func scrollViews(_ view: NSView) -> [NSScrollView] {
+                if let scroll = view as? NSScrollView { return [scroll] }
+                return view.subviews.flatMap(scrollViews)
+            }
+            let detail = try XCTUnwrap(split.splitView.arrangedSubviews.last)
+            let scroll = try XCTUnwrap(scrollViews(detail).first)
+            let document = try XCTUnwrap(scroll.documentView)
+            XCTAssertFalse(navigation.detailScrolled)
+            XCTAssertEqual(window.titlebarSeparatorStyle, .none)
+            let top = document.isFlipped ? document.bounds.minY : document.bounds.maxY - scroll.contentView.bounds.height
+            let down = top + (document.isFlipped ? 80 : -80)
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: down))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertTrue(navigation.detailScrolled)
+            XCTAssertEqual(window.titlebarSeparatorStyle, .line)
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: top))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertFalse(navigation.detailScrolled)
+            XCTAssertEqual(window.titlebarSeparatorStyle, .none)
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: down))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            navigation.page = .privacy
+            try await Task.sleep(nanoseconds: 400_000_000)
+            XCTAssertFalse(navigation.detailScrolled)
+            XCTAssertEqual(window.titlebarSeparatorStyle, .none)
+        }
+    }
+
 }

@@ -31,3 +31,77 @@ struct SettingsSidebarBackground: View {
         }
     }
 }
+
+/// Observe the detail's native scroll views, including grouped Forms, on macOS 13.
+struct SettingsScrollObserver: NSViewRepresentable {
+    let onChange: (Bool) -> Void
+    func makeNSView(context: Context) -> SettingsScrollTrackingView {
+        SettingsScrollTrackingView(onChange: onChange)
+    }
+    func updateNSView(_ view: SettingsScrollTrackingView, context: Context) {
+        view.onChange = onChange
+        view.scheduleRefresh()
+    }
+}
+
+final class SettingsScrollTrackingView: NSView {
+    var onChange: (Bool) -> Void
+    private var tokens: [NSObjectProtocol] = []
+    private var scrollViews: [NSScrollView] = []
+    private var refreshPending = false
+    private var previous: Bool?
+    init(onChange: @escaping (Bool) -> Void) {
+        self.onChange = onChange
+        super.init(frame: .zero)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    deinit { tokens.forEach(NotificationCenter.default.removeObserver) }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        scheduleRefresh()
+    }
+    func scheduleRefresh() {
+        guard !refreshPending else { return }
+        refreshPending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.refreshPending = false
+            self.refresh()
+        }
+    }
+    private func refresh() {
+        guard window != nil else { return }
+        var root: NSView = self
+        while let parent = root.superview, !(parent is NSSplitView) { root = parent }
+        func collect(_ view: NSView) -> [NSScrollView] {
+            // Nested thumbnail grids do not determine the page's scroll position.
+            if let scroll = view as? NSScrollView { return [scroll] }
+            return view.subviews.flatMap(collect)
+        }
+        let found = collect(root)
+        if found.map(ObjectIdentifier.init) != scrollViews.map(ObjectIdentifier.init) {
+            tokens.forEach(NotificationCenter.default.removeObserver)
+            tokens = []
+            scrollViews = found
+            for scroll in found {
+                scroll.contentView.postsBoundsChangedNotifications = true
+                tokens.append(NotificationCenter.default.addObserver(
+                    forName: NSView.boundsDidChangeNotification, object: scroll.contentView, queue: .main
+                ) { [weak self] _ in self?.report() })
+            }
+        }
+        report()
+    }
+    private func report() {
+        let scrolled = scrollViews.contains { scroll in
+            guard let document = scroll.documentView else { return false }
+            let visible = document.convert(scroll.contentView.bounds, from: scroll.contentView)
+            let offset = document.isFlipped ? visible.minY - document.bounds.minY : document.bounds.maxY - visible.maxY
+            return offset > 1
+        }
+        guard previous != scrolled else { return }
+        previous = scrolled
+        onChange(scrolled)
+    }
+}
