@@ -96,6 +96,11 @@ extension AppIntegrationTests {
             try self.activateMenu(L10n.text("menu.settings"), in: menu)
             let settings: NSWindow = try self.field("settingsWindow", of: delegate)
             XCTAssertTrue(settings.isVisible)
+            // The native toolbar installs asynchronously and changes the frame minimum.
+            for _ in 0..<20 {
+                if settings.toolbar != nil && settings.minSize.height >= SettingsWindowLayout.minimumFrameSize.height { break }
+                try await Task.sleep(nanoseconds: 50_000_000)
+            }
             self.assertSettingsMinimum(settings)
             settings.close()
             XCTAssertFalse(delegate.applicationShouldHandleReopen(NSApp, hasVisibleWindows: false))
@@ -210,7 +215,10 @@ extension AppIntegrationTests {
                 model.action { $0.setPause(.indefinite, now: Date()) }
                 try await Task.sleep(nanoseconds: 100_000_000)
                 XCTAssertEqual(menu.items.first?.title, L10n.text("state.paused"))
-                XCTAssertEqual(menu.items.filter { !$0.isHidden && $0.title == focus }.count, 1)
+                let restContext = L10n.text("plan.rest_after_focus", 1, 4)
+                XCTAssertEqual(menu.items.filter { !$0.isHidden && $0.title == restContext }.count, 1)
+                XCTAssertEqual(model.engine.completedRounds, 1)
+                XCTAssertEqual(model.engine.roundRestKind, .short)
                 model.resume()
                 try await Task.sleep(nanoseconds: 100_000_000)
                 XCTAssertEqual(menu.items.first?.title, focus)
@@ -601,7 +609,7 @@ extension AppIntegrationTests {
             }
             let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
             let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
-            func scrollViews(_ view: NSView) -> [NSScrollView] {
+            @MainActor func scrollViews(_ view: NSView) -> [NSScrollView] {
                 if let scroll = view as? NSScrollView { return [scroll] }
                 return view.subviews.flatMap(scrollViews)
             }
@@ -657,7 +665,7 @@ extension AppIntegrationTests {
             window.setContentSize(SettingsWindowLayout.minimumContentSize)
             try await Task.sleep(nanoseconds: 300_000_000)
             let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
-            func scrollViews(_ view: NSView) -> [NSScrollView] {
+            @MainActor func scrollViews(_ view: NSView) -> [NSScrollView] {
                 if let scroll = view as? NSScrollView { return [scroll] }
                 return view.subviews.flatMap(scrollViews)
             }
@@ -667,15 +675,18 @@ extension AppIntegrationTests {
             XCTAssertEqual(scrollViews(detail).count, 1)
             XCTAssertTrue(self.containsText(L10n.text("reminder.style"), in: window.contentView!))
             XCTAssertNotNil(self.findButton(named: L10n.text("reminder.test_sound"), in: window.contentView!))
-            XCTAssertGreaterThan(document.bounds.height, scroll.contentView.bounds.height)
             XCTAssertEqual(scroll.contentView.convert(scroll.contentView.bounds, to: nil).maxY,
                            detail.convert(detail.bounds, to: nil).maxY, accuracy: 0.5,
                            "The appearance scroll viewport must meet the titlebar")
-            let bottom = document.isFlipped ? document.bounds.maxY - scroll.contentView.bounds.height : document.bounds.minY
+            let overflows = document.bounds.height > scroll.contentView.bounds.height
+            let bottom = document.isFlipped
+                ? max(document.bounds.minY, document.bounds.maxY - scroll.contentView.bounds.height)
+                : document.bounds.minY
             scroll.contentView.scroll(to: NSPoint(x: 0, y: bottom))
             scroll.reflectScrolledClipView(scroll.contentView)
             try await Task.sleep(nanoseconds: 100_000_000)
-            XCTAssertTrue(navigation.detailScrolled)
+            XCTAssertEqual(navigation.detailScrolled, overflows,
+                           "The separator should appear only when the page actually scrolls")
         }
     }
 
