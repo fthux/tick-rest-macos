@@ -500,37 +500,6 @@ struct BackgroundMenuPicker<Value: Hashable>: View {
     }
 }
 
-/// Each choice owns its full rectangular hit area, including the selected one.
-struct BackgroundChoicePicker<Value: Hashable>: View {
-    let title: String
-    @Binding var selection: Value
-    let choices: [Value]
-    let label: (Value) -> String
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.callout).fixedSize(horizontal: false, vertical: true)
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 4) { buttons }
-                VStack(spacing: 4) { buttons }
-            }
-        }
-    }
-    private var buttons: some View {
-        ForEach(choices, id: \.self) { choice in
-            Button { selection = choice } label: {
-                Text(label(choice)).fixedSize()
-                    .padding(.horizontal, 12).padding(.vertical, 7)
-                    .frame(maxWidth: .infinity, minHeight: 32)
-                    .background(selection == choice ? Color.accentColor.opacity(0.18) : Color.secondary.opacity(0.08),
-                                in: RoundedRectangle(cornerRadius: 6))
-                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(selection == choice ? Color.accentColor : .clear))
-                    .contentShape(Rectangle())
-            }.buttonStyle(.plain)
-                .accessibilityAddTraits(selection == choice ? .isSelected : [])
-        }
-    }
-}
-
 private struct GradientBackgroundEditor: View {
     @Binding var gradient: BackgroundGradient
     @State private var selectedID: UUID?
@@ -562,7 +531,7 @@ private struct GradientBackgroundEditor: View {
                 Text(L10n.text("background.custom_gradient")).font(.caption).foregroundStyle(.secondary)
             }
             Divider()
-            BackgroundChoicePicker(title: L10n.text("background.gradient_type"), selection: binding(\.kind),
+            BackgroundMenuPicker(title: L10n.text("background.gradient_type"), selection: binding(\.kind),
                                    choices: BackgroundGradientKind.allCases) { L10n.text("background.gradient.\($0.rawValue)") }
             Divider()
             colorRail
