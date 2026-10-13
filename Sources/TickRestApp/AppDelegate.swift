@@ -230,7 +230,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         window.toolbarStyle = .unified
         (window as? SettingsWindow)?.managedToolbar = toolbar
         window.toolbar = toolbar
-        window.titlebarAppearsTransparent = false
+        window.backgroundColor = SettingsPalette.content
+        window.titlebarAppearsTransparent = true
         window.titlebarSeparatorStyle = .none
     }
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
@@ -368,6 +369,6 @@ private final class SettingsWindow: NSWindow {
     }
     override var titlebarAppearsTransparent: Bool {
         get { super.titlebarAppearsTransparent }
-        set { super.titlebarAppearsTransparent = managedToolbar == nil ? newValue : false }
+        set { super.titlebarAppearsTransparent = managedToolbar == nil ? newValue : true }
     }
 }

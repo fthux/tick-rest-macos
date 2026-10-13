@@ -543,4 +543,27 @@ extension AppIntegrationTests {
             XCTAssertNil(model.engine.pendingPlan)
         }
     }
+    func testSettingsTitlebarKeepsItsBackgroundWhenInactive() async throws {
+        try await withDelegate { delegate, model, _, _ in
+            model.update { $0.theme = .light }
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            XCTAssertTrue(window.titlebarAppearsTransparent)
+            let expected = try XCTUnwrap(window.backgroundColor.usingColorSpace(.sRGB))
+            XCTAssertEqual(expected.redComponent, 234 / 255, accuracy: 0.001)
+            XCTAssertEqual(expected.greenComponent, 235 / 255, accuracy: 0.001)
+            XCTAssertEqual(expected.blueComponent, 236 / 255, accuracy: 0.001)
+            let other = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 200, height: 100),
+                                 styleMask: [.titled], backing: .buffered, defer: false)
+            other.isReleasedWhenClosed = false
+            defer { other.close() }
+            other.makeKeyAndOrderFront(nil)
+            try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertFalse(window.isKeyWindow)
+            XCTAssertTrue(window.titlebarAppearsTransparent)
+            XCTAssertEqual(window.backgroundColor.usingColorSpace(.sRGB), expected)
+        }
+    }
+
 }

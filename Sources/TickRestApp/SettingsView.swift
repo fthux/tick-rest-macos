@@ -115,7 +115,7 @@ struct SettingsView: View {
             // Animate only page changes, leaving the sidebar and toolbar immediate.
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
             .clipped()
-            .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: [])
+            .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: .top)
         }
         // Constrain the whole split view so AppKit does not add the sidebar width
         // to a minimum that was imposed on the window while the sidebar was hidden.
