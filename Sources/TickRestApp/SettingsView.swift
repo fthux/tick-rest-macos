@@ -11,6 +11,24 @@ private struct SettingsSwitchToggleStyle: ToggleStyle {
     }
 }
 
+private struct WeekdayToggleStyle: ToggleStyle {
+    @Environment(\.isEnabled) private var isEnabled
+    func makeBody(configuration: Configuration) -> some View {
+        Button { configuration.isOn.toggle() } label: {
+            configuration.label
+                .foregroundStyle(configuration.isOn ? Color.white : Color.primary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .background(configuration.isOn ? Color.orange : Color.primary.opacity(0.06),
+                            in: RoundedRectangle(cornerRadius: 6))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .opacity(isEnabled ? 1 : 0.5)
+        .accessibilityAddTraits(configuration.isOn ? .isSelected : [])
+    }
+}
+
 enum SettingsPage: String, CaseIterable, Identifiable {
     case general, rhythm, schedule, appearance, displays, overview, privacy, about
     var id: String { rawValue }
@@ -384,7 +402,7 @@ struct SettingsView: View {
                                 }
                             }
                         ))
-                        .toggleStyle(.button)
+                        .toggleStyle(WeekdayToggleStyle())
                         .frame(maxWidth: .infinity)
                     }
                 }.disabled(!model.settings.scheduleEnabled)
