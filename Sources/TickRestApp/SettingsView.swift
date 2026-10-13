@@ -66,70 +66,73 @@ struct SettingsView: View {
     @State private var connectedDisplays = ConnectedDisplay.current
     @State private var displayIdentification = DisplayIdentificationController()
     var body: some View {
-        NavigationSplitView(columnVisibility: $navigation.columnVisibility) {
-            // Draw the selected background ourselves: native sidebar selection
-            // can keep the system accent color despite tint/accentColor overrides.
-            List {
-                ForEach(SettingsPage.allCases) { item in
-                    Button { navigation.page = item } label: {
-                        Label(item.title, systemImage: item.symbol)
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
+        GeometryReader { viewport in
+            NavigationSplitView(columnVisibility: $navigation.columnVisibility) {
+                // Draw the selected background ourselves: native sidebar selection
+                // can keep the system accent color despite tint/accentColor overrides.
+                List {
+                    ForEach(SettingsPage.allCases) { item in
+                        Button { navigation.page = item } label: {
+                            Label(item.title, systemImage: item.symbol)
+                                .foregroundStyle(.primary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(page == item ? .isSelected : [])
+                        .listRowBackground(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(page == item ? Color.orange : Color.clear)
+                        )
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(page == item ? .isSelected : [])
-                    .listRowBackground(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(page == item ? Color.orange : Color.clear)
-                    )
                 }
-            }
-            .listStyle(.sidebar)
-            .scrollContentBackground(.hidden)
-            .background { SettingsSidebarBackground().ignoresSafeArea() }
-            .onMoveCommand { direction in
-                guard let index = SettingsPage.allCases.firstIndex(of: page) else { return }
-                let next: Int
-                switch direction {
-                case .up: next = max(0, index - 1)
-                case .down: next = min(SettingsPage.allCases.count - 1, index + 1)
-                default: return
+                .listStyle(.sidebar)
+                .scrollContentBackground(.hidden)
+                .background { SettingsSidebarBackground().ignoresSafeArea() }
+                .onMoveCommand { direction in
+                    guard let index = SettingsPage.allCases.firstIndex(of: page) else { return }
+                    let next: Int
+                    switch direction {
+                    case .up: next = max(0, index - 1)
+                    case .down: next = min(SettingsPage.allCases.count - 1, index + 1)
+                    default: return
+                    }
+                    navigation.page = SettingsPage.allCases[next]
                 }
-                navigation.page = SettingsPage.allCases[next]
-            }
-            .navigationSplitViewColumnWidth(min: 180, ideal: 206, max: 260)
-            // Native List rows can retain labels when their stable IDs do not change.
-            .id(model.interfaceLanguage)
-        } detail: {
-            // A non-scrolling container keeps the Form's viewport inside the
-            // detail safe area, including during scroll rubber-banding.
-            ZStack(alignment: .top) {
-                settingsContent(for: page)
-                    .padding(.top, 16)
-                    // A new page gets its own scroll viewport. Passing the page
-                    // explicitly also keeps outgoing content stable as it fades.
-                    .id(page)
-                    .transition(pageTransition)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Animate only page changes, leaving the sidebar and toolbar immediate.
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
-            .overlay(alignment: .top) {
-                if navigation.detailScrolled {
-                    Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 0.5)
-                        .allowsHitTesting(false).accessibilityHidden(true)
+                .navigationSplitViewColumnWidth(min: 180, ideal: 206, max: 260)
+                // Native List rows can retain labels when their stable IDs do not change.
+                .id(model.interfaceLanguage)
+            } detail: {
+                // A non-scrolling container keeps the Form's viewport inside the
+                // detail safe area, including during scroll rubber-banding.
+                ZStack(alignment: .top) {
+                    settingsContent(for: page)
+                        .padding(.top, 16)
+                        // A new page gets its own scroll viewport. Passing the page
+                        // explicitly also keeps outgoing content stable as it fades.
+                        .id(page)
+                        .transition(pageTransition)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                // Animate only page changes, leaving the sidebar and toolbar immediate.
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
+                .overlay(alignment: .top) {
+                    if navigation.detailScrolled {
+                        Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 0.5)
+                            .allowsHitTesting(false).accessibilityHidden(true)
+                    }
+                }
+                .clipped()
+                .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: .top)
+                .background(SettingsScrollObserver { navigation.detailScrolled = $0 })
             }
-            .clipped()
-            .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: .top)
-            .background(SettingsScrollObserver { navigation.detailScrolled = $0 })
+            // Constrain the whole split view so AppKit does not add the sidebar width
+            // to a minimum that was imposed on the window while the sidebar was hidden.
+            // Anchor the leading edge while AppKit reconciles the split width during
+            // a reveal; centering temporarily wider content moves the menu text left.
+            .frame(width: viewport.size.width, height: viewport.size.height, alignment: .topLeading)
         }
-        // Constrain the whole split view so AppKit does not add the sidebar width
-        // to a minimum that was imposed on the window while the sidebar was hidden.
-        // Anchor the leading edge while AppKit reconciles the split width during
-        // a reveal; centering temporarily wider content moves the menu text left.
-        .frame(minWidth: 780, minHeight: 580, alignment: .leading)
+        .frame(minWidth: 780, minHeight: 580, alignment: .topLeading)
         .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in

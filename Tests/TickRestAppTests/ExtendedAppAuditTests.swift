@@ -705,4 +705,37 @@ extension AppIntegrationTests {
         }
     }
 
+    func testSwitchingFullscreenStyleKeepsSidebarPosition() async throws {
+        try await withDelegate { delegate, model, _, _ in
+            model.update { $0.theme = .light; $0.language = "zh-Hans" }
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
+            func outlineViews(_ view: NSView) -> [NSOutlineView] {
+                if let outline = view as? NSOutlineView { return [outline] }
+                return view.subviews.flatMap(outlineViews)
+            }
+            for size in [NSSize(width: 920, height: 680), NSSize(width: 780, height: 580)] {
+                window.setContentSize(size)
+                navigation.page = .general
+                model.update { $0.style = .gentle }
+                try await Task.sleep(nanoseconds: 300_000_000)
+                let sidebar = try XCTUnwrap(split.splitView.arrangedSubviews.first)
+                let outline = try XCTUnwrap(outlineViews(sidebar).first)
+                let initial = outline.convert(outline.rect(ofRow: 0), to: nil)
+                let windowFrame = window.frame
+                for style in [ReminderStyle.gentle, .overlay, .gentle, .overlay] {
+                    navigation.page = .appearance
+                    model.update { $0.style = style }
+                    try await Task.sleep(nanoseconds: 300_000_000)
+                    let current = outline.convert(outline.rect(ofRow: 0), to: nil)
+                    XCTAssertEqual(current.minY, initial.minY, accuracy: 0.5)
+                    XCTAssertEqual(window.frame, windowFrame)
+                }
+            }
+        }
+    }
+
 }
