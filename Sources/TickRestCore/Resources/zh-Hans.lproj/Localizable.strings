@@ -421,3 +421,5 @@
 "background.failure.tooLarge" = "“%@”的尺寸超出限制，或无法读取有效的图片尺寸。";
 "background.failure.decodeFailed" = "无法解码“%@”，文件可能损坏或格式不受支持。";
 "background.failure.noSelection" = "尚未选择可读取的壁纸。";
+"background.category.pictures" = "图片";
+"background.category.colors" = "颜色";

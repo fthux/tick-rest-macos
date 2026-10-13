@@ -279,7 +279,26 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
                     .font(.callout).foregroundStyle(.secondary)
             } else {
                 ScrollView(.vertical, showsIndicators: true) {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 116), spacing: 12)], spacing: 12) {
+                    LazyVStack(alignment: .leading, spacing: 16) {
+                        if background.wallpaper.source == .system {
+                            ForEach(SystemWallpaperCategory.allCases) { category in
+                                let group = items.filter { $0.systemCategory == category }
+                                if !group.isEmpty {
+                                    Text(category.title).font(.headline)
+                                    wallpaperThumbnails(group)
+                                }
+                            }
+                        } else { wallpaperThumbnails(items) }
+                    }
+                }
+                .scrollIndicators(.visible)
+                .frame(height: items.count <= 2 ? 148 : 296)
+                .clipped()
+            }
+        }
+    }
+    private func wallpaperThumbnails(_ items: [WallpaperItem]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 116), spacing: 12)], spacing: 12) {
                         ForEach(items) { item in
                             VStack(alignment: .leading, spacing: 5) {
                                 Button {
@@ -309,13 +328,7 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
                                 }
                             }
                         }
-                    }.padding(4).padding(.trailing, 12)
-                }
-                .scrollIndicators(.visible)
-                .frame(height: items.count <= 2 ? 148 : 296)
-                .clipped()
-            }
-        }
+        }.padding(4).padding(.trailing, 12)
     }
     private func importImages() {
         let panel = NSOpenPanel()

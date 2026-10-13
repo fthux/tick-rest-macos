@@ -35,6 +35,24 @@ final class WallpaperRepositoryTests: XCTestCase {
     private func request(source: WallpaperSource, id: String? = nil, url: URL? = nil, screen: String = "display-1", pixels: Int = 300) -> WallpaperImageRequest {
         WallpaperImageRequest(source: source, selectedID: id, desktopURL: url, screenID: screen, maximumPixels: pixels, revision: 0)
     }
+    func testSystemCategoriesPersistAfterSourceRemovalAndReadLegacyCatalogues() throws {
+        let picture = try image("system/Photo.png")
+        let color = try image("system/Solid Colors/Blue.png")
+        let repo = repository(roots: [picture.deletingLastPathComponent()])
+        var manifest = try repo.synchronize(WallpaperManifest())
+        let colorItem = try XCTUnwrap(manifest.items.first { $0.name == "Blue" })
+        XCTAssertEqual(colorItem.systemCategory, .colors)
+        XCTAssertEqual(manifest.items.first { $0.name == "Photo" }?.systemCategory, .pictures)
+        try repo.cacheSystem(colorItem.id, in: &manifest)
+        try FileManager.default.removeItem(at: color)
+        manifest = try repo.synchronize(manifest)
+        XCTAssertEqual(repo.load().items.first { $0.id == colorItem.id }?.systemCategory, .colors)
+        var legacy = colorItem
+        legacy.category = nil
+        XCTAssertEqual(legacy.systemCategory, .colors)
+        legacy.sourcePath = picture.path
+        XCTAssertEqual(legacy.systemCategory, .pictures)
+    }
     func testImportedCopiesSurviveSourceRemovalAndDeletingNeverRemovesOriginal() throws {
         let original = try image("original.png"), second = try image("second.png")
         let repo = repository(); var manifest = WallpaperManifest()

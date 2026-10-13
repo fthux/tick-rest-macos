@@ -421,3 +421,5 @@
 "background.failure.tooLarge" = "「%@」的尺寸超出限制，或無法讀取有效的圖片尺寸。";
 "background.failure.decodeFailed" = "無法解碼「%@」，檔案可能損壞或格式不受支援。";
 "background.failure.noSelection" = "尚未選擇可讀取的桌布。";
+"background.category.pictures" = "圖片";
+"background.category.colors" = "顏色";

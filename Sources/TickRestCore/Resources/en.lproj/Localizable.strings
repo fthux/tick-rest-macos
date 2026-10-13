@@ -421,3 +421,5 @@
 "background.failure.tooLarge" = "“%@” exceeds the image dimension limits or has invalid dimension metadata.";
 "background.failure.decodeFailed" = "“%@” could not be decoded. The file may be damaged or its format unsupported.";
 "background.failure.noSelection" = "No readable wallpaper has been selected.";
+"background.category.pictures" = "Pictures";
+"background.category.colors" = "Colors";

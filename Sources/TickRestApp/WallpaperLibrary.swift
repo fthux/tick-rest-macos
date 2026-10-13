@@ -15,6 +15,16 @@ struct WallpaperItem: Codable, Equatable, Identifiable {
     var cachedFile: String?
     var available: Bool
     var cachedSourceDate: Date? = nil
+    var category: SystemWallpaperCategory? = nil
+    var systemCategory: SystemWallpaperCategory {
+        category ?? (sourcePath.map { URL(fileURLWithPath: $0).pathComponents.contains("Solid Colors") } == true ? .colors : .pictures)
+    }
+}
+
+enum SystemWallpaperCategory: String, Codable, CaseIterable, Identifiable {
+    case pictures, colors
+    var id: String { rawValue }
+    var title: String { L10n.text("background.category.\(rawValue)") }
 }
 
 struct WallpaperManifest: Codable {
@@ -303,7 +313,8 @@ final class WallpaperRepository: @unchecked Sendable {
                 let old = previous.items.first { $0.id == id }
                 var item = WallpaperItem(id: id, name: url.deletingPathExtension().lastPathComponent,
                                          width: width, height: height, source: .system, sourcePath: url.path,
-                                         cachedFile: old?.cachedFile, available: true, cachedSourceDate: old?.cachedSourceDate)
+                                         cachedFile: old?.cachedFile, available: true, cachedSourceDate: old?.cachedSourceDate,
+                                         category: url.pathComponents.contains("Solid Colors") ? .colors : .pictures)
                 do { try cacheThumbnail(item, from: url) }
                 catch { item.available = false }
                 system.append(item); progress(system.count)

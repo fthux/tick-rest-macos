@@ -421,3 +421,5 @@
 "background.failure.tooLarge" = "「%@」の寸法が上限を超えているか、寸法の情報が無効です。";
 "background.failure.decodeFailed" = "「%@」をデコードできません。ファイルの破損や未対応形式の可能性があります。";
 "background.failure.noSelection" = "読み込み可能な壁紙が選択されていません。";
+"background.category.pictures" = "ピクチャ";
+"background.category.colors" = "カラー";
