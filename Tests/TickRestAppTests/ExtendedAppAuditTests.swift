@@ -806,6 +806,58 @@ extension AppIntegrationTests {
         }
     }
 
+    func testAppearanceCardsMatchGroupedFormInDarkMode() async throws {
+        try await withDelegate { delegate, model, _, _ in
+            model.update { $0.theme = .dark; $0.language = "en" }
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 300_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            window.setContentSize(NSSize(width: 920, height: 680))
+            let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            let output = project.appendingPathComponent(".build/settings-review")
+            try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+            var nativeCardColor: NSColor?
+            for (page, style, name, labels) in [
+                (SettingsPage.general, ReminderStyle.gentle, "dark-general", ["general.login"]),
+                (.appearance, .gentle, "dark-gentle", ["reminder.style", "reminder.size"]),
+                (.appearance, .overlay, "dark-overlay", ["reminder.style", "background.title"])
+            ] {
+                navigation.page = page
+                model.update { $0.style = style }
+                try await Task.sleep(nanoseconds: 700_000_000)
+                let root = try XCTUnwrap(window.contentView)
+                let frame = try XCTUnwrap(window.contentView?.superview)
+                let bitmap = try XCTUnwrap(frame.bitmapImageRepForCachingDisplay(in: frame.bounds))
+                frame.cacheDisplay(in: frame.bounds, to: bitmap)
+                try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent(name + ".png"))
+                for label in labels {
+                    let text = try XCTUnwrap(self.elements(in: root).first { element in
+                        self.accessibilityValue(element, "accessibilityRole") as? String == NSAccessibility.Role.staticText.rawValue &&
+                        ["accessibilityLabel", "accessibilityTitle", "accessibilityValue"].contains {
+                            self.accessibilityValue(element, $0) as? String == L10n.text(label)
+                        }
+                    })
+                    let selector = NSSelectorFromString("accessibilityFrame")
+                    typealias FrameValue = @convention(c) (AnyObject, Selector) -> NSRect
+                    let textFrame = unsafeBitCast(text.method(for: selector), to: FrameValue.self)(text, selector)
+                    // Sample the card's padding beside its label, clear of text and controls.
+                    let point = frame.convert(window.convertPoint(fromScreen: NSPoint(x: textFrame.minX - 6, y: textFrame.midY)), from: nil)
+                    let scale = window.backingScaleFactor
+                    let color = try XCTUnwrap(bitmap.colorAt(x: Int(point.x * scale),
+                        y: Int((frame.bounds.maxY - point.y) * scale))?.usingColorSpace(.sRGB))
+                    if page == .general { nativeCardColor = color }
+                    else {
+                        let expected = try XCTUnwrap(nativeCardColor)
+                        XCTAssertEqual(color.redComponent, expected.redComponent, accuracy: 0.01, name + " " + label)
+                        XCTAssertEqual(color.greenComponent, expected.greenComponent, accuracy: 0.01, name + " " + label)
+                        XCTAssertEqual(color.blueComponent, expected.blueComponent, accuracy: 0.01, name + " " + label)
+                    }
+                }
+            }
+        }
+    }
+
     func testSystemWallpaperFillStaysCoveredWhileDragging() async throws {
         try await withFixture { _, _, directory in
             let system = directory.appendingPathComponent("system-wallpapers")
