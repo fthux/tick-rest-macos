@@ -603,4 +603,34 @@ extension AppIntegrationTests {
         }
     }
 
+    func testGentleAppearanceScrollsAsOnePageAtMinimumSize() async throws {
+        try await withDelegate { delegate, model, _, _ in
+            model.update { $0.style = .gentle; $0.language = "zh-Hans" }
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            navigation.page = .appearance
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 300_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            window.setContentSize(NSSize(width: 780, height: 580))
+            try await Task.sleep(nanoseconds: 300_000_000)
+            let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
+            func scrollViews(_ view: NSView) -> [NSScrollView] {
+                if let scroll = view as? NSScrollView { return [scroll] }
+                return view.subviews.flatMap(scrollViews)
+            }
+            let detail = try XCTUnwrap(split.splitView.arrangedSubviews.last)
+            let scroll = try XCTUnwrap(scrollViews(detail).first)
+            let document = try XCTUnwrap(scroll.documentView)
+            XCTAssertEqual(scrollViews(detail).count, 1)
+            XCTAssertTrue(self.containsText(L10n.text("reminder.style"), in: window.contentView!))
+            XCTAssertNotNil(self.findButton(named: L10n.text("reminder.test_sound"), in: window.contentView!))
+            XCTAssertGreaterThan(document.bounds.height, scroll.contentView.bounds.height)
+            let bottom = document.isFlipped ? document.bounds.maxY - scroll.contentView.bounds.height : document.bounds.minY
+            scroll.contentView.scroll(to: NSPoint(x: 0, y: bottom))
+            scroll.reflectScrolledClipView(scroll.contentView)
+            try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertTrue(navigation.detailScrolled)
+        }
+    }
+
 }

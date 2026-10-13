@@ -149,34 +149,42 @@ struct SettingsView: View {
     }
     @ViewBuilder private func settingsContent(for page: SettingsPage) -> some View {
         if page == .appearance {
-            VStack(spacing: 12) {
-                SettingsSectionCard {
-                    HStack {
-                        Text(L10n.text("reminder.style"))
-                        Spacer(minLength: 20)
-                        Picker(L10n.text("reminder.style"), selection: binding(\.style)) {
-                            ForEach(ReminderStyle.allCases, id: \.self) {
-                                Text(L10n.text("style.\($0.rawValue)")).tag($0)
-                            }
-                        }
-                        .pickerStyle(.menu).labelsHidden().fixedSize().buttonStyle(.borderless)
-                    }.frame(maxWidth: .infinity)
-                    Text(L10n.text("reminder.style_help")).font(.caption).foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .padding(.horizontal, 20)
-                if model.settings.style == .overlay {
+            if model.settings.style == .overlay {
+                VStack(spacing: 12) {
+                    reminderStyleCard.padding(.horizontal, 20)
                     fullscreenAppearance
-                } else {
-                    ScrollView(.vertical, showsIndicators: true) {
-                        VStack(alignment: .leading, spacing: 20) {
-                            appearanceError
-                            appearance
-                        }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            } else {
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 20) {
+                        reminderStyleCard
+                        appearanceError
+                        appearance
                     }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 4)
+                    .padding(.bottom, 32)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         } else { settingsForm(for: page) }
+    }
+    private var reminderStyleCard: some View {
+        SettingsSectionCard {
+            HStack {
+                Text(L10n.text("reminder.style"))
+                Spacer(minLength: 20)
+                Picker(L10n.text("reminder.style"), selection: binding(\.style)) {
+                    ForEach(ReminderStyle.allCases, id: \.self) {
+                        Text(L10n.text("style.\($0.rawValue)")).tag($0)
+                    }
+                }
+                .pickerStyle(.menu).labelsHidden().fixedSize().buttonStyle(.borderless)
+            }.frame(maxWidth: .infinity)
+            Text(L10n.text("reminder.style_help")).font(.caption).foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
     private var fullscreenAppearance: some View {
         BackgroundSettingsView(model: model) {
