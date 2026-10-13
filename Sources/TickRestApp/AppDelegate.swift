@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var menuKinds: [BreakKind] = []
     private var menuResting = false
     private var menuHasReminder = false
+    private var menuPaused = false
     private var menuRoundItem: NSMenuItem?
     private var menuSkipItem: NSMenuItem?
     private var menuStateItem: NSMenuItem?
@@ -104,6 +105,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         if menuStateItem != nil, let menu = status.menu,
            menuPlan != model.settings.restPlan || menuKinds != engine.displayKinds
            || menuResting != engine.isResting || menuHasReminder != (engine.reminder != nil)
+           || menuPaused != (engine.pause != nil)
            || menuLanguage != L10n.language { menuWillOpen(menu) }
         menuRoundItem?.title = display.roundRestText
         menuSkipItem?.toolTip = display.skipResultText
@@ -123,6 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         menuLanguage = L10n.language
         menuKinds = model.engine.displayKinds; menuResting = model.engine.isResting
         menuHasReminder = model.engine.reminder != nil
+        menuPaused = model.engine.pause != nil
         menuCountdownItems.removeAll()
         let display = ReminderDisplay(engine: model.engine)
         menuStateItem = add(menu, display.menuStateText, nil)
@@ -174,6 +177,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     }
     func menuDidClose(_ menu: NSMenu) {
         menuStateItem = nil; menuPlan = nil; menuLanguage = nil; menuRoundItem = nil; menuSkipItem = nil
+        menuPaused = false
         menuCountdownItems.removeAll()
     }
     @discardableResult private func add(_ menu: NSMenu, _ title: String, _ action: Selector?, key: String = "") -> NSMenuItem {
