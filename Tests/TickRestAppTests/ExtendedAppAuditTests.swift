@@ -806,4 +806,65 @@ extension AppIntegrationTests {
         }
     }
 
+    func testSystemWallpaperFillStaysCoveredWhileDragging() async throws {
+        try await withFixture { _, _, directory in
+            let system = directory.appendingPathComponent("system-wallpapers")
+            try FileManager.default.createDirectory(at: system, withIntermediateDirectories: true)
+            for (name, width, height) in [("Wide", 1200, 300), ("Tall", 300, 1200)] {
+                let context = try XCTUnwrap(CGContext(data: nil, width: width, height: height,
+                    bitsPerComponent: 8, bytesPerRow: width * 4,
+                    space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+                context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+                context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+                let bitmap = NSBitmapImageRep(cgImage: try XCTUnwrap(context.makeImage()))
+                try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                    .write(to: system.appendingPathComponent(name + ".png"))
+            }
+            let library = WallpaperLibrary(directory: directory.appendingPathComponent("wallpaper-library"), systemRoots: [system])
+            await library.synchronize()
+            XCTAssertEqual(library.items.count, 2)
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 200),
+                                  styleMask: [.titled], backing: .buffered, defer: false)
+            window.isReleasedWhenClosed = false
+            defer { window.close() }
+            for item in library.items {
+                let cached = await library.selectSystem(item.id)
+                XCTAssertTrue(cached)
+                var wallpaper = WallpaperBackground()
+                wallpaper.source = .system; wallpaper.systemID = item.id
+                wallpaper.fit = .fill; wallpaper.baseColor = .hex("0000FF")!
+                var resolved: ResolvedWallpaper?
+                let view = NSHostingView(rootView: WallpaperSurface(library: library, wallpaper: wallpaper,
+                    screen: nil, maximumPixels: 1200, onResolved: { resolved = $0 }))
+                window.contentView = view
+                window.orderFrontRegardless()
+                for size in [CGSize(width: 300, height: 200), CGSize(width: 1440, height: 900)] {
+                    window.setContentSize(size)
+                    for translation in [CGSize.zero, CGSize(width: -10_000, height: -10_000),
+                                        CGSize(width: 10_000, height: 10_000), CGSize(width: -50, height: -50)] {
+                        wallpaper.position = BackgroundGeometry.draggedPosition(start: .init(), translation: translation,
+                            image: CGSize(width: item.width, height: item.height), viewport: size)
+                        view.rootView = WallpaperSurface(library: library, wallpaper: wallpaper,
+                            screen: nil, maximumPixels: 1200, onResolved: { resolved = $0 })
+                        try await Task.sleep(nanoseconds: 150_000_000)
+                        XCTAssertNotNil(resolved?.image)
+                        XCTAssertEqual(resolved?.usedFallback, false)
+                        view.layoutSubtreeIfNeeded()
+                        let bitmap = try XCTUnwrap(view.bitmapImageRepForCachingDisplay(in: view.bounds))
+                        view.cacheDisplay(in: view.bounds, to: bitmap)
+                        for x in [2, bitmap.pixelsWide / 2, bitmap.pixelsWide - 3] {
+                            for y in [2, bitmap.pixelsHigh / 2, bitmap.pixelsHigh - 3] {
+                                let color = try XCTUnwrap(bitmap.colorAt(x: x, y: y)?.usingColorSpace(.sRGB))
+                                // Compare channel dominance rather than exact RGB;
+                                // the active display's ColorSync profile can shift red.
+                                XCTAssertGreaterThan(color.redComponent, max(color.greenComponent, color.blueComponent) + 0.4,
+                                    "\(item.name), \(size), \(wallpaper.position), pixel \(x),\(y) must show the red image, not the backing color")
+                                XCTAssertGreaterThan(color.alphaComponent, 0.99)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

@@ -120,7 +120,11 @@ struct WallpaperSurface: View {
                 } else {
                     Settings.defaultOverlayBackgroundColor.swiftUIColor
                 }
-            }.frame(width: geometry.size.width, height: geometry.size.height).clipped()
+            }
+            // Crop coordinates use the viewport's top-left origin. A centered
+            // frame shifts oversized fill images and exposes the backing color.
+            .frame(width: geometry.size.width, height: geometry.size.height, alignment: .topLeading)
+            .clipped()
         }
         .task(id: RequestIdentity(request: request, refresh: refreshToken)) {
             var value = request
