@@ -6,6 +6,7 @@ private struct SettingsSwitchToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         Toggle(configuration)
             .toggleStyle(.switch)
+            .controlSize(.small)
             .tint(.orange)
             .accentColor(.orange)
     }

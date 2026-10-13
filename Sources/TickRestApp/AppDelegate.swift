@@ -9,6 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var model: AppController!
     private var windows: WindowCoordinator!
     private var statusSubscription: AnyCancellable?
+    private var countdownTimer: Timer?
+    private var lastCountdownText: String?
     private let statusDotRenderer = StatusDotRenderer()
     private var menuPlan: RestPlan?
     private var menuLanguage: String?
@@ -42,6 +44,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         injectedStore = store; injectedLockDirectory = lockDirectory
         super.init()
     }
+    deinit { countdownTimer?.invalidate() }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // A per-user flock avoids duplicate schedulers without a persistent stale PID file.
@@ -76,14 +79,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         NotificationCenter.default.addObserver(self, selector: #selector(previewRest(_:)), name: .previewRest, object: nil)
         model.begin(); updateStatus()
         // Published emits before mutation; refresh on the main queue after the engine/settings commit.
-        // Revisions include each scheduler tick and explicit actions, so no second UI timer is needed.
+        // Revisions refresh state/layout; the lightweight timer only updates countdown text.
         statusSubscription = model.$revision.dropFirst().receive(on: DispatchQueue.main).sink { [weak self] _ in
             self?.updateStatus()
         }
+        countdownTimer = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in
+            self?.updateMenuBarCountdown()
+        }
+        countdownTimer?.tolerance = 0.02
+        RunLoop.main.add(countdownTimer!, forMode: .common)
+        RunLoop.main.add(countdownTimer!, forMode: .eventTracking)
         if !model.settings.onboardingComplete { openWelcome() }
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { openSettings(); return false }
     func applicationWillTerminate(_ notification: Notification) {
+        countdownTimer?.invalidate(); countdownTimer = nil
         statusSubscription?.cancel(); model?.consume(); model?.persist(); model?.removeNotifications()
         if lockFD >= 0 { flock(lockFD, LOCK_UN); close(lockFD) }
     }
@@ -93,13 +103,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         let display = ReminderDisplay(engine: engine)
         let symbol = display.statusSymbolName
         button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: L10n.text("app.name"))
-        let title = display.menuBarText
         button.font = .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
-        button.attributedTitle = statusDotRenderer.title(
-            text: model.settings.showCountdown ? title : "",
-            color: model.settings.showStatusDot ? model.settings.statusDotPalette[display.statusDotState] : nil,
-            font: button.font!
-        )
+        updateMenuBarCountdown(force: true)
         button.toolTip = L10n.text("app.name") + " — " + model.stateText
         button.setAccessibilityLabel(button.toolTip)
         if menuStateItem != nil, let menu = status.menu,
@@ -119,6 +124,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         updateSidebarToolbarLabel(settingsNavigation.columnVisibility)
         welcomeWindow?.title = L10n.text("welcome.title")
         windows.refresh()
+    }
+    private func updateMenuBarCountdown(force: Bool = false) {
+        guard model != nil, let button = status?.button else { return }
+        let text = model.settings.showCountdown ? model.menuBarText() : ""
+        guard force || text != lastCountdownText else { return }
+        lastCountdownText = text
+        let display = ReminderDisplay(engine: model.engine)
+        let title = statusDotRenderer.title(
+            text: text,
+            color: model.settings.showStatusDot ? model.settings.statusDotPalette[display.statusDotState] : nil,
+            font: button.font ?? .monospacedDigitSystemFont(ofSize: 12, weight: .regular)
+        )
+        if !button.attributedTitle.isEqual(to: title) { button.attributedTitle = title }
     }
     func menuWillOpen(_ menu: NSMenu) {
         menu.removeAllItems(); menuPlan = model.settings.restPlan

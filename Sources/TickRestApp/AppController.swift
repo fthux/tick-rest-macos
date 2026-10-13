@@ -27,6 +27,7 @@ final class AppController: ObservableObject {
     var saved: SavedData
     var onEffects: (([EngineEffect]) -> Void)?
     private var timer: Timer?
+    private var menuCountdown: MenuBarCountdown?
     private var lastTick = ProcessInfo.processInfo.systemUptime
     private var lastSave = ProcessInfo.processInfo.systemUptime
     private var lastProbe = -Double.infinity
@@ -46,6 +47,7 @@ final class AppController: ObservableObject {
         engine = Engine(settings: loaded.settings, snapshot: FileManager.default.fileExists(atPath: disk.url.path) ? loaded.snapshot : nil)
         errorKey = disk.loadErrorKey
         refreshLogin(); refreshNotificationStatus()
+        menuCountdown = MenuBarCountdown(engine: engine, uptime: lastTick)
     }
     deinit { timer?.invalidate() }
     func begin() {
@@ -74,8 +76,8 @@ final class AppController: ObservableObject {
         }
         if engine.isResting { lastRestTick = Date() }
         engine.tick(seconds: delta, now: Date())
-        consume()
-        if uptime - lastSave >= 30 { persist(); lastSave = uptime }
+        consume(countdownUptime: uptime)
+        if uptime - lastSave >= 30 { persist(deferPersistence: true); lastSave = uptime }
         revision += 1
     }
     private func probeIdle() {
@@ -169,7 +171,7 @@ final class AppController: ObservableObject {
         if idleAway && !systemAway {
             idleAway = false; engine.endAway(now: Date(), minimumShort: settings.timingModel == .dual ? max(60, settings.shortDuration) : settings.shortDuration)
         }
-        body(engine); consume(); persist(); revision += 1
+        body(engine); consume(countdownUptime: ProcessInfo.processInfo.systemUptime); persist(); revision += 1
     }
     func pauseMinutes(_ value: Int) { action { $0.setPause(.until(Date().addingTimeInterval(Double(value * 60))), now: Date()) } }
     func pauseToday() {
@@ -181,15 +183,25 @@ final class AppController: ObservableObject {
         StatisticsSummary(records: saved.records, range: range)
     }
     var stateText: String { ReminderDisplay(engine: engine).stateText }
-    func consume() {
+    func menuBarText(at uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) -> String {
+        menuCountdown?.text(at: uptime) ?? ReminderDisplay(engine: engine).menuBarText
+    }
+    func consume(countdownUptime: TimeInterval? = nil) {
         if settings != engine.settings { settings = engine.settings }
+        var countdown = MenuBarCountdown(engine: engine, uptime: countdownUptime ?? ProcessInfo.processInfo.systemUptime)
+        if countdownUptime == nil, let previous = menuCountdown { countdown.preserveAnchor(from: previous) }
+        menuCountdown = countdown
         let (effects, records) = engine.drain()
         DataStore.append(records, to: &saved.records, now: Date())
         onEffects?(effects)
     }
-    func persist() {
+    func persist(deferPersistence: Bool = false) {
         captureSavedState()
-        do { try stateWriter.flush(saved) } catch { showError("error.save") }
+        if deferPersistence {
+            stateWriter.schedule(saved) { [weak self] _ in self?.showError("error.save") }
+        } else {
+            do { try stateWriter.flush(saved) } catch { showError("error.save") }
+        }
     }
     private func captureSavedState() {
         saved.settings = settings; saved.snapshot = engine.snapshot(now: Date())
