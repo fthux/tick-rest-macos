@@ -85,6 +85,8 @@ struct SettingsView: View {
                 }
             }
             .listStyle(.sidebar)
+            .scrollContentBackground(.hidden)
+            .background { SettingsSidebarBackground().ignoresSafeArea() }
             .onMoveCommand { direction in
                 guard let index = SettingsPage.allCases.firstIndex(of: page) else { return }
                 let next: Int
@@ -113,7 +115,7 @@ struct SettingsView: View {
             // Animate only page changes, leaving the sidebar and toolbar immediate.
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
             .clipped()
-            .background(Color(nsColor: .windowBackgroundColor), ignoresSafeAreaEdges: [])
+            .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: [])
         }
         // Constrain the whole split view so AppKit does not add the sidebar width
         // to a minimum that was imposed on the window while the sidebar was hidden.
