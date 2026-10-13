@@ -217,10 +217,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         split.splitViewItems.first?.allowsFullHeightLayout = true
         // Keep sidebar changes inside the window instead of preserving detail width.
         split.splitViewItems.first?.collapseBehavior = .preferResizingSiblingsWithFixedSplitView
-        // Use the titlebar background and safe area as the visual boundary.
-        for item in split.splitViewItems.dropFirst() {
-            item.titlebarSeparatorStyle = .none
-        }
+        // Reopening settings must preserve the current scroll separator.
+        updateSettingsSeparator(scrolled: settingsNavigation.detailScrolled)
         guard window.toolbar?.identifier != NSToolbar.Identifier(AppIdentity.identifier("settingsToolbar")) else { return }
         settingsTitleField.stringValue = settingsNavigation.page.title
         settingsTitleField.font = .systemFont(ofSize: 13, weight: .semibold)

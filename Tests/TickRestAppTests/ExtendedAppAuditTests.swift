@@ -571,6 +571,16 @@ extension AppIntegrationTests {
             delegate.openSettings()
             try await Task.sleep(nanoseconds: 400_000_000)
             let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            @MainActor func snapshot(_ name: String) throws -> NSBitmapImageRep {
+                let frame = try XCTUnwrap(window.contentView?.superview)
+                let bitmap = try XCTUnwrap(frame.bitmapImageRepForCachingDisplay(in: frame.bounds))
+                frame.cacheDisplay(in: frame.bounds, to: bitmap)
+                let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+                let output = project.appendingPathComponent(".build/settings-review")
+                try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+                try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent(name + ".png"))
+                return bitmap
+            }
             let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
             let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
             func scrollViews(_ view: NSView) -> [NSScrollView] {
@@ -582,6 +592,7 @@ extension AppIntegrationTests {
             let document = try XCTUnwrap(scroll.documentView)
             XCTAssertFalse(navigation.detailScrolled)
             XCTAssertEqual(window.titlebarSeparatorStyle, .none)
+            let topBitmap = try snapshot("scroll-top")
             let top = document.isFlipped ? document.bounds.minY : document.bounds.maxY - scroll.contentView.bounds.height
             let down = top + (document.isFlipped ? 80 : -80)
             scroll.contentView.scroll(to: NSPoint(x: 0, y: down))
@@ -589,6 +600,17 @@ extension AppIntegrationTests {
             try await Task.sleep(nanoseconds: 100_000_000)
             XCTAssertTrue(navigation.detailScrolled)
             XCTAssertEqual(window.titlebarSeparatorStyle, .line)
+            let downBitmap = try snapshot("scroll-down")
+            let frame = try XCTUnwrap(window.contentView?.superview)
+            let boundaryY = Int((frame.bounds.height - window.contentLayoutRect.maxY) * window.backingScaleFactor)
+            let sampleX = topBitmap.pixelsWide - 60
+            let topColor = try XCTUnwrap(topBitmap.colorAt(x: sampleX, y: boundaryY)?.usingColorSpace(.sRGB))
+            let downColor = try XCTUnwrap(downBitmap.colorAt(x: sampleX, y: boundaryY)?.usingColorSpace(.sRGB))
+            XCTAssertLessThan(downColor.redComponent, topColor.redComponent - 0.04,
+                              "Scrolling must draw an actual line at the titlebar boundary")
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 100_000_000)
+            XCTAssertEqual(split.splitViewItems.last?.titlebarSeparatorStyle, .line)
             scroll.contentView.scroll(to: NSPoint(x: 0, y: top))
             scroll.reflectScrolledClipView(scroll.contentView)
             try await Task.sleep(nanoseconds: 100_000_000)

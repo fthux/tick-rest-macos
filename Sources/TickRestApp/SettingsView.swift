@@ -115,6 +115,12 @@ struct SettingsView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // Animate only page changes, leaving the sidebar and toolbar immediate.
             .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
+            .overlay(alignment: .top) {
+                if navigation.detailScrolled {
+                    Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 0.5)
+                        .allowsHitTesting(false).accessibilityHidden(true)
+                }
+            }
             .clipped()
             .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: .top)
             .background(SettingsScrollObserver { navigation.detailScrolled = $0 })
