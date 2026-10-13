@@ -83,6 +83,7 @@ struct SettingsView: View {
                         .listRowBackground(
                             RoundedRectangle(cornerRadius: 6)
                                 .fill(page == item ? Color.orange : Color.clear)
+                            .padding(.horizontal, 10)
                         )
                     }
                 }
