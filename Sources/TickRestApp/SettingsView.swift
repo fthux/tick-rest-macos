@@ -175,6 +175,7 @@ struct SettingsView: View {
                     .padding(.bottom, 32)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .id(model.interfaceLanguage)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         } else { settingsForm(for: page) }
