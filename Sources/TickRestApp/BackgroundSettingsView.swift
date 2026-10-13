@@ -460,11 +460,16 @@ struct BackgroundNumberControl: View {
     }
     private var numberInput: some View {
         HStack(spacing: 4) {
-            TextField(title, value: Binding(get: { value }, set: { value = $0.isFinite ? min(range.upperBound, max(range.lowerBound, $0)) : range.lowerBound }),
+            if suffix == "%" {
+                Text(value, format: .number.precision(.fractionLength(0...1)))
+                    .monospacedDigit().frame(width: 65, alignment: .trailing)
+            } else {
+                TextField(title, value: Binding(get: { value }, set: { value = $0.isFinite ? min(range.upperBound, max(range.lowerBound, $0)) : range.lowerBound }),
                       format: .number.precision(.fractionLength(0...1)))
                 .multilineTextAlignment(.trailing).frame(width: 65)
                 .labelsHidden()
                 .accessibilityLabel(title)
+            }
             if !suffix.isEmpty { Text(suffix).foregroundStyle(.secondary).fixedSize() }
             Stepper(title, value: Binding(get: { value }, set: {
                 value = $0.isFinite ? min(range.upperBound, max(range.lowerBound, $0)) : range.lowerBound

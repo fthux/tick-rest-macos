@@ -677,6 +677,11 @@ extension AppIntegrationTests {
                     self.accessibilityValue($0, "accessibilityLabel") as? String == title
                 })
             }
+            let percentTitle = L10n.text("background.protection_scope", L10n.text("background.type.gradient"))
+            XCTAssertFalse(self.elements(in: root).contains {
+                self.accessibilityValue($0, "accessibilityRole") as? String == NSAccessibility.Role.textField.rawValue &&
+                self.accessibilityValue($0, "accessibilityLabel") as? String == percentTitle
+            }, "Percentages must not expose an editable text field")
             _ = self.increment(try protectionStepper())
             XCTAssertEqual(model.settings.overlayBackground.activeProtection, 0.66, accuracy: 0.001)
             model.update { $0.overlayBackground.activeProtection = 0.90 }
