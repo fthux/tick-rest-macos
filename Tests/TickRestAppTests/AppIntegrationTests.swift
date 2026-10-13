@@ -145,6 +145,12 @@ final class AppIntegrationTests: XCTestCase {
                     navigation.page = page
                     try await self.writeSnapshot(SettingsView(model: model, navigation: navigation),
                                            name: "settings-\(language)-\(page.rawValue)", size: NSSize(width: 860, height: 640))
+                    if page == .appearance {
+                        model.update { $0.style = .overlay }
+                        try await self.writeSnapshot(SettingsView(model: model, navigation: navigation),
+                            name: "settings-\(language)-appearance-fullscreen", size: NSSize(width: 860, height: 640))
+                        model.update { $0.style = .gentle }
+                    }
                 }
             }
         }

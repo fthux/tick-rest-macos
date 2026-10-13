@@ -161,11 +161,7 @@ struct SettingsView: View {
     @ViewBuilder private func settingsContent(for page: SettingsPage) -> some View {
         if page == .appearance {
             if model.settings.style == .overlay {
-                VStack(spacing: 12) {
-                    reminderStyleCard.padding(.horizontal, 20)
-                    fullscreenAppearance
-                }.padding(.top, 16)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                fullscreenAppearance
             } else {
                 ScrollView(.vertical, showsIndicators: true) {
                     VStack(alignment: .leading, spacing: 20) {
@@ -199,7 +195,7 @@ struct SettingsView: View {
         }
     }
     private var fullscreenAppearance: some View {
-        BackgroundSettingsView(model: model) {
+        BackgroundSettingsView(model: model, styleSelection: { reminderStyleCard }) {
             appearanceError
             appearance
         }.id(model.interfaceLanguage)

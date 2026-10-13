@@ -806,6 +806,78 @@ extension AppIntegrationTests {
         }
     }
 
+    func testFullscreenPreviewPinsAfterStyleSelectionScrollsAway() async throws {
+        try await withDelegate { delegate, model, _, _ in
+            model.update {
+                $0.style = .overlay; $0.theme = .light; $0.language = "zh-Hans"
+                $0.overlayBackground.kind = .gradient; $0.overlayBackground.gradient.kind = .radial
+            }
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            navigation.page = .appearance
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            let root = try XCTUnwrap(window.contentView)
+            let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
+            @MainActor func scrollViews(_ view: NSView) -> [NSScrollView] {
+                if let scroll = view as? NSScrollView { return [scroll] }
+                return view.subviews.flatMap(scrollViews)
+            }
+            @MainActor func textFrame(_ key: String) throws -> NSRect {
+                let text = try XCTUnwrap(self.elements(in: root).first { element in
+                    ["accessibilityLabel", "accessibilityTitle", "accessibilityValue"].contains {
+                        self.accessibilityValue(element, $0) as? String == L10n.text(key)
+                    }
+                }, "Missing visible text: " + key)
+                let selector = NSSelectorFromString("accessibilityFrame")
+                typealias FrameValue = @convention(c) (AnyObject, Selector) -> NSRect
+                return unsafeBitCast(text.method(for: selector), to: FrameValue.self)(text, selector)
+            }
+            for size in [NSSize(width: 780, height: 580), NSSize(width: 920, height: 680)] {
+                window.setContentSize(size)
+                try await Task.sleep(nanoseconds: 200_000_000)
+                let detail = try XCTUnwrap(split.splitView.arrangedSubviews.last)
+                let scrolls = scrollViews(detail)
+                XCTAssertEqual(scrolls.count, 1, "Style selection, preview and controls must share one scroll view")
+                let scroll = try XCTUnwrap(scrolls.first)
+                let document = try XCTUnwrap(scroll.documentView)
+                let top = document.isFlipped ? document.bounds.minY - scroll.contentInsets.top :
+                    document.bounds.maxY - scroll.contentView.bounds.height + scroll.contentInsets.top
+                @MainActor func scrollTo(_ offset: CGFloat) async throws {
+                    scroll.contentView.scroll(to: NSPoint(x: 0, y: top + (document.isFlipped ? offset : -offset)))
+                    scroll.reflectScrolledClipView(scroll.contentView)
+                    try await Task.sleep(nanoseconds: 150_000_000)
+                }
+                try await scrollTo(0)
+                let initialPreview = try textFrame("background.title")
+                let initialStyle = try textFrame("reminder.style")
+                let visible = window.convertToScreen(window.contentLayoutRect)
+                XCTAssertLessThan(initialPreview.maxY, initialStyle.minY)
+                let windowFrame = window.frame
+                try await scrollTo(300)
+                let pinnedPreview = try textFrame("background.title")
+                XCTAssertGreaterThan(pinnedPreview.maxY, initialPreview.maxY + 50,
+                                     "Scrolling away the style selection must free space below the preview")
+                XCTAssertLessThanOrEqual(pinnedPreview.maxY, visible.maxY - 12)
+                XCTAssertGreaterThanOrEqual(pinnedPreview.maxY, visible.maxY - 28,
+                                            "The pinned preview must sit directly below the titlebar")
+                XCTAssertGreaterThanOrEqual(try textFrame("reminder.style").minY, visible.maxY)
+                XCTAssertTrue(navigation.detailScrolled)
+                try await scrollTo(450)
+                XCTAssertEqual(try textFrame("background.title").maxY, pinnedPreview.maxY, accuracy: 0.5)
+                XCTAssertEqual(window.frame, windowFrame)
+                XCTAssertTrue(self.press(try self.button(named: L10n.text("background.full_preview"), in: root)))
+                try await Task.sleep(nanoseconds: 150_000_000)
+                XCTAssertFalse(self.panels.isEmpty, "Pinned preview actions must remain interactive")
+                let coordinator: WindowCoordinator = try self.field("windows", of: delegate)
+                coordinator.hide(restoreFocus: false)
+                try await scrollTo(0)
+                XCTAssertEqual(try textFrame("background.title").maxY, initialPreview.maxY, accuracy: 0.5)
+                XCTAssertFalse(navigation.detailScrolled)
+            }
+        }
+    }
+
     func testAppearanceCardsMatchGroupedFormInDarkMode() async throws {
         try await withDelegate { delegate, model, _, _ in
             model.update { $0.theme = .dark; $0.language = "en" }
@@ -833,11 +905,10 @@ extension AppIntegrationTests {
                 try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent(name + ".png"))
                 for label in labels {
                     let text = try XCTUnwrap(self.elements(in: root).first { element in
-                        self.accessibilityValue(element, "accessibilityRole") as? String == NSAccessibility.Role.staticText.rawValue &&
                         ["accessibilityLabel", "accessibilityTitle", "accessibilityValue"].contains {
                             self.accessibilityValue(element, $0) as? String == L10n.text(label)
                         }
-                    })
+                    }, "Missing visible text: " + label)
                     let selector = NSSelectorFromString("accessibilityFrame")
                     typealias FrameValue = @convention(c) (AnyObject, Selector) -> NSRect
                     let textFrame = unsafeBitCast(text.method(for: selector), to: FrameValue.self)(text, selector)

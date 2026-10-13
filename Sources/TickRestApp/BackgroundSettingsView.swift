@@ -3,7 +3,7 @@ import SwiftUI
 import TickRestCore
 import UniformTypeIdentifiers
 
-struct BackgroundSettingsView<AdditionalSettings: View>: View {
+struct BackgroundSettingsView<StyleSelection: View, AdditionalSettings: View>: View {
     @ObservedObject var model: AppController
     @ObservedObject var library: WallpaperLibrary
     @State private var screens: [NSScreen] = []
@@ -16,9 +16,12 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
     @State private var dragStart: BackgroundPoint?
     @State private var deleting: WallpaperItem?
     @State private var showingProtectionPreview = false
+    private let styleSelection: StyleSelection
     private let additionalSettings: AdditionalSettings
-    init(model: AppController, @ViewBuilder additionalSettings: () -> AdditionalSettings) {
+    init(model: AppController, @ViewBuilder styleSelection: () -> StyleSelection,
+         @ViewBuilder additionalSettings: () -> AdditionalSettings) {
         self.model = model; library = model.wallpapers
+        self.styleSelection = styleSelection()
         self.additionalSettings = additionalSettings()
     }
     private var background: OverlayBackground { model.settings.overlayBackground.normalized }
@@ -35,13 +38,11 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
     }
     var body: some View {
         GeometryReader { geometry in
-            VStack(spacing: 0) {
-                SettingsSectionCard {
-                    previewPanel(height: min(220, max(110, geometry.size.height * 0.28)))
-                }.padding(.horizontal, 20).padding(.bottom, 12)
-                Divider()
-                GeometryReader { viewport in
-                    ScrollView(.vertical, showsIndicators: true) {
+            ScrollView(.vertical, showsIndicators: true) {
+                LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
+                    styleSelection
+                        .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 12)
+                    Section {
                         VStack(alignment: .leading, spacing: 20) {
                             SettingsSectionCard {
                                 BackgroundMenuPicker(title: L10n.text("background.type"), selection: binding(\.kind),
@@ -60,12 +61,19 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
                             additionalSettings
                         }.padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 32)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                    } header: {
+                        SettingsSectionCard {
+                            previewPanel(height: min(220, max(110, geometry.size.height * 0.28)))
+                        }
+                        .padding(.horizontal, 20).padding(.bottom, 12)
+                        // Keep the scrolling controls from showing through the pinned preview.
+                        .background(Color(nsColor: SettingsPalette.content))
+                        .overlay(alignment: .bottom) { Divider() }
                     }
-                    .frame(width: viewport.size.width, height: viewport.size.height)
-                    .clipped()
                 }
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
+            .clipped()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .buttonStyle(.bordered)
