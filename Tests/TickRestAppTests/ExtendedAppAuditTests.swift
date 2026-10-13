@@ -7,10 +7,10 @@ import TickRestCore
 extension AppIntegrationTests {
     @MainActor private func assertSettingsMinimum(_ window: NSWindow, file: StaticString = #filePath, line: UInt = #line) {
         // AppKit may add titlebar/toolbar height to the content minimum.
-        XCTAssertGreaterThanOrEqual(window.minSize.width, 720, file: file, line: line)
-        XCTAssertGreaterThanOrEqual(window.minSize.height, 540, file: file, line: line)
-        XCTAssertGreaterThanOrEqual(window.contentMinSize.width, 720, file: file, line: line)
-        XCTAssertGreaterThanOrEqual(window.contentMinSize.height, 540, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(window.minSize.width, SettingsWindowLayout.minimumFrameSize.width, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(window.minSize.height, SettingsWindowLayout.minimumFrameSize.height, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(window.contentMinSize.width, SettingsWindowLayout.minimumContentSize.width, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(window.contentMinSize.height, SettingsWindowLayout.minimumContentSize.height, file: file, line: line)
     }
     @MainActor private func elements(in root: NSObject) -> [NSObject] {
         var result: [NSObject] = []; var pending = [root]; var visited: Set<ObjectIdentifier> = []
@@ -244,6 +244,24 @@ extension AppIntegrationTests {
         }
     }
 
+    func testSettingsDefaultAndMinimumMatchCapturedWindowSize() async throws {
+        for style in [ReminderStyle.gentle, .overlay] {
+            try await withDelegate { delegate, model, _, _ in
+                model.update { $0.style = style }
+                let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+                navigation.page = .appearance
+                delegate.openSettings()
+                try await Task.sleep(nanoseconds: 400_000_000)
+                let window: NSWindow = try self.field("settingsWindow", of: delegate)
+                XCTAssertEqual(window.frame.width, 890, accuracy: 0.5)
+                XCTAssertEqual(window.frame.height, 708, accuracy: 0.5)
+                XCTAssertEqual(window.minSize, SettingsWindowLayout.minimumFrameSize)
+                XCTAssertEqual(window.contentLayoutRect.height, SettingsWindowLayout.minimumContentSize.height, accuracy: 0.5)
+                self.assertSettingsMinimum(window)
+            }
+        }
+    }
+
     func testSettingsSidebarTogglePreservesWindowFrameAfterFreshLaunch() async throws {
         // Each delegate creates a fresh settings host, as quitting and relaunching does.
         for _ in 0..<2 {
@@ -474,7 +492,7 @@ extension AppIntegrationTests {
             model.action { $0.startNow(.short, now: Date()); $0.skip(now: Date()) }
             let ids = model.saved.records.map(\.id); let preferences = model.settings
             let navigation = SettingsNavigation(); navigation.page = .privacy
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: SettingsWindowLayout.minimumContentSize),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: SettingsView(model: model, navigation: navigation))
@@ -504,7 +522,7 @@ extension AppIntegrationTests {
     func testPlanDraftIncrementCancelApplyAndPendingCancellationUseActualButtons() async throws {
         try await withFixture { model, _, _ in
             let navigation = SettingsNavigation(); navigation.page = .rhythm
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 900),
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: SettingsWindowLayout.minimumContentSize.width, height: 900),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: SettingsView(model: model, navigation: navigation))
@@ -636,7 +654,7 @@ extension AppIntegrationTests {
             delegate.openSettings()
             try await Task.sleep(nanoseconds: 300_000_000)
             let window: NSWindow = try self.field("settingsWindow", of: delegate)
-            window.setContentSize(NSSize(width: 780, height: 580))
+            window.setContentSize(SettingsWindowLayout.minimumContentSize)
             try await Task.sleep(nanoseconds: 300_000_000)
             let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
             func scrollViews(_ view: NSView) -> [NSScrollView] {
@@ -728,7 +746,7 @@ extension AppIntegrationTests {
                 if let outline = view as? NSOutlineView { return [outline] }
                 return view.subviews.flatMap(outlineViews)
             }
-            for size in [NSSize(width: 920, height: 680), NSSize(width: 780, height: 580)] {
+            for size in [NSSize(width: 920, height: 680), SettingsWindowLayout.minimumContentSize] {
                 window.setContentSize(size)
                 navigation.page = .general
                 model.update { $0.style = .gentle }
@@ -762,7 +780,7 @@ extension AppIntegrationTests {
                 if let scroll = view as? NSScrollView { return [scroll] }
                 return view.subviews.flatMap(scrollViews)
             }
-            for size in [NSSize(width: 780, height: 580), NSSize(width: 920, height: 680)] {
+            for size in [SettingsWindowLayout.minimumContentSize, NSSize(width: 920, height: 680)] {
                 window.setContentSize(size)
                 for kind in OverlayBackgroundKind.allCases {
                     model.update {
@@ -833,7 +851,7 @@ extension AppIntegrationTests {
                 typealias FrameValue = @convention(c) (AnyObject, Selector) -> NSRect
                 return unsafeBitCast(text.method(for: selector), to: FrameValue.self)(text, selector)
             }
-            for size in [NSSize(width: 780, height: 580), NSSize(width: 920, height: 680)] {
+            for size in [SettingsWindowLayout.minimumContentSize, NSSize(width: 920, height: 680)] {
                 window.setContentSize(size)
                 try await Task.sleep(nanoseconds: 200_000_000)
                 let detail = try XCTUnwrap(split.splitView.arrangedSubviews.last)

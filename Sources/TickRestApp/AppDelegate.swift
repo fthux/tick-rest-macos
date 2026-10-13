@@ -198,14 +198,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     @objc private func openAbout() { settingsNavigation.page = .about; openSettings() }
     @objc func openSettings() {
         if settingsWindow == nil {
-            settingsWindow = makeWindow(title: settingsNavigation.page.title, size: NSSize(width: 920, height: 680), content: SettingsView(model: model, navigation: settingsNavigation), managesToolbar: true)
+            let initialContent = NSWindow.contentRect(
+                forFrameRect: NSRect(origin: .zero, size: SettingsWindowLayout.minimumFrameSize),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable]
+            ).size
+            settingsWindow = makeWindow(title: settingsNavigation.page.title, size: initialContent, content: SettingsView(model: model, navigation: settingsNavigation), managesToolbar: true)
             settingsWindow?.styleMask.insert(.fullSizeContentView)
             // A hosting controller lets NavigationSplitView install its native toolbar.
             settingsWindow?.contentViewController = NSHostingController(
                 rootView: SettingsView(model: model, navigation: settingsNavigation)
             )
             // Hosting installs its own sizing constraints; apply ours afterward.
-            settingsWindow?.minSize = NSSize(width: 780, height: 580)
+            settingsWindow?.minSize = SettingsWindowLayout.minimumFrameSize
         }
         model.refreshLogin(); model.refreshNotificationStatus(); show(settingsWindow!)
         DispatchQueue.main.async { [weak self] in self?.configureSettingsToolbar() }

@@ -1,6 +1,12 @@
 import AppKit
 import SwiftUI
 
+enum SettingsWindowLayout {
+    // Captured settings window, including its 52-point titlebar and toolbar.
+    static let minimumFrameSize = NSSize(width: 890, height: 708)
+    static let minimumContentSize = NSSize(width: 890, height: 656)
+}
+
 enum SettingsPalette {
     static let content = adaptiveColor(red: 234, green: 235, blue: 236)
     static let sidebar = adaptiveColor(red: 222, green: 223, blue: 224)

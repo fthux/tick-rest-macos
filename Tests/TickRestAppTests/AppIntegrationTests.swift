@@ -144,11 +144,11 @@ final class AppIntegrationTests: XCTestCase {
                 for page in SettingsPage.allCases {
                     navigation.page = page
                     try await self.writeSnapshot(SettingsView(model: model, navigation: navigation),
-                                           name: "settings-\(language)-\(page.rawValue)", size: NSSize(width: 860, height: 640))
+                                           name: "settings-\(language)-\(page.rawValue)", size: SettingsWindowLayout.minimumContentSize)
                     if page == .appearance {
                         model.update { $0.style = .overlay }
                         try await self.writeSnapshot(SettingsView(model: model, navigation: navigation),
-                            name: "settings-\(language)-appearance-fullscreen", size: NSSize(width: 860, height: 640))
+                            name: "settings-\(language)-appearance-fullscreen", size: SettingsWindowLayout.minimumContentSize)
                         model.update { $0.style = .gentle }
                     }
                 }
@@ -170,7 +170,7 @@ final class AppIntegrationTests: XCTestCase {
                 ])
                 let root = SettingsView(model: model, navigation: navigation, buildInfo: buildInfo)
                 let view = NSHostingView(rootView: root)
-                let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+                let window = NSWindow(contentRect: NSRect(origin: .zero, size: SettingsWindowLayout.minimumContentSize),
                                       styleMask: [.titled, .closable], backing: .buffered, defer: false)
                 window.isReleasedWhenClosed = false
                 window.contentView = view
@@ -179,7 +179,7 @@ final class AppIntegrationTests: XCTestCase {
                 view.layoutSubtreeIfNeeded()
                 try await Task.sleep(nanoseconds: 150_000_000)
                 XCTAssertTrue(self.containsText(buildInfo.versionDescription, in: window), architecture)
-                try await self.writeSnapshot(root, name: "about-build-\(architecture)", size: NSSize(width: 860, height: 640))
+                try await self.writeSnapshot(root, name: "about-build-\(architecture)", size: SettingsWindowLayout.minimumContentSize)
             }
         }
     }
@@ -412,7 +412,7 @@ final class AppIntegrationTests: XCTestCase {
     func testRealSettingsSidebarButtonsNavigateToEveryPage() async throws {
         try await withFixture { model, _, _ in
             let navigation = SettingsNavigation()
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: SettingsWindowLayout.minimumContentSize),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
             window.contentViewController = NSHostingController(rootView: SettingsView(model: model, navigation: navigation))
@@ -448,7 +448,7 @@ final class AppIntegrationTests: XCTestCase {
         try await withFixture { model, _, _ in
             model.update { $0.style = .overlay; $0.language = "zh-Hans" }
             let navigation = SettingsNavigation(); navigation.page = .appearance
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 860, height: 640),
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: SettingsWindowLayout.minimumContentSize),
                                   styleMask: [.titled, .closable], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
             window.contentView = NSHostingView(rootView: SettingsView(model: model, navigation: navigation))
@@ -471,7 +471,7 @@ final class AppIntegrationTests: XCTestCase {
             model.persist()
             XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, selected)
             try await self.writeSnapshot(SettingsView(model: model, navigation: navigation),
-                                   name: "settings-zh-Hans-overlay-background", size: NSSize(width: 860, height: 640))
+                                   name: "settings-zh-Hans-overlay-background", size: SettingsWindowLayout.minimumContentSize)
             XCTAssertTrue(self.press(try self.button(named: L10n.text("background.reset"), in: window)))
             XCTAssertEqual(model.settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)
             XCTAssertEqual(model.store.load().settings.overlayBackgroundColor, Settings.defaultOverlayBackgroundColor)

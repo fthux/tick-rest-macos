@@ -134,7 +134,8 @@ struct SettingsView: View {
             // a reveal; centering temporarily wider content moves the menu text left.
             .frame(width: viewport.size.width, height: viewport.size.height, alignment: .topLeading)
         }
-        .frame(minWidth: 780, minHeight: 580, alignment: .topLeading)
+        .frame(minWidth: SettingsWindowLayout.minimumContentSize.width,
+               minHeight: SettingsWindowLayout.minimumContentSize.height, alignment: .topLeading)
         .toggleStyle(SettingsSwitchToggleStyle())
         .environment(\.locale, model.interfaceLocale)
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didChangeScreenParametersNotification)) { _ in
