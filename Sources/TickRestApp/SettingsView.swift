@@ -104,28 +104,30 @@ struct SettingsView: View {
                 // Native List rows can retain labels when their stable IDs do not change.
                 .id(model.interfaceLanguage)
             } detail: {
-                // A non-scrolling container keeps the Form's viewport inside the
-                // detail safe area, including during scroll rubber-banding.
-                ZStack(alignment: .top) {
-                    settingsContent(for: page)
-                        .padding(.top, 16)
-                        // A new page gets its own scroll viewport. Passing the page
-                        // explicitly also keeps outgoing content stable as it fades.
-                        .id(page)
-                        .transition(pageTransition)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                // Animate only page changes, leaving the sidebar and toolbar immediate.
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
-                .overlay(alignment: .top) {
-                    if navigation.detailScrolled {
-                        Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 0.5)
-                            .allowsHitTesting(false).accessibilityHidden(true)
+                GeometryReader { detailViewport in
+                    // A non-scrolling container keeps the Form's viewport inside the
+                    // detail safe area, including during scroll rubber-banding.
+                    ZStack(alignment: .top) {
+                        settingsContent(for: page)
+                            .padding(.top, 16)
+                            // A new page gets its own scroll viewport. Passing the page
+                            // explicitly also keeps outgoing content stable as it fades.
+                            .id(page)
+                            .transition(pageTransition)
                     }
+                    .frame(width: detailViewport.size.width, height: detailViewport.size.height, alignment: .topLeading)
+                    // Animate only page changes, leaving the sidebar and toolbar immediate.
+                    .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: page)
+                    .overlay(alignment: .top) {
+                        if navigation.detailScrolled {
+                            Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 0.5)
+                                .allowsHitTesting(false).accessibilityHidden(true)
+                        }
+                    }
+                    .clipped()
+                    .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: .top)
+                    .background(SettingsScrollObserver { navigation.detailScrolled = $0 })
                 }
-                .clipped()
-                .background(Color(nsColor: SettingsPalette.content), ignoresSafeAreaEdges: .top)
-                .background(SettingsScrollObserver { navigation.detailScrolled = $0 })
             }
             // Constrain the whole split view so AppKit does not add the sidebar width
             // to a minimum that was imposed on the window while the sidebar was hidden.

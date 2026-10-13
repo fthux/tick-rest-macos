@@ -40,26 +40,30 @@ struct BackgroundSettingsView<AdditionalSettings: View>: View {
                     previewPanel(height: min(220, max(110, geometry.size.height * 0.28)))
                 }.padding(.horizontal, 20).padding(.bottom, 12)
                 Divider()
-                ScrollView(.vertical, showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 20) {
-                        SettingsSectionCard {
-                            BackgroundMenuPicker(title: L10n.text("background.type"), selection: binding(\.kind),
-                                                   choices: OverlayBackgroundKind.allCases) { L10n.text("background.type.\($0.rawValue)") }
-                            Divider()
-                            if background.kind != .solid {
-                                protectionControls
+                GeometryReader { viewport in
+                    ScrollView(.vertical, showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: 20) {
+                            SettingsSectionCard {
+                                BackgroundMenuPicker(title: L10n.text("background.type"), selection: binding(\.kind),
+                                                       choices: OverlayBackgroundKind.allCases) { L10n.text("background.type.\($0.rawValue)") }
                                 Divider()
+                                if background.kind != .solid {
+                                    protectionControls
+                                    Divider()
+                                }
+                                switch background.kind {
+                                case .solid: SolidBackgroundEditor(color: solid)
+                                case .gradient: GradientBackgroundEditor(gradient: binding(\.gradient))
+                                case .wallpaper: wallpaperEditor
+                                }
                             }
-                            switch background.kind {
-                            case .solid: SolidBackgroundEditor(color: solid)
-                            case .gradient: GradientBackgroundEditor(gradient: binding(\.gradient))
-                            case .wallpaper: wallpaperEditor
-                            }
-                        }
-                        additionalSettings
-                    }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
+                            additionalSettings
+                        }.padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 32)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(width: viewport.size.width, height: viewport.size.height)
+                    .clipped()
                 }
-                .clipped()
             }
             .frame(width: geometry.size.width, height: geometry.size.height, alignment: .top)
         }

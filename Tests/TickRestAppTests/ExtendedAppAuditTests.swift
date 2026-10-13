@@ -718,7 +718,7 @@ extension AppIntegrationTests {
             let window: NSWindow = try self.field("settingsWindow", of: delegate)
             let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
             let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
-            func outlineViews(_ view: NSView) -> [NSOutlineView] {
+            @MainActor func outlineViews(_ view: NSView) -> [NSOutlineView] {
                 if let outline = view as? NSOutlineView { return [outline] }
                 return view.subviews.flatMap(outlineViews)
             }
@@ -738,6 +738,63 @@ extension AppIntegrationTests {
                     let current = outline.convert(outline.rect(ofRow: 0), to: nil)
                     XCTAssertEqual(current.minY, initial.minY, accuracy: 0.5)
                     XCTAssertEqual(window.frame, windowFrame)
+                }
+            }
+        }
+    }
+
+    func testFullscreenSettingsCanReachLastCardAtMinimumSize() async throws {
+        try await withDelegate { delegate, model, _, _ in
+            model.update { $0.style = .overlay; $0.theme = .light; $0.language = "zh-Hans" }
+            let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
+            navigation.page = .appearance
+            delegate.openSettings()
+            try await Task.sleep(nanoseconds: 400_000_000)
+            let window: NSWindow = try self.field("settingsWindow", of: delegate)
+            let split: NSSplitViewController = try self.field("settingsSplitController", of: delegate)
+            @MainActor func scrollViews(_ view: NSView) -> [NSScrollView] {
+                if let scroll = view as? NSScrollView { return [scroll] }
+                return view.subviews.flatMap(scrollViews)
+            }
+            for size in [NSSize(width: 780, height: 580), NSSize(width: 920, height: 680)] {
+                window.setContentSize(size)
+                for kind in OverlayBackgroundKind.allCases {
+                    model.update {
+                        $0.overlayBackground.kind = kind
+                        $0.overlayBackground.wallpaper.source = .custom
+                        $0.overlayBackground.gradient.kind = .radial
+                    }
+                    try await Task.sleep(nanoseconds: 300_000_000)
+                    let detail = try XCTUnwrap(split.splitView.arrangedSubviews.last)
+                    let scroll = try XCTUnwrap(scrollViews(detail).first)
+                    let document = try XCTUnwrap(scroll.documentView)
+                    let viewport = scroll.contentView.convert(scroll.contentView.bounds, to: nil)
+                    XCTAssertGreaterThanOrEqual(viewport.minY, window.contentLayoutRect.minY - 0.5)
+                    let bottom = document.isFlipped ? document.bounds.maxY - scroll.contentView.bounds.height : document.bounds.minY
+                    scroll.contentView.scroll(to: NSPoint(x: 0, y: bottom))
+                    scroll.reflectScrolledClipView(scroll.contentView)
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                    let root = try XCTUnwrap(window.contentView)
+                    let footer = try XCTUnwrap(self.elements(in: root).first { element in
+                        ["accessibilityLabel", "accessibilityTitle", "accessibilityValue"].contains {
+                            self.accessibilityValue(element, $0) as? String == L10n.text("plan.actions_help")
+                        }
+                    })
+                    let selector = NSSelectorFromString("accessibilityFrame")
+                    XCTAssertTrue(footer.responds(to: selector))
+                    typealias FrameValue = @convention(c) (AnyObject, Selector) -> NSRect
+                    let footerFrame = unsafeBitCast(footer.method(for: selector), to: FrameValue.self)(footer, selector)
+                    let visible = window.convertToScreen(window.contentLayoutRect)
+                    XCTAssertGreaterThanOrEqual(footerFrame.minY, visible.minY + 20,
+                                                "The last card needs a visible bottom gap")
+                    XCTAssertLessThanOrEqual(footerFrame.maxY, visible.maxY)
+                    let frame = try XCTUnwrap(root.superview)
+                    let bitmap = try XCTUnwrap(frame.bitmapImageRepForCachingDisplay(in: frame.bounds))
+                    frame.cacheDisplay(in: frame.bounds, to: bitmap)
+                    let project = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+                    let output = project.appendingPathComponent(".build/settings-review")
+                    try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+                    try XCTUnwrap(bitmap.representation(using: .png, properties: [:])).write(to: output.appendingPathComponent("bottom-\(kind.rawValue)-\(Int(size.width)).png"))
                 }
             }
         }
