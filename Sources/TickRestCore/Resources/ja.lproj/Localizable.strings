@@ -483,3 +483,4 @@
 "welcome.optional" = "任意の設定：ログイン時の起動と休憩前の通知";
 "welcome.start_help" = "「使い始める」をクリックすると、最初の作業タイマーが開始します。";
 "welcome.continue" = "設定を続ける";
+"welcome.background_help" = "単色・グラデーション・画像の背景に対応。設定 → %@で変更できます。";

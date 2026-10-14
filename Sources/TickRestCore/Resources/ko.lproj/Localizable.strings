@@ -483,3 +483,4 @@
 "welcome.optional" = "선택 설정: 로그인 시 실행 및 사전 알림";
 "welcome.start_help" = "시작하기를 클릭하면 첫 작업 타이머가 시작됩니다.";
 "welcome.continue" = "설정 계속";
+"welcome.background_help" = "단색, 그라데이션, 이미지 배경을 지원합니다. 설정 → %@에서 변경할 수 있습니다.";

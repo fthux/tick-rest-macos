@@ -483,3 +483,4 @@
 "welcome.optional" = "Optional: launch at login and advance notifications";
 "welcome.start_help" = "Your first work timer starts when you click Get started.";
 "welcome.continue" = "Continue setup";
+"welcome.background_help" = "Supports solid colors, gradients, and images. Customize in Settings → %@.";

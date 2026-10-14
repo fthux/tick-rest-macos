@@ -483,3 +483,4 @@
 "welcome.optional" = "選用設定：登入時啟動與提前通知";
 "welcome.start_help" = "按一下「開始使用」後，首次工作計時才會開始。";
 "welcome.continue" = "繼續引導";
+"welcome.background_help" = "支援純色、漸層和圖片背景，可在設定 → %@ 中調整。";

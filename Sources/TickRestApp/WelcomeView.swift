@@ -160,6 +160,7 @@ struct WelcomeView: View {
 
     private func styleCard(_ style: ReminderStyle) -> some View {
         let selected = model.settings.style == style
+        let backgroundHelp = L10n.text("welcome.background_help", L10n.text("settings.appearance"))
         return Button { model.update { $0.style = style } } label: {
             VStack(alignment: .leading, spacing: 12) {
                 WelcomeStyleThumbnail(style: style)
@@ -174,6 +175,10 @@ struct WelcomeView: View {
                 Text(L10n.text("welcome.style.\(style.rawValue)"))
                     .font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                if style == .overlay {
+                    Text(backgroundHelp).font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(12).frame(maxWidth: .infinity, alignment: .leading)
             .background(selected ? Color.orange.opacity(0.08) : Color.secondary.opacity(0.04),
@@ -183,7 +188,7 @@ struct WelcomeView: View {
             .contentShape(RoundedRectangle(cornerRadius: 12))
         }.buttonStyle(.plain)
             .accessibilityLabel(L10n.text("style.\(style.rawValue)"))
-            .accessibilityHint(L10n.text("welcome.style.\(style.rawValue)"))
+            .accessibilityHint(L10n.text("welcome.style.\(style.rawValue)") + (style == .overlay ? " " + backgroundHelp : ""))
             .accessibilityAddTraits(selected ? [.isSelected] : [])
     }
 
@@ -223,7 +228,7 @@ struct WelcomeView: View {
 /// A schematic preview stays inside onboarding; actual fullscreen previews are opt-in.
 private struct WelcomeStyleThumbnail: View {
     let style: ReminderStyle
-    private let green = Color(red: 0.10, green: 0.18, blue: 0.15)
+    private let gradient = OverlayBackground().gradient
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 8).fill(Color.secondary.opacity(0.10))
@@ -238,7 +243,8 @@ private struct WelcomeStyleThumbnail: View {
                 Spacer(minLength: 0)
             }.padding(10)
             if style == .overlay {
-                RoundedRectangle(cornerRadius: 8).fill(green)
+                BackgroundGradientView(gradient: gradient)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
                 VStack(spacing: 7) {
                     Image(systemName: "eye").font(.title3)
                     Text("00:20").font(.system(size: 24, weight: .light, design: .rounded)).monospacedDigit()

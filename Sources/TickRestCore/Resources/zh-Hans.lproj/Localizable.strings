@@ -483,3 +483,4 @@
 "welcome.optional" = "可选设置：开机启动与提前通知";
 "welcome.start_help" = "点击“开始使用”后，首次工作计时才会开始。";
 "welcome.continue" = "继续引导";
+"welcome.background_help" = "支持纯色、渐变和图片背景，可在设置 → %@ 中调整。";
