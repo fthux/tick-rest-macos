@@ -64,6 +64,7 @@ struct PlanEditor: View {
                     if draft.model == .rounds {
                         duration("plan.long_minutes", \.longDuration, range: 60...1800, step: 60, minutes: true)
                         Stepper(value: binding(\.rounds), in: 2...12) { Text(L10n.text("plan.rounds", draft.rounds)) }
+                            .controlSize(.small)
                         Text(L10n.text("plan.rounds_help")).font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -81,6 +82,7 @@ struct PlanEditor: View {
                         duration("plan.postpone_long", \.longPostpone, range: 60...1800, step: 60, minutes: true)
                     }
                     Stepper(value: binding(\.postponeLimit), in: 0...10) { Text(L10n.text("plan.postpone_limit", draft.postponeLimit)) }
+                        .controlSize(.small)
                     Text(L10n.text("plan.postpone_help")).font(.caption).foregroundStyle(.secondary)
                 }.controlSize(.small)
             }
@@ -113,5 +115,6 @@ struct PlanEditor: View {
                 Text(L10n.text(draft.model == .rounds ? "plan.short_duration" : "plan.break_duration", L10n.duration(draft.shortDuration)))
             } else { Text(L10n.text(key, Int(draft[keyPath: path] / (minutes ? 60 : 1)))) }
         }
+        .controlSize(.small)
     }
 }

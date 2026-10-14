@@ -479,6 +479,7 @@ struct BackgroundNumberControl: View {
                 value = $0.isFinite ? min(range.upperBound, max(range.lowerBound, $0)) : range.lowerBound
             }), in: range, step: step)
                 .labelsHidden()
+                .controlSize(.small)
         }.fixedSize()
     }
 }

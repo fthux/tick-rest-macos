@@ -455,7 +455,9 @@ struct SettingsView: View {
                 }.disabled(!model.settings.scheduleEnabled)
                 HStack {
                     DatePicker(L10n.text("schedule.start"), selection: timeBinding(\.scheduleStart), displayedComponents: .hourAndMinute)
+                        .controlSize(.small)
                     DatePicker(L10n.text("schedule.end"), selection: timeBinding(\.scheduleEnd), displayedComponents: .hourAndMinute)
+                        .controlSize(.small)
                 }.disabled(!model.settings.scheduleEnabled)
                 Text(L10n.text("schedule.overnight")).font(.caption).foregroundStyle(.secondary)
             }
