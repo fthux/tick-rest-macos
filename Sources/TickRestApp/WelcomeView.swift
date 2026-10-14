@@ -137,12 +137,13 @@ struct WelcomeView: View {
                 styleCard(.overlay)
                 styleCard(.gentle)
             }
+            .fixedSize(horizontal: false, vertical: true)
             Button(L10n.text("reminder.preview")) {
                 // The chosen plan is available to the preview without starting the scheduler.
                 NotificationCenter.default.post(name: .previewRest, object: nil)
             }
             Text(L10n.text("welcome.preview_help")).font(.caption).foregroundStyle(.secondary)
-            DisclosureGroup(L10n.text("welcome.more_options"), isExpanded: $showingOptions) {
+            DisclosureGroup(isExpanded: $showingOptions) {
                 VStack(alignment: .leading, spacing: 8) {
                     Picker(L10n.text("reminder.start_mode"), selection: Binding(
                         get: { model.settings.breakStartMode },
@@ -154,6 +155,14 @@ struct WelcomeView: View {
                     }.pickerStyle(.segmented)
                     Text(L10n.text("reminder.start_mode_help")).font(.caption).foregroundStyle(.secondary)
                 }.padding(.top, 10)
+            } label: {
+                Button {
+                    withAnimation { showingOptions.toggle() }
+                } label: {
+                    Text(L10n.text("welcome.more_options"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }.buttonStyle(.plain)
             }
         }
     }
@@ -180,7 +189,7 @@ struct WelcomeView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12).frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(selected ? Color.orange.opacity(0.08) : Color.secondary.opacity(0.04),
                         in: RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12)
