@@ -451,3 +451,11 @@
 "background.failure.noSelection" = "尚未选择可读取的壁纸。";
 "background.category.pictures" = "图片";
 "background.category.colors" = "颜色";
+
+// Debug-only first-run testing
+"debug.reset_section" = "Debug 测试";
+"debug.reset_action" = "清除所有数据并退出";
+"debug.reset_title" = "清除本机所有应用数据？";
+"debug.reset_body" = "将删除设置、统计、计时状态、导入的壁纸、缓存及备份，并关闭开机启动。删除后无法恢复。Debug 与 Release 共用这些数据。应用将退出，重新打开后进入首次引导。不会重置 macOS 通知权限。";
+"debug.reset_help" = "恢复到首次启动状态。清除后重新打开应用，即可测试完整引导。macOS 通知权限需单独管理。";
+"debug.reset_error" = "无法清除所有数据：%@";

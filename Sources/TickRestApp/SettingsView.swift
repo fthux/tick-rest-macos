@@ -62,6 +62,9 @@ struct SettingsView: View {
     var buildInfo = AppBuildInfo.current
     private var page: SettingsPage { navigation.page }
     @State private var confirmClear = false
+#if DEBUG
+    @State private var confirmResetAllData = false
+#endif
     @State private var recordsCleared = false
     @State private var aboutCountry: AboutCountry?
     @State private var connectedDisplays = ConnectedDisplay.current
@@ -153,6 +156,14 @@ struct SettingsView: View {
             Button(L10n.text("data.clear"), role: .destructive) { recordsCleared = model.clearRecords() }
             Button(L10n.text("common.cancel"), role: .cancel) {}
         } message: { Text(L10n.text("data.clear_body")) }
+#if DEBUG
+        .confirmationDialog(L10n.text("debug.reset_title"), isPresented: $confirmResetAllData) {
+            Button(L10n.text("debug.reset_action"), role: .destructive) {
+                NotificationCenter.default.post(name: .debugResetAllData, object: nil)
+            }
+            Button(L10n.text("common.cancel"), role: .cancel) {}
+        } message: { Text(L10n.text("debug.reset_body")) }
+#endif
     }
     private var pageTransition: AnyTransition {
         reduceMotion ? .identity : .asymmetric(
@@ -544,6 +555,15 @@ struct SettingsView: View {
                         .font(.callout).foregroundStyle(.green)
                 }
             }
+#if DEBUG
+            Section {
+                Text(L10n.text("debug.reset_section")).font(.headline)
+                Text(L10n.text("debug.reset_help")).font(.callout).foregroundStyle(.secondary)
+                Button(role: .destructive) { confirmResetAllData = true } label: {
+                    Text(L10n.text("debug.reset_action")).foregroundStyle(.red)
+                }
+            }
+#endif
         }
     }
 }
@@ -610,3 +630,6 @@ struct SettingsSectionCard<Content: View>: View {
 }
 
 extension Notification.Name { static let previewRest = Notification.Name(AppIdentity.identifier("previewRest")) }
+#if DEBUG
+extension Notification.Name { static let debugResetAllData = Notification.Name(AppIdentity.identifier("debugResetAllData")) }
+#endif

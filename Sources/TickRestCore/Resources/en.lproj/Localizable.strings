@@ -451,3 +451,11 @@
 "background.failure.noSelection" = "No readable wallpaper has been selected.";
 "background.category.pictures" = "Pictures";
 "background.category.colors" = "Colors";
+
+// Debug-only first-run testing
+"debug.reset_section" = "Debug testing";
+"debug.reset_action" = "Clear all data and quit";
+"debug.reset_title" = "Clear all app data on this Mac?";
+"debug.reset_body" = "Deletes settings, statistics, timer state, and wallpaper imports, caches, and backups, and disables launch at login. This cannot be undone. Debug and Release share this data. The app will quit; reopen it to start the first-run guide. macOS notification permissions are not reset.";
+"debug.reset_help" = "Restore the app to its first-run state. After clearing, reopen the app to test onboarding. macOS notification permissions are managed separately.";
+"debug.reset_error" = "Could not clear all data: %@";

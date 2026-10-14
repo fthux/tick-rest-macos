@@ -570,6 +570,14 @@ final class WallpaperLibrary: ObservableObject {
         recoveryWarningKey = repository.loadErrorKey
     }
     var items: [WallpaperItem] { manifest.items }
+#if DEBUG
+    /// Called just before quitting, while the main thread cannot enqueue work.
+    /// Image resolution can also write desktop wallpaper caches.
+    func finishWritesForDebugReset() {
+        queue.sync {}
+        imageQueue.sync {}
+    }
+#endif
     func thumbnailURL(_ id: String) -> URL? { repository.localURL("thumb-\(id).png") }
     private func work<T>(_ body: @escaping (WallpaperRepository) throws -> T) async throws -> T {
         try await withCheckedThrowingContinuation { continuation in

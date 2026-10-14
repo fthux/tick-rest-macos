@@ -451,3 +451,11 @@
 "background.failure.noSelection" = "尚未選擇可讀取的桌布。";
 "background.category.pictures" = "圖片";
 "background.category.colors" = "顏色";
+
+// Debug-only first-run testing
+"debug.reset_section" = "Debug 測試";
+"debug.reset_action" = "清除所有資料並結束";
+"debug.reset_title" = "清除此 Mac 上的所有應用程式資料？";
+"debug.reset_body" = "將刪除設定、統計、計時狀態、匯入的桌布、快取與備份，並關閉登入時啟動。刪除後無法復原。Debug 與 Release 共用這些資料。應用程式將結束，重新開啟後進入首次引導。不會重設 macOS 通知權限。";
+"debug.reset_help" = "還原至首次啟動狀態。清除後重新開啟應用程式，即可測試完整引導。macOS 通知權限需另外管理。";
+"debug.reset_error" = "無法清除所有資料：%@";

@@ -451,3 +451,11 @@
 "background.failure.noSelection" = "読み込み可能な壁紙が選択されていません。";
 "background.category.pictures" = "ピクチャ";
 "background.category.colors" = "カラー";
+
+// Debug-only first-run testing
+"debug.reset_section" = "Debug テスト";
+"debug.reset_action" = "すべてのデータを消去して終了";
+"debug.reset_title" = "このMacのすべてのアプリデータを消去しますか？";
+"debug.reset_body" = "設定、統計、タイマーの状態、読み込んだ壁紙、キャッシュ、バックアップを削除し、ログイン時の起動を無効にします。元に戻せません。DebugとReleaseはこのデータを共有します。アプリは終了し、再度開くと初回ガイドが表示されます。macOSの通知権限はリセットされません。";
+"debug.reset_help" = "初回起動の状態に戻します。消去後にアプリを再度開くと、初回ガイドをテストできます。macOSの通知権限は別途管理してください。";
+"debug.reset_error" = "すべてのデータを消去できませんでした：%@";

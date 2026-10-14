@@ -77,6 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(openSettings), name: NSNotification.Name(AppIdentity.identifier("showSettings")), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(previewRest(_:)), name: .previewRest, object: nil)
+#if DEBUG
+        NotificationCenter.default.addObserver(self, selector: #selector(clearAllDataForDebug), name: .debugResetAllData, object: nil)
+#endif
         model.begin(); updateStatus()
         // Published emits before mutation; refresh on the main queue after the engine/settings commit.
         // Revisions refresh state/layout; the lightweight timer only updates countdown text.
@@ -94,7 +97,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { openSettings(); return false }
     func applicationWillTerminate(_ notification: Notification) {
         countdownTimer?.invalidate(); countdownTimer = nil
-        statusSubscription?.cancel(); model?.consume(); model?.persist(); model?.removeNotifications()
+        statusSubscription?.cancel()
+#if DEBUG
+        if model?.debugDataCleared != true { model?.consume(); model?.persist() }
+#else
+        model?.consume(); model?.persist()
+#endif
+        model?.removeNotifications()
         if lockFD >= 0 { flock(lockFD, LOCK_UN); close(lockFD) }
     }
     private func updateStatus() {
@@ -363,6 +372,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         welcomeWindow?.center()
         show(welcomeWindow!)
     }
+#if DEBUG
+    @objc private func clearAllDataForDebug() {
+        windows.hide(restoreFocus: false)
+        guard model.clearAllDataForDebug() else { return }
+        NSApp.terminate(nil)
+    }
+#endif
     private func resizeWelcome() {
         guard let window = welcomeWindow, let content = window.contentView else { return }
         content.layoutSubtreeIfNeeded()

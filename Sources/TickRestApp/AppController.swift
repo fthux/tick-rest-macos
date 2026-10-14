@@ -38,6 +38,41 @@ final class AppController: ObservableObject {
     private let observers = NotificationObservations()
     private var notificationEnabled = false
     private var lastRestTick: Date?
+#if DEBUG
+    private(set) var debugDataCleared = false
+
+    @discardableResult func clearAllDataForDebug() -> Bool {
+        do {
+            let usesApplicationStore = store.url.standardizedFileURL == DataStore().url.standardizedFileURL
+            if usesApplicationStore, SMAppService.mainApp.status == .enabled || SMAppService.mainApp.status == .requiresApproval {
+                try SMAppService.mainApp.unregister()
+                refreshLogin()
+            }
+            try stateWriter.resetForDebug {
+                wallpapers.finishWritesForDebugReset()
+                let directory = store.url.deletingLastPathComponent()
+                let files = FileManager.default
+                if files.fileExists(atPath: directory.path) {
+                    for item in try files.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+                        // Keep the live flock inode until applicationWillTerminate
+                        // releases it; removing it would allow a second instance.
+                        if item.lastPathComponent != "instance.lock" { try files.removeItem(at: item) }
+                    }
+                }
+            }
+            if usesApplicationStore {
+                UserDefaults.standard.removePersistentDomain(forName: AppIdentity.bundleIdentifier)
+            }
+            timer?.invalidate(); timer = nil
+            playingSound?.stop()
+            debugDataCleared = true
+            return true
+        } catch {
+            showError("debug.reset_error", detail: error.localizedDescription)
+            return false
+        }
+    }
+#endif
 
     init(store disk: DataStore = DataStore()) {
         let loaded = disk.load()

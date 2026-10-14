@@ -10,6 +10,9 @@ final class DebouncedStateWriter {
     private let save: (SavedData) throws -> Void
     private var pending: DispatchWorkItem?
     private var generation = 0
+#if DEBUG
+    private var resetComplete = false
+#endif
 
     init(delay: TimeInterval = 0.35, save: @escaping (SavedData) throws -> Void) {
         self.delay = delay; self.save = save
@@ -17,6 +20,9 @@ final class DebouncedStateWriter {
 
     func schedule(_ data: SavedData, onError: @escaping (Error) -> Void) {
         queue.async { [self] in
+#if DEBUG
+            guard !resetComplete else { return }
+#endif
             generation += 1
             let expected = generation
             pending?.cancel()
@@ -33,8 +39,23 @@ final class DebouncedStateWriter {
 
     func flush(_ data: SavedData) throws {
         try queue.sync {
+#if DEBUG
+            guard !resetComplete else { return }
+#endif
             generation += 1; pending?.cancel(); pending = nil
             try save(data)
         }
     }
+
+#if DEBUG
+    /// Wait for in-flight writes, cancel deferred edits, and prevent shutdown
+    /// from recreating data after a successful reset.
+    func resetForDebug(_ erase: () throws -> Void) throws {
+        try queue.sync {
+            generation += 1; pending?.cancel(); pending = nil
+            try erase()
+            resetComplete = true
+        }
+    }
+#endif
 }
