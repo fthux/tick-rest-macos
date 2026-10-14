@@ -251,8 +251,7 @@ private struct AboutShareMenu: View {
                 NSPasteboard.general.clearContents()
                 copied = NSPasteboard.general.setString(AboutLinks.website.absoluteString, forType: .string)
             } label: {
-                Label(L10n.text(copied ? "about.copied" : "about.copy_link"),
-                      systemImage: copied ? "checkmark" : "doc.on.doc")
+                Label(L10n.text("about.copy_link"), systemImage: "doc.on.doc")
             }
             Button { showsQRCode = true } label: {
                 Label(L10n.text("about.qr_code"), systemImage: "qrcode")
@@ -261,6 +260,17 @@ private struct AboutShareMenu: View {
             Label(L10n.text("about.share"), systemImage: "square.and.arrow.up")
         }
         .popover(isPresented: $showsQRCode, arrowEdge: .bottom) { AboutQRCodeView() }
+        .overlay(alignment: .bottom) {
+            if copied {
+                Label(L10n.text("about.copied"), systemImage: "checkmark")
+                    .font(.caption)
+                    .foregroundStyle(.green)
+                    .fixedSize()
+                    .offset(y: 14)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: copied)
         .task(id: copied) {
             guard copied else { return }
             do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
