@@ -82,7 +82,7 @@ public struct WallpaperProtection: Codable, Equatable {
     public var desktop: Double
     public var system: Double
     public var custom: Double
-    public init(value: Double = 0.65) { desktop = value; system = value; custom = value }
+    public init(value: Double = 0.45) { desktop = value; system = value; custom = value }
     public subscript(source: WallpaperSource) -> Double {
         get {
             switch source { case .desktop: return desktop; case .system: return system; case .custom: return custom }
@@ -94,11 +94,11 @@ public struct WallpaperProtection: Codable, Equatable {
 }
 
 public struct OverlayBackground: Codable, Equatable {
-    public var kind: OverlayBackgroundKind = .solid
+    public var kind: OverlayBackgroundKind = .gradient
     public var gradient = BackgroundGradient()
     public var wallpaper = WallpaperBackground()
     /// Gradient protection; retained as the legacy decoding key.
-    public var protection: Double = 0.65
+    public var protection: Double = 0.45
     public var wallpaperProtection = WallpaperProtection()
     public init() {}
     public var activeProtection: Double {
@@ -120,7 +120,7 @@ public struct OverlayBackground: Codable, Equatable {
             ?? WallpaperProtection(value: protection)
     }
     private static func clampedProtection(_ value: Double) -> Double {
-        value.isFinite ? min(1, max(0, value)) : 0.65
+        value.isFinite ? min(1, max(0, value)) : 0.45
     }
     public var normalized: Self {
         var result = self

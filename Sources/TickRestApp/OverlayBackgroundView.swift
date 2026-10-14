@@ -88,6 +88,58 @@ struct DesktopWallpaperSnapshot {
     }
 }
 
+/// The window and its SwiftUI surface share the same request and decoded first frame.
+struct PreparedWallpaper {
+    let request: WallpaperImageRequest
+    let desktop: DesktopWallpaperSnapshot
+    let result: ResolvedWallpaper
+    var needsUpgrade = false
+
+    static func request(wallpaper: WallpaperBackground, screen: NSScreen?, maximumPixels: Int?, revision: Int) -> WallpaperImageRequest {
+        let pixels = DesktopWallpaperSnapshot.pixelSize(screen)
+        let limit = maximumPixels ?? Int(max(pixels.width, pixels.height))
+        let scale = min(1, CGFloat(limit) / max(pixels.width, pixels.height))
+        return WallpaperImageRequest(source: wallpaper.source, selectedID: wallpaper.selectedID, desktopURL: nil,
+            screenID: DesktopWallpaperSnapshot.screenID(screen), maximumPixels: limit,
+            revision: wallpaper.source == .desktop ? 0 : revision,
+            viewport: CGSize(width: pixels.width * scale, height: pixels.height * scale), fit: wallpaper.fit)
+    }
+
+    private static func resolvedRequest(_ request: WallpaperImageRequest, screen: NSScreen?, desktop: DesktopWallpaperSnapshot) -> WallpaperImageRequest {
+        var value = request
+        value.desktopURL = desktop.url
+        if value.source == .desktop {
+            value.fit = desktop.fit
+            if screen == nil { value.desktopFailure = .init(kind: .screenUnavailable) }
+        }
+        return value
+    }
+
+    @MainActor static func load(request: WallpaperImageRequest, screen: NSScreen?, library: WallpaperLibrary,
+                                desktop captured: DesktopWallpaperSnapshot? = nil) async -> Self {
+        let desktop = captured ?? (request.source == .desktop ? DesktopWallpaperSnapshot.capture(screen) : DesktopWallpaperSnapshot())
+        let value = resolvedRequest(request, screen: screen, desktop: desktop)
+        return Self(request: request, desktop: desktop, result: await library.resolve(value))
+    }
+
+    @MainActor static func loadInitial(request: WallpaperImageRequest, screen: NSScreen?, library: WallpaperLibrary) async -> Self {
+        let desktop = request.source == .desktop ? DesktopWallpaperSnapshot.capture(screen) : DesktopWallpaperSnapshot()
+        let value = resolvedRequest(request, screen: screen, desktop: desktop)
+        if let cached = library.cachedResolution(value) {
+            return Self(request: request, desktop: desktop, result: cached.result, needsUpgrade: true)
+        }
+        var small = request
+        small.maximumPixels = min(1200, request.maximumPixels)
+        // A hard decode limit also keeps very tall/wide sources inexpensive;
+        // fill-quality viewport sizing is reserved for the subsequent HD read.
+        small.viewport = nil
+        // A low-resolution first frame must not wait for a full original-file copy.
+        small.cacheDesktopOriginal = false
+        let result = await library.resolve(resolvedRequest(small, screen: screen, desktop: desktop))
+        return Self(request: request, desktop: desktop, result: result, needsUpgrade: result.image != nil)
+    }
+}
+
 /// Request identity excludes timer ticks and crop edits. Desktop resources are captured once per presentation.
 struct WallpaperSurface: View {
     @ObservedObject var library: WallpaperLibrary
@@ -96,23 +148,29 @@ struct WallpaperSurface: View {
     var maximumPixels: Int?
     var refreshToken = 0
     var onResolved: ((ResolvedWallpaper) -> Void)?
+    var prepared: PreparedWallpaper?
     @State private var image: CGImage?
     @State private var desktop = DesktopWallpaperSnapshot()
+    @State private var originalSize: CGSize?
+
+    init(library: WallpaperLibrary, wallpaper: WallpaperBackground, screen: NSScreen?, maximumPixels: Int? = nil,
+         refreshToken: Int = 0, onResolved: ((ResolvedWallpaper) -> Void)? = nil, prepared: PreparedWallpaper? = nil) {
+        self.library = library; self.wallpaper = wallpaper; self.screen = screen
+        self.maximumPixels = maximumPixels; self.refreshToken = refreshToken; self.onResolved = onResolved
+        self.prepared = prepared
+        _image = State(initialValue: prepared?.result.image)
+        _desktop = State(initialValue: prepared?.desktop ?? DesktopWallpaperSnapshot())
+        _originalSize = State(initialValue: prepared?.result.originalSize)
+    }
     private var request: WallpaperImageRequest {
-        let pixels = DesktopWallpaperSnapshot.pixelSize(screen)
-        let scale: CGFloat = min(1, CGFloat(maximumPixels ?? Int(max(pixels.width, pixels.height))) / max(pixels.width, pixels.height))
-        return WallpaperImageRequest(source: wallpaper.source, selectedID: wallpaper.selectedID, desktopURL: nil,
-                                     screenID: DesktopWallpaperSnapshot.screenID(screen),
-                                     maximumPixels: maximumPixels ?? Int(max(pixels.width, pixels.height)),
-                                     revision: wallpaper.source == .desktop ? 0 : library.revision,
-                                     viewport: CGSize(width: pixels.width * scale, height: pixels.height * scale), fit: wallpaper.fit)
+        PreparedWallpaper.request(wallpaper: wallpaper, screen: screen, maximumPixels: maximumPixels, revision: library.revision)
     }
     var body: some View {
         GeometryReader { geometry in
             ZStack(alignment: .topLeading) {
                 if let image {
                     let fit = wallpaper.source == .desktop ? desktop.fit : wallpaper.fit
-                    let rect = BackgroundGeometry.imageRect(image: CGSize(width: image.width, height: image.height),
+                    let rect = BackgroundGeometry.imageRect(image: originalSize ?? CGSize(width: image.width, height: image.height),
                                                             viewport: geometry.size, fit: fit, position: wallpaper.position)
                     (wallpaper.source == .desktop ? desktop.baseColor : wallpaper.baseColor).swiftUIColor
                     Image(decorative: image, scale: 1).resizable().interpolation(.high)
@@ -127,14 +185,19 @@ struct WallpaperSurface: View {
             .clipped()
         }
         .task(id: RequestIdentity(request: request, refresh: refreshToken)) {
-            var value = request
-            let snapshot = wallpaper.source == .desktop ? DesktopWallpaperSnapshot.capture(screen) : DesktopWallpaperSnapshot()
-            value.desktopURL = snapshot.url
-            if wallpaper.source == .desktop, screen == nil { value.desktopFailure = .init(kind: .screenUnavailable) }
-            if wallpaper.source == .desktop { value.fit = snapshot.fit }
-            let result = await library.resolve(value)
+            if let prepared, prepared.request == request, refreshToken == 0 {
+                onResolved?(prepared.result)
+                guard prepared.needsUpgrade else { return }
+            }
+            let seed = prepared.flatMap { $0.request == request && refreshToken == 0 ? $0 : nil }
+            let value = await PreparedWallpaper.load(request: request, screen: screen, library: library, desktop: seed?.desktop)
             guard !Task.isCancelled else { return }
-            desktop = snapshot; image = result.image; onResolved?(result)
+            // If the source disappears during the upgrade, keep the already
+            // visible image of this presentation instead of flashing green.
+            if value.result.image != nil || seed?.result.image == nil {
+                desktop = value.desktop; originalSize = value.result.originalSize; image = value.result.image
+            }
+            onResolved?(value.result)
         }
     }
     private struct RequestIdentity: Equatable { var request: WallpaperImageRequest; var refresh: Int }
@@ -148,13 +211,14 @@ struct OverlayBackgroundView: View {
     var maximumPixels: Int?
     var refreshToken = 0
     var onResolved: ((ResolvedWallpaper) -> Void)?
+    var preparedWallpaper: PreparedWallpaper?
     var body: some View {
         switch background.kind {
         case .solid: solid.swiftUIColor
         case .gradient: BackgroundGradientView(gradient: background.gradient)
         case .wallpaper:
             WallpaperSurface(library: library, wallpaper: background.wallpaper, screen: screen,
-                             maximumPixels: maximumPixels, refreshToken: refreshToken, onResolved: onResolved)
+                             maximumPixels: maximumPixels, refreshToken: refreshToken, onResolved: onResolved, prepared: preparedWallpaper)
         }
     }
 }

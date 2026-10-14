@@ -104,6 +104,34 @@ final class WallpaperRepositoryTests: XCTestCase {
         XCTAssertEqual(try repo.synchronize(manifest).items.map(\.id), manifest.items.map(\.id))
         XCTAssertNotNil(repo.thumbnail(try XCTUnwrap(manifest.items.first { $0.available })))
     }
+    func testDefaultScanFindsUserDownloadedWallpapersAndFiltersNonStaticResources() throws {
+        // Mirror the default search directories under a temporary home, without scanning the real user's files.
+        let home = root.appendingPathComponent("home")
+        let roots = WallpaperRepository.defaultSystemRoots(homeDirectory: home).map { url in
+            url.path.hasPrefix(home.path + "/") ? url : root.appendingPathComponent("fixtures" + url.path)
+        }
+        let downloadPath = "home/Library/Application Support/com.apple.mobileAssetDesktop"
+        let downloaded = try image("\(downloadPath)/Big Sur Aerial.jpg")
+        _ = try image("\(downloadPath)/Catalina.tiff", frames: 2)
+        _ = try image("\(downloadPath)/.thumbnails/Preview.png")
+        let legacy = try image("fixtures/Library/Desktop Pictures/Legacy.png")
+        let repo = repository(roots: roots)
+        var manifest = try repo.synchronize(WallpaperManifest())
+        XCTAssertEqual(Set(manifest.visibleItems(source: .system).map(\.name)), ["Big Sur Aerial", "Legacy"])
+        let item = try XCTUnwrap(manifest.items.first { $0.name == "Big Sur Aerial" })
+        XCTAssertEqual(URL(fileURLWithPath: try XCTUnwrap(item.sourcePath)).resolvingSymlinksInPath(), downloaded.resolvingSymlinksInPath())
+        XCTAssertEqual(item.systemCategory, .pictures)
+        XCTAssertNotNil(repo.thumbnail(item))
+        try repo.cacheSystem(item.id, in: &manifest)
+        let resolved = repo.resolve(request(source: .system, id: item.id))
+        XCTAssertNotNil(resolved.image); XCTAssertFalse(resolved.usedFallback)
+        XCTAssertEqual(resolved.originalSize, CGSize(width: 1000, height: 600))
+        try FileManager.default.removeItem(at: downloaded.deletingLastPathComponent())
+        manifest = try repo.synchronize(manifest)
+        XCTAssertTrue(manifest.visibleItems(source: .system).contains { $0.id == item.id })
+        XCTAssertNotNil(repo.resolve(request(source: .system, id: item.id)).image)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: legacy.path))
+    }
     func testCachedSystemSelectionSurvivesSourceDisappearanceAndSync() throws {
         let source = try image("system/Static.png")
         let repo = repository(roots: [source.deletingLastPathComponent()])
@@ -130,6 +158,39 @@ final class WallpaperRepositoryTests: XCTestCase {
         XCTAssertEqual(fallback.originalSize, CGSize(width: 1600, height: 900))
         XCTAssertNil(repo.resolve(request(source: .desktop, screen: "display-2")).image)
         XCTAssertNil(repo.resolve(request(source: .desktop, screen: "../../outside")).image)
+    }
+    func testResolvedImagesReuseDecodedPixelsWithoutReusingThumbnailResolution() throws {
+        let source = try image("large.png", width: 1600, height: 900)
+        let repo = repository(); var manifest = WallpaperManifest()
+        let item = try repo.importImage(source, into: &manifest)
+        let small = request(source: .custom, id: item.id, pixels: 120)
+        let full = request(source: .custom, id: item.id, pixels: 1600)
+        let thumbnail = try XCTUnwrap(repo.resolve(small).image)
+        let first = try XCTUnwrap(repo.resolve(full).image)
+        let second = try XCTUnwrap(repo.resolve(full).image)
+        XCTAssertTrue(first === second, "Repeated presentations should reuse the decoded bitmap")
+        XCTAssertFalse(first === thumbnail)
+        XCTAssertEqual(thumbnail.width, 120)
+        XCTAssertEqual(first.width, 1600)
+        try repo.removeCustom(item.id, from: &manifest)
+        XCTAssertNil(repo.resolve(full).image, "Memory cache must not resurrect a removed selection")
+    }
+    func testDesktopDecodedCacheInvalidatesWhenFileChangesOrDisappears() throws {
+        let source = try image("desktop.png")
+        let repo = repository()
+        let value = request(source: .desktop, url: source)
+        let first = try XCTUnwrap(repo.resolve(value).image)
+        XCTAssertTrue(first === repo.resolve(value).image)
+        _ = try image("desktop.png", width: 600, height: 1000)
+        try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSinceNow: 120)], ofItemAtPath: source.path)
+        let replaced = repo.resolve(value)
+        XCTAssertFalse(first === replaced.image)
+        XCTAssertEqual(replaced.originalSize, CGSize(width: 600, height: 1000))
+        try FileManager.default.removeItem(at: source)
+        let fallback = repo.resolve(value)
+        XCTAssertTrue(fallback.usedFallback)
+        XCTAssertNotNil(fallback.failure)
+        XCTAssertEqual(fallback.originalSize, CGSize(width: 600, height: 1000))
     }
     func testSyncRefreshesCachedSystemImageWhenItsSourceChanges() throws {
         let source = try image("system/Static.png", width: 1000, height: 600)

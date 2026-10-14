@@ -52,7 +52,7 @@ struct FullscreenBackgroundTests {
         background.wallpaperProtection.custom = 2
         background.protection = 0.78
         let result = background.normalized
-        #expect(result.wallpaperProtection.desktop == 0.65)
+        #expect(result.wallpaperProtection.desktop == 0.45)
         #expect(result.wallpaperProtection.system == 0)
         #expect(result.wallpaperProtection.custom == 1)
         #expect(result.protection == 0.78)
@@ -128,7 +128,7 @@ struct FullscreenBackgroundTests {
         }
         json["settings"] = settings
         let result = try JSONDecoder().decode(SavedData.self, from: JSONSerialization.data(withJSONObject: json))
-        #expect(result.settings.overlayBackground.kind == .solid)
+        #expect(result.settings.overlayBackground.kind == .gradient)
         #expect(result.settings.overlayBackgroundColor == .hex("334455"))
         #expect(result.settings.language == "ko" && result.snapshot.shortElapsed == 45)
     }
@@ -144,7 +144,7 @@ struct FullscreenBackgroundTests {
         #expect(normalized.gradient.angle == 45 && normalized.gradient.radius == 0.1)
         #expect(normalized.gradient.center == .init(x: 0.5, y: 1))
         #expect(normalized.wallpaper.position == .init(x: 0, y: 0.5))
-        #expect(normalized.protection == 0.65)
+        #expect(normalized.protection == 0.45)
         #expect(BackgroundGeometry.imageRect(image: .zero, viewport: .zero, fit: .fill, position: .init()) == .zero)
         background.gradient.stops = []
         #expect(background.normalized.gradient.stops.count == 2)

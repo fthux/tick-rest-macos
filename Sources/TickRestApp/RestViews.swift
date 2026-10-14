@@ -280,6 +280,7 @@ struct OverlayView: View {
     var maximumImagePixels: Int? = nil
     var backgroundRefreshToken = 0
     var onWallpaperResolved: ((ResolvedWallpaper) -> Void)? = nil
+    var preparedWallpaper: PreparedWallpaper? = nil
     private var r: Reminder { model.engine.reminder ?? model.settings.previewReminder }
     private var background: OverlayBackground { model.settings.overlayBackground.normalized }
     private var palette: OverlayPalette {
@@ -315,7 +316,7 @@ struct OverlayView: View {
             .background {
                 OverlayBackgroundView(library: model.wallpapers, background: background, solid: model.settings.overlayBackgroundColor,
                                       screen: wallpaperScreen, maximumPixels: maximumImagePixels,
-                                      refreshToken: backgroundRefreshToken, onResolved: onWallpaperResolved)
+                                      refreshToken: backgroundRefreshToken, onResolved: onWallpaperResolved, preparedWallpaper: preparedWallpaper)
             }
             // A preview shares the settings window. Keep its palette local to
             // this subtree instead of publishing a preference to that window.

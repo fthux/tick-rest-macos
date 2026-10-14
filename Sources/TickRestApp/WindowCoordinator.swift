@@ -79,6 +79,7 @@ final class WindowCoordinator {
     private var warning: NSPanel?
     private var warningWork: DispatchWorkItem?
     private var previewWork: DispatchWorkItem?
+    private var wallpaperPreparation: Task<Void, Never>?
     private var priorApplication: NSRunningApplication?
     private let observations = NotificationObservations()
     private var isPreview = false
@@ -88,7 +89,7 @@ final class WindowCoordinator {
     init(model: AppController) {
         self.model = model
         observations.observe(NotificationCenter.default, name: NSApplication.didChangeScreenParametersNotification) { [weak self] _ in
-            guard let self, !self.panels.isEmpty, !self.isPreview, let r = self.model.engine.reminder else { return }
+            guard let self, (!self.panels.isEmpty || self.wallpaperPreparation != nil), !self.isPreview, let r = self.model.engine.reminder else { return }
             self.show(r, preview: false, rebuilding: true)
         }
     }
@@ -127,9 +128,6 @@ final class WindowCoordinator {
         if model.settings.style == .gentle { gentlePresentation.begin(size: model.settings.gentleReminderSize) }
         else { gentlePresentation.end() }
         show(model.settings.previewReminder, preview: true, preferredScreen: screen)
-        if model.settings.style != .overlay || model.settings.overlayBackground.kind != .wallpaper {
-            startPreviewCountdown()
-        }
     }
     private func startPreviewCountdown() {
         guard isPreview, !panels.isEmpty, previewWork == nil else { return }
@@ -156,6 +154,7 @@ final class WindowCoordinator {
             panel.contentView = viewport
             panel.setContentSize(rect.size)
             panel.orderFrontRegardless(); panels = [panel]
+            if preview { startPreviewCountdown() }
         } else {
             let screens = NSScreen.screens
             // On disconnection, fall back to the pointer rather than the old panel's screen.
@@ -166,19 +165,48 @@ final class WindowCoordinator {
             let previewIndex = preferredScreen.flatMap { screens.firstIndex(of: $0) }
             let selection = preview && previewIndex != nil
                 ? ReminderScreenSelection(targets: [previewIndex!], primary: previewIndex) : normalSelection
-            for index in selection.targets {
-                let target = screens[index]
-                let panel = makePanel(frame: target.frame, overlay: true)
-                panel.contentView = NSHostingView(rootView: OverlayView(model: model, preview: preview, primary: index == selection.primary,
-                    previewEnd: { [weak self] in self?.hide() }, wallpaperScreen: target,
-                    onWallpaperResolved: { [weak self] _ in
-                        if preview && index == selection.primary && self?.presentationID == presentation { self?.startPreviewCountdown() }
-                    }))
-                panel.orderFrontRegardless(); panels.append(panel)
-                if index == selection.primary { panel.makeKey() }
+            let targets = selection.targets.map { (screen: screens[$0], primary: $0 == selection.primary) }
+            let background = model.settings.overlayBackground.normalized
+            if background.kind == .wallpaper {
+                // Prepare only a small first frame; SwiftUI upgrades it after showing.
+                wallpaperPreparation = Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    var prepared: [PreparedWallpaper] = []
+                    for target in targets {
+                        let request = PreparedWallpaper.request(wallpaper: background.wallpaper, screen: target.screen,
+                            maximumPixels: nil, revision: self.model.wallpapers.revision)
+                        let value = await PreparedWallpaper.loadInitial(request: request, screen: target.screen, library: self.model.wallpapers)
+                        guard !Task.isCancelled, self.presentationID == presentation else { return }
+                        prepared.append(value)
+                    }
+                    self.wallpaperPreparation = nil
+                    guard self.model.settings.style == .overlay,
+                          self.model.settings.overlayBackground.normalized == background else {
+                        self.show(r, preview: preview, rebuilding: true, preferredScreen: preferredScreen)
+                        return
+                    }
+                    self.presentOverlay(targets: targets, preview: preview, prepared: prepared)
+                }
+            } else {
+                presentOverlay(targets: targets, preview: preview)
             }
         }
         if model.settings.sound && !preview && !rebuilding { model.playReminderSound() }
+    }
+    private func presentOverlay(targets: [(screen: NSScreen, primary: Bool)], preview: Bool, prepared: [PreparedWallpaper] = []) {
+        for (index, target) in targets.enumerated() {
+            let panel = makePanel(frame: target.screen.frame, overlay: true)
+            let hosting = NSHostingView(rootView: OverlayView(model: model, preview: preview, primary: target.primary,
+                previewEnd: { [weak self] in self?.hide() }, wallpaperScreen: target.screen,
+                preparedWallpaper: prepared.isEmpty ? nil : prepared[index]))
+            panel.contentView = hosting
+            // Commit the seeded background while the panel is still offscreen.
+            hosting.layoutSubtreeIfNeeded()
+            hosting.displayIfNeeded()
+            panel.orderFrontRegardless(); panels.append(panel)
+            if target.primary { panel.makeKey() }
+        }
+        if preview { startPreviewCountdown() }
     }
     private func gentleCard() -> RestCard {
         RestCard(model: model, size: gentlePresentation.expandedSize ?? model.settings.gentleReminderSize,
@@ -218,6 +246,7 @@ final class WindowCoordinator {
         warningWork = task; DispatchQueue.main.asyncAfter(deadline: .now() + max(1, model.settings.prewarning), execute: task)
     }
     func hide(restoreFocus: Bool = true, preservingGentlePresentation: Bool = false) {
+        wallpaperPreparation?.cancel(); wallpaperPreparation = nil
         warningWork?.cancel(); previewWork?.cancel(); warning?.close(); warning = nil
         previewWork = nil; presentationID = UUID()
         let hadOverlay = shownStyle == .overlay && !panels.isEmpty

@@ -71,9 +71,9 @@ final class BackgroundControlTests: XCTestCase {
         XCTAssertEqual(background.activeProtection, 1)
         coordinator.receive(65, enabled: false)
         XCTAssertEqual(received, [0, 0.25, 0.75, 1])
-        XCTAssertEqual(background.wallpaperProtection.desktop, 0.65)
-        XCTAssertEqual(background.wallpaperProtection.custom, 0.65)
-        XCTAssertEqual(background.protection, 0.65)
+        XCTAssertEqual(background.wallpaperProtection.desktop, 0.45)
+        XCTAssertEqual(background.wallpaperProtection.custom, 0.45)
+        XCTAssertEqual(background.protection, 0.45)
         // These are the actual backing opacities used by both previews. Over
         // white their remaining brightness changes from 100% to 0%.
         XCTAssertEqual(1 - received.first!, 1, accuracy: 0.0001)

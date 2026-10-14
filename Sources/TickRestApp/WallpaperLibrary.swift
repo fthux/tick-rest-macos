@@ -46,6 +46,15 @@ struct WallpaperImageRequest: Equatable {
     var viewport: CGSize? = nil
     var fit: WallpaperFit = .fill
     var desktopFailure: WallpaperReadFailure? = nil
+    var cacheDesktopOriginal = true
+
+    func hasSameContent(as other: Self) -> Bool {
+        var candidate = self
+        candidate.maximumPixels = other.maximumPixels
+        candidate.viewport = other.viewport
+        candidate.cacheDesktopOriginal = other.cacheDesktopOriginal
+        return candidate == other
+    }
 }
 
 struct WallpaperReadFailure: Error, Equatable {
@@ -72,18 +81,31 @@ struct ResolvedWallpaper {
 /// Catalogue mutations are serialized; image reads use committed snapshots and
 /// atomically replaced files. Tests do not need AppKit windows.
 final class WallpaperRepository: @unchecked Sendable {
+    private let decodedImages: NSCache<NSString, CGImage> = {
+        let cache = NSCache<NSString, CGImage>()
+        cache.totalCostLimit = 96 * 1024 * 1024
+        cache.countLimit = 8
+        return cache
+    }()
     let directory: URL
     let systemRoots: [URL]
     private let files = FileManager.default
     private(set) var loadErrorKey: String?
     private var preservedIndex: Data?
     private static let extensions: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "tif", "tiff", "bmp", "webp"]
-    init(directory: URL, systemRoots: [URL] = [
-        URL(fileURLWithPath: "/System/Library/Desktop Pictures"),
-        URL(fileURLWithPath: "/Library/Desktop Pictures"),
-        URL(fileURLWithPath: "/System/Library/AssetsV2/com_apple_MobileAsset_DesktopPicture"),
-        URL(fileURLWithPath: "/Library/AssetsV2/com_apple_MobileAsset_DesktopPicture")
-    ]) { self.directory = directory; self.systemRoots = systemRoots.map { $0.resolvingSymlinksInPath() } }
+    static func defaultSystemRoots(homeDirectory: URL = FileManager.default.homeDirectoryForCurrentUser) -> [URL] {
+        [
+            URL(fileURLWithPath: "/System/Library/Desktop Pictures"),
+            URL(fileURLWithPath: "/Library/Desktop Pictures"),
+            URL(fileURLWithPath: "/System/Library/AssetsV2/com_apple_MobileAsset_DesktopPicture"),
+            URL(fileURLWithPath: "/Library/AssetsV2/com_apple_MobileAsset_DesktopPicture"),
+            // System Settings stores downloaded wallpapers in the user's library on newer macOS versions.
+            homeDirectory.appendingPathComponent("Library/Application Support/com.apple.mobileAssetDesktop", isDirectory: true)
+        ]
+    }
+    init(directory: URL, systemRoots: [URL] = WallpaperRepository.defaultSystemRoots()) {
+        self.directory = directory; self.systemRoots = systemRoots.map { $0.resolvingSymlinksInPath() }
+    }
 
     static func safeName(_ name: String) -> Bool {
         !name.isEmpty && name.count <= 160 && name.unicodeScalars.allSatisfy {
@@ -444,6 +466,21 @@ final class WallpaperRepository: @unchecked Sendable {
         }).first { return .success(resource.url) }
         return .failure(.init(kind: .notDownloaded, resource: url.deletingPathExtension().lastPathComponent))
     }
+    private func decodedImage(_ url: URL, request: WallpaperImageRequest) -> CGImage? {
+        // Include the file version and render size: a thumbnail must never serve
+        // a full-screen request, and replacing the desktop must invalidate it.
+        guard let attributes = try? files.attributesOfItem(atPath: url.path),
+              let modified = attributes[.modificationDate] as? Date,
+              let size = attributes[.size] as? NSNumber else {
+            return Self.decode(url, maximumPixels: request.maximumPixels, viewport: request.viewport, fit: request.fit)
+        }
+        let key = "\(url.path.utf8.count):\(url.path)|\(modified.timeIntervalSince1970)|\(size)|\(attributes[.systemFileNumber] ?? "")|\(request.revision)|\(request.maximumPixels)|\(request.viewport?.width ?? 0)|\(request.viewport?.height ?? 0)|\(request.fit.rawValue)" as NSString
+        if let image = decodedImages.object(forKey: key) { return image }
+        guard let image = Self.decode(url, maximumPixels: request.maximumPixels, viewport: request.viewport, fit: request.fit) else { return nil }
+        let cost = image.bytesPerRow * image.height
+        if cost <= decodedImages.totalCostLimit { decodedImages.setObject(image, forKey: key, cost: cost) }
+        return image
+    }
     func resolve(_ request: WallpaperImageRequest, manifest snapshot: WallpaperManifest? = nil) -> ResolvedWallpaper {
         if request.source != .desktop {
             let manifest = snapshot ?? load()
@@ -453,7 +490,7 @@ final class WallpaperRepository: @unchecked Sendable {
             let cached = item.cachedFile.flatMap(localURL)
             let source = item.sourcePath.map { URL(fileURLWithPath: $0) }
             for url in [cached, source].compactMap({ $0 }) {
-                if let image = Self.decode(url, maximumPixels: request.maximumPixels, viewport: request.viewport, fit: request.fit) {
+                if let image = decodedImage(url, request: request) {
                     let dimensions = Self.dimensions(url)
                     return ResolvedWallpaper(image: image,
                                              originalSize: dimensions.map { CGSize(width: $0.0, height: $0.1) })
@@ -473,17 +510,23 @@ final class WallpaperRepository: @unchecked Sendable {
             case .failure(let reason): failure = reason
             }
         }
-        if let source = resource, let image = Self.decode(source, maximumPixels: request.maximumPixels, viewport: request.viewport, fit: request.fit) {
-            if let cache = localURL("\(cachePrefix).\(source.pathExtension.lowercased())"), source.standardizedFileURL != cache.standardizedFileURL {
+        if let source = resource, let image = decodedImage(source, request: request) {
+            if request.cacheDesktopOriginal, let cache = localURL("\(cachePrefix).\(source.pathExtension.lowercased())"), source.standardizedFileURL != cache.standardizedFileURL {
                 try? files.createDirectory(at: directory, withIntermediateDirectories: true)
                 let temporary = directory.appendingPathComponent(UUID().uuidString + ".tmp")
                 defer { try? files.removeItem(at: temporary) }
                 // Preserve the original resolution; a small settings preview must not downgrade the fallback.
                 do {
-                    try files.copyItem(at: source, to: temporary)
-                    if files.fileExists(atPath: cache.path) { _ = try files.replaceItemAt(cache, withItemAt: temporary) }
-                    else { try files.moveItem(at: temporary, to: cache) }
-                    for old in cachedSources where old != cache { try? files.removeItem(at: old) }
+                    let original = try files.attributesOfItem(atPath: source.path)
+                    let existing = try? files.attributesOfItem(atPath: cache.path)
+                    let unchanged = existing?[.modificationDate] as? Date == original[.modificationDate] as? Date
+                        && existing?[.size] as? NSNumber == original[.size] as? NSNumber
+                    if !unchanged {
+                        try files.copyItem(at: source, to: temporary)
+                        if files.fileExists(atPath: cache.path) { _ = try files.replaceItemAt(cache, withItemAt: temporary) }
+                        else { try files.moveItem(at: temporary, to: cache) }
+                        for old in cachedSources where old != cache { try? files.removeItem(at: old) }
+                    }
                 } catch {
                     // Display the readable source even when caching fails.
                 }
@@ -493,7 +536,7 @@ final class WallpaperRepository: @unchecked Sendable {
         }
         if let resource { failure = .init(kind: .decodeFailed, resource: resource.lastPathComponent) }
         for cache in cachedSources {
-            if let image = Self.decode(cache, maximumPixels: request.maximumPixels, viewport: request.viewport, fit: request.fit) {
+            if let image = decodedImage(cache, request: request) {
                 let dimensions = Self.dimensions(cache)
                 return ResolvedWallpaper(image: image, usedFallback: true,
                                          originalSize: dimensions.map { CGSize(width: $0.0, height: $0.1) }, failure: failure)
@@ -513,10 +556,15 @@ final class WallpaperLibrary: ObservableObject {
     @Published private(set) var revision = 0
     private let repository: WallpaperRepository
     private let queue: DispatchQueue
-    private let imageQueue = DispatchQueue(label: "tickrest.wallpaper-images", qos: .userInitiated)
+    private let imageQueue: DispatchQueue
+    // Keep a few recent surfaces available for an immediate first frame. The
+    // CGImages are shared with the repository cache, rather than copied.
+    private var recentImages: [(request: WallpaperImageRequest, result: ResolvedWallpaper)] = []
     init(directory: URL, systemRoots: [URL]? = nil,
-         mutationQueue: DispatchQueue = DispatchQueue(label: "tickrest.wallpaper", qos: .utility)) {
+         mutationQueue: DispatchQueue = DispatchQueue(label: "tickrest.wallpaper", qos: .utility),
+         imageQueue: DispatchQueue = DispatchQueue(label: "tickrest.wallpaper-images", qos: .userInitiated)) {
         queue = mutationQueue
+        self.imageQueue = imageQueue
         repository = systemRoots.map { WallpaperRepository(directory: directory, systemRoots: $0) } ?? WallpaperRepository(directory: directory)
         manifest = repository.load()
         recoveryWarningKey = repository.loadErrorKey
@@ -586,14 +634,26 @@ final class WallpaperLibrary: ObservableObject {
             revision += 1; busy = false; return true
         } catch { self.error = L10n.text("background.remove_error", error.localizedDescription); busy = false; return false }
     }
+    @MainActor func cachedResolution(_ request: WallpaperImageRequest) -> (request: WallpaperImageRequest, result: ResolvedWallpaper)? {
+        recentImages.filter { $0.request.hasSameContent(as: request) }
+            .max { $0.request.maximumPixels < $1.request.maximumPixels }
+    }
     @MainActor func resolve(_ request: WallpaperImageRequest) async -> ResolvedWallpaper {
         // Read a committed immutable catalogue. Scanning/importing can proceed
         // on the mutation queue without delaying a reminder's image decode.
         let snapshot = manifest
-        return await withCheckedContinuation { continuation in
+        let result: ResolvedWallpaper = await withCheckedContinuation { continuation in
             imageQueue.async { [repository] in
                 continuation.resume(returning: repository.resolve(request, manifest: snapshot))
             }
         }
+        if result.image != nil, !Task.isCancelled {
+            recentImages.removeAll { $0.request == request }
+            recentImages.append((request, result))
+            while recentImages.count > 8 || recentImages.reduce(0, { $0 + ($1.result.image.map { $0.bytesPerRow * $0.height } ?? 0) }) > 96 * 1024 * 1024 {
+                recentImages.removeFirst()
+            }
+        }
+        return result
     }
 }
