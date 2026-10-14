@@ -214,7 +214,7 @@
 "welcome.ready" = "시작할 준비가 되었습니다";
 "welcome.rhythm" = "휴식 간격과 시간 선택";
 "welcome.rhythm_help" = "컴퓨터를 20분 사용할 때마다 20초 동안 눈을 쉬게 하고, 60분 사용할 때마다 5분 동안 몸을 움직이는 것을 권장합니다. 나중에 설정에서 바꿀 수 있습니다.";
-"welcome.step" = "3단계 중 %d단계";
+"welcome.step" = "4단계 중 %d단계";
 "welcome.style" = "알림 표시 방식 선택";
 "welcome.title" = "{appName}에 오신 것을 환영합니다";
 "idea.short.0" = "먼 곳을 바라보고 자연스럽게 눈을 깜빡이며 눈과 어깨의 긴장을 풀어 보세요.";
@@ -459,3 +459,27 @@
 "debug.reset_body" = "설정, 통계, 타이머 상태, 가져온 배경화면, 캐시, 백업을 삭제하고 로그인 시 실행을 끕니다. 되돌릴 수 없습니다. Debug와 Release는 이 데이터를 공유합니다. 앱이 종료되며 다시 열면 최초 실행 안내가 표시됩니다. macOS 알림 권한은 초기화되지 않습니다.";
 "debug.reset_help" = "최초 실행 상태로 되돌립니다. 데이터를 지운 후 앱을 다시 열면 전체 안내를 테스트할 수 있습니다. macOS 알림 권한은 별도로 관리해야 합니다.";
 "debug.reset_error" = "모든 데이터를 지우지 못했습니다: %@";
+
+/* First-run introduction and setup */
+"welcome.intro_title" = "바쁜 날에도 잠깐 쉬어 가세요";
+"welcome.intro_body" = "{appName}은 컴퓨터를 사용하는 동안 눈을 쉬게 하고 자리에서 일어나 움직일 시간을 알려 주어, 일과 휴식의 리듬을 만드는 데 도움을 줍니다.";
+"welcome.work" = "작업";
+"welcome.adjust_later" = "메뉴 막대에 상주합니다. 휴식 주기와 알림 방식은 언제든 변경할 수 있습니다.";
+"welcome.configure" = "휴식 주기 설정";
+"welcome.use_plan" = "이 계획 사용";
+"welcome.plan_help" = "먼저 기본 계획을 선택하세요. 나중에 설정에서 조정할 수 있습니다.";
+"welcome.recommended_plan" = "{appName} 추천";
+"welcome.plan.tickrest" = "20분 작업 → 20초 눈 휴식\n누적 60분 작업 → 5분 활동 휴식";
+"welcome.plan.eye202020" = "20분 작업 → 20초 먼 곳 바라보기";
+"welcome.plan.fiftyTen" = "50분 작업 → 10분 휴식";
+"welcome.plan.pomodoro" = "25분 집중 → 5분 휴식\n4번째 집중 후 → 15분 휴식";
+"welcome.custom_later" = "사용자 지정 계획과 자세한 시간은 설정에서 조정할 수 있습니다.";
+"welcome.default" = "기본";
+"welcome.style.overlay" = "화면 전체를 덮어 잠시 작업을 내려놓도록 알려 줍니다.";
+"welcome.style.gentle" = "작업 화면을 유지하며 작은 창으로 알려 줍니다.";
+"welcome.preview_help" = "미리 보기는 5초 후 자동으로 닫히며 휴식 통계에 포함되지 않습니다.";
+"welcome.more_options" = "추가 옵션";
+"welcome.menu_location" = "화면 상단 메뉴 막대";
+"welcome.optional" = "선택 설정: 로그인 시 실행 및 사전 알림";
+"welcome.start_help" = "시작하기를 클릭하면 첫 작업 타이머가 시작됩니다.";
+"welcome.continue" = "설정 계속";

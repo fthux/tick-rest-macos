@@ -79,7 +79,7 @@ final class AppController: ObservableObject {
         store = disk; saved = loaded; settings = loaded.settings
         L10n.language = loaded.settings.language
         interfaceLanguage = L10n.resolvedLanguage
-        engine = Engine(settings: loaded.settings, snapshot: FileManager.default.fileExists(atPath: disk.url.path) ? loaded.snapshot : nil)
+        engine = Engine(settings: loaded.settings, snapshot: loaded.settings.onboardingComplete && FileManager.default.fileExists(atPath: disk.url.path) ? loaded.snapshot : nil)
         errorKey = disk.loadErrorKey
         refreshLogin(); refreshNotificationStatus()
         menuCountdown = MenuBarCountdown(engine: engine, uptime: lastTick)
@@ -104,6 +104,7 @@ final class AppController: ObservableObject {
     func tick() {
         let uptime = ProcessInfo.processInfo.systemUptime
         let elapsed = max(0, uptime - lastTick); lastTick = uptime
+        guard settings.onboardingComplete else { return }
         // Avoid charging suspended event loops as active screen use.
         let delta = min(elapsed, 5)
         if uptime - lastProbe >= 5 {
@@ -156,12 +157,14 @@ final class AppController: ObservableObject {
         engine.setSuppressed(fullscreen)
     }
     private func beginSystemAway(reason: String) {
+        guard settings.onboardingComplete else { return }
         awayReasons.insert(reason)
         guard !systemAway else { return }
         systemAway = true; idleAtSystemAway = idleAway
         engine.beginAway(at: Date()); consume(); persist()
     }
     private func endSystemAway(reason: String) {
+        guard settings.onboardingComplete else { return }
         awayReasons.remove(reason)
         guard systemAway, awayReasons.isEmpty else { return }
         systemAway = false; idleAway = false
@@ -193,6 +196,14 @@ final class AppController: ObservableObject {
         if let key = candidate.validationErrorKey { showError(key); return }
         action { $0.applyPlan(plan, now: Date()) }
     }
+    func completeOnboarding(plan: RestPlan) {
+        guard !settings.onboardingComplete else { return }
+        if settings.restPlan != plan { applyPlan(plan) }
+        lastTick = ProcessInfo.processInfo.systemUptime
+        lastProbe = -Double.infinity
+        update { $0.onboardingComplete = true }
+        consume(countdownUptime: lastTick)
+    }
     func cancelPendingPlan() { action { $0.cancelPendingPlan() } }
     func applyAppearance() {
         switch settings.theme {
@@ -219,7 +230,8 @@ final class AppController: ObservableObject {
     }
     var stateText: String { ReminderDisplay(engine: engine).stateText }
     func menuBarText(at uptime: TimeInterval = ProcessInfo.processInfo.systemUptime) -> String {
-        menuCountdown?.text(at: uptime) ?? ReminderDisplay(engine: engine).menuBarText
+        guard settings.onboardingComplete else { return L10n.text("welcome.continue") }
+        return menuCountdown?.text(at: uptime) ?? ReminderDisplay(engine: engine).menuBarText
     }
     func consume(countdownUptime: TimeInterval? = nil) {
         if settings != engine.settings { settings = engine.settings }

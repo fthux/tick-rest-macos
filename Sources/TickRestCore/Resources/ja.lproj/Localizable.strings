@@ -214,7 +214,7 @@
 "welcome.ready" = "準備ができました";
 "welcome.rhythm" = "休憩の間隔と時間を選ぶ";
 "welcome.rhythm_help" = "パソコンを20分使うごとに20秒間目を休め、60分使うごとに5分間体を動かすのがおすすめです。後から設定で変更できます。";
-"welcome.step" = "ステップ%d / 3";
+"welcome.step" = "ステップ%d / 4";
 "welcome.style" = "通知の表示方法を選択";
 "welcome.title" = "{appName}へようこそ";
 "idea.short.0" = "遠くを見て自然にまばたきし、目と肩をリラックスさせましょう。";
@@ -459,3 +459,27 @@
 "debug.reset_body" = "設定、統計、タイマーの状態、読み込んだ壁紙、キャッシュ、バックアップを削除し、ログイン時の起動を無効にします。元に戻せません。DebugとReleaseはこのデータを共有します。アプリは終了し、再度開くと初回ガイドが表示されます。macOSの通知権限はリセットされません。";
 "debug.reset_help" = "初回起動の状態に戻します。消去後にアプリを再度開くと、初回ガイドをテストできます。macOSの通知権限は別途管理してください。";
 "debug.reset_error" = "すべてのデータを消去できませんでした：%@";
+
+/* First-run introduction and setup */
+"welcome.intro_title" = "忙しいときこそ、ひと休み";
+"welcome.intro_body" = "{appName}はパソコンの使用中に、目を休めたり席を立ったりする時間をお知らせし、仕事と休憩のリズムづくりを助けます。";
+"welcome.work" = "作業";
+"welcome.adjust_later" = "メニューバーに常駐します。休憩のリズムや通知方法はいつでも変更できます。";
+"welcome.configure" = "休憩のリズムを設定";
+"welcome.use_plan" = "このプランを使う";
+"welcome.plan_help" = "まずはプリセットを選びましょう。後から設定で調整できます。";
+"welcome.recommended_plan" = "{appName}おすすめ";
+"welcome.plan.tickrest" = "20分作業 → 20秒の目の休憩\n累計60分作業 → 5分の運動休憩";
+"welcome.plan.eye202020" = "20分作業 → 20秒遠くを見る";
+"welcome.plan.fiftyTen" = "50分作業 → 10分休憩";
+"welcome.plan.pomodoro" = "25分集中 → 5分休憩\n4回目の集中後 → 15分休憩";
+"welcome.custom_later" = "カスタムプランや詳しい時間は設定で調整できます。";
+"welcome.default" = "既定";
+"welcome.style.overlay" = "画面全体を覆い、作業を一旦やめるようお知らせします。";
+"welcome.style.gentle" = "作業画面を残して、小さなウインドウでお知らせします。";
+"welcome.preview_help" = "プレビューは5秒後に閉じます。休憩の統計には記録されません。";
+"welcome.more_options" = "その他のオプション";
+"welcome.menu_location" = "画面上部のメニューバー";
+"welcome.optional" = "任意の設定：ログイン時の起動と休憩前の通知";
+"welcome.start_help" = "「使い始める」をクリックすると、最初の作業タイマーが開始します。";
+"welcome.continue" = "設定を続ける";

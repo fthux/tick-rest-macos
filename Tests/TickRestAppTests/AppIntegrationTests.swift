@@ -23,7 +23,7 @@ final class AppIntegrationTests: XCTestCase {
         let previousAppearance = NSApp.appearance
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tickrest-native-test-\(UUID())")
         let disk = DataStore(url: directory.appendingPathComponent("state.json"))
-        var data = SavedData(); data.settings.detectIdle = false
+        var data = SavedData(); data.settings.style = .gentle; data.settings.detectIdle = false
         data.settings.avoidFullscreen = false; data.settings.prewarning = 0
         data.settings.language = "en"; data.settings.onboardingComplete = true
         try disk.save(data)

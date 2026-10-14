@@ -37,7 +37,7 @@ extension AppIntegrationTests {
         _ body: @MainActor (AppDelegate, AppController, NSStatusItem, URL) async throws -> Void) async throws {
         try await withFixture { _, _, directory in
             let disk = DataStore(url: directory.appendingPathComponent("launch/state.json"))
-            var data = SavedData(); data.settings.language = "en"
+            var data = SavedData(); data.settings.style = onboarding ? .gentle : .overlay; data.settings.language = "en"
             data.settings.detectIdle = false; data.settings.avoidFullscreen = false
             data.settings.prewarning = 0; data.settings.onboardingComplete = onboarding
             try disk.save(data)
@@ -75,10 +75,31 @@ extension AppIntegrationTests {
             XCTAssertTrue(welcome.isVisible)
             XCTAssertFalse(welcome.styleMask.contains(.resizable))
             XCTAssertEqual(welcome.contentView!.frame.width, 580, accuracy: 1)
-            for _ in 0..<2 {
-                try await Task.sleep(nanoseconds: 150_000_000)
-                XCTAssertTrue(self.press(try self.button(named: L10n.text("common.next"), in: welcome)))
-            }
+            try await Task.sleep(nanoseconds: 150_000_000)
+            XCTAssertTrue(self.containsText(L10n.text("welcome.intro_title"), in: welcome))
+            XCTAssertFalse(self.containsText(L10n.text("welcome.rhythm"), in: welcome))
+            XCTAssertEqual(model.settings.style, .overlay)
+            XCTAssertEqual(model.engine.shortElapsed, 0)
+            XCTAssertTrue(model.saved.records.isEmpty)
+            XCTAssertEqual(model.menuBarText(at: ProcessInfo.processInfo.systemUptime + 100), L10n.text("welcome.continue"))
+            // Closing setup must leave a route back to the same draft, without starting work.
+            welcome.close()
+            let onboardingMenu = try XCTUnwrap(status.menu)
+            delegate.menuWillOpen(onboardingMenu)
+            try self.activateMenu(L10n.text("welcome.continue"), in: onboardingMenu)
+            XCTAssertTrue(welcome.isVisible)
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("welcome.configure"), in: welcome)))
+            try await Task.sleep(nanoseconds: 150_000_000)
+            XCTAssertTrue(self.containsText(L10n.text("welcome.rhythm"), in: welcome))
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("welcome.use_plan"), in: welcome)))
+            try await Task.sleep(nanoseconds: 150_000_000)
+            XCTAssertTrue(self.containsText(L10n.text("welcome.style"), in: welcome))
+            XCTAssertEqual(model.settings.breakStartMode, .automatic)
+            // The real timer has been running throughout setup but cannot accumulate usage.
+            model.tick()
+            XCTAssertEqual(model.engine.shortElapsed, 0)
+            XCTAssertTrue(model.saved.records.isEmpty)
+            XCTAssertTrue(self.press(try self.button(named: L10n.text("common.next"), in: welcome)))
             try await Task.sleep(nanoseconds: 150_000_000)
             XCTAssertTrue(self.press(try self.button(named: L10n.text("common.back"), in: welcome)))
             try await Task.sleep(nanoseconds: 150_000_000)
@@ -89,6 +110,9 @@ extension AppIntegrationTests {
             XCTAssertFalse(welcome.isVisible)
             XCTAssertTrue(model.settings.onboardingComplete)
             XCTAssertTrue(model.store.load().settings.onboardingComplete)
+            XCTAssertLessThan(model.engine.shortElapsed, 1)
+            model.tick()
+            XCTAssertGreaterThan(model.engine.shortElapsed, 0)
             let automaticSettings: NSWindow? = try self.field("settingsWindow", of: delegate, as: NSWindow?.self)
             XCTAssertNil(automaticSettings)
             XCTAssertNotNil(status.button)
@@ -111,6 +135,53 @@ extension AppIntegrationTests {
             let navigation: SettingsNavigation = try self.field("settingsNavigation", of: delegate)
             XCTAssertEqual(navigation.page, .about)
             XCTAssertEqual(reopened.title, SettingsPage.about.title)
+        }
+    }
+
+    func testWelcomePlansStylesPreviewAndLayoutInEveryLanguage() async throws {
+        for language in ["zh-Hans", "zh-Hant", "en", "ja", "ko"] {
+            try await withDelegate(onboarding: false) { delegate, model, _, _ in
+                model.update { $0.language = language }
+                let welcome: NSWindow = try self.field("welcomeWindow", of: delegate)
+                let titles = ["welcome.configure", "welcome.use_plan", "common.next", "welcome.begin"]
+                for step in 0..<4 {
+                    try await Task.sleep(nanoseconds: 150_000_000)
+                    let content = try XCTUnwrap(welcome.contentView)
+                    XCTAssertEqual(content.frame.width, 580, accuracy: 1)
+                    XCTAssertGreaterThanOrEqual(content.frame.height + 1, content.fittingSize.height)
+                    XCTAssertLessThanOrEqual(welcome.frame.height, welcome.screen!.visibleFrame.height)
+                    if let directory = ProcessInfo.processInfo.environment["TICKREST_ONBOARDING_SCREENSHOTS"] {
+                        let destination = URL(fileURLWithPath: directory)
+                        try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+                        let capture = try XCTUnwrap(CGWindowListCreateImage(.null, .optionIncludingWindow,
+                            CGWindowID(welcome.windowNumber), [.boundsIgnoreFraming, .bestResolution]))
+                        let bitmap = NSBitmapImageRep(cgImage: capture)
+                        try XCTUnwrap(bitmap.representation(using: .png, properties: [:]))
+                            .write(to: destination.appendingPathComponent("\(language)-\(step).png"))
+                    }
+                    if step == 1 {
+                        XCTAssertTrue(self.press(try self.button(named: RestPlanID.fiftyTen.title, in: welcome)))
+                    } else if step == 2 {
+                        XCTAssertEqual(model.settings.planID, .fiftyTen)
+                        XCTAssertTrue(self.press(try self.button(named: L10n.text("style.gentle"), in: welcome)))
+                        XCTAssertEqual(model.settings.style, .gentle)
+                        XCTAssertTrue(self.press(try self.button(named: L10n.text("reminder.preview"), in: welcome)))
+                        try await Task.sleep(nanoseconds: 100_000_000)
+                        let coordinator: WindowCoordinator = try self.field("windows", of: delegate)
+                        coordinator.hide(restoreFocus: false)
+                        XCTAssertFalse(model.settings.onboardingComplete)
+                        XCTAssertEqual(model.engine.shortElapsed, 0)
+                        XCTAssertTrue(model.saved.records.isEmpty)
+                        XCTAssertTrue(self.press(try self.button(named: L10n.text("style.overlay"), in: welcome)))
+                    }
+                    XCTAssertTrue(self.press(try self.button(named: L10n.text(titles[step]), in: welcome)))
+                }
+                XCTAssertTrue(model.settings.onboardingComplete)
+                XCTAssertEqual(model.settings.planID, .fiftyTen)
+                XCTAssertEqual(model.engine.remaining(.short), 3000)
+                XCTAssertEqual(model.store.load().settings.style, .overlay)
+                XCTAssertEqual(model.store.load().settings.planID, .fiftyTen)
+            }
         }
     }
 

@@ -148,6 +148,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         if !button.attributedTitle.isEqual(to: title) { button.attributedTitle = title }
     }
     func menuWillOpen(_ menu: NSMenu) {
+        if !model.settings.onboardingComplete {
+            menu.removeAllItems()
+            add(menu, L10n.text("welcome.continue"), #selector(openWelcome))
+            menu.addItem(.separator())
+            add(menu, L10n.text("menu.quit"), #selector(quit), key: "q")
+            return
+        }
         menu.removeAllItems(); menuPlan = model.settings.restPlan
         menuLanguage = L10n.language
         menuKinds = model.engine.displayKinds; menuResting = model.engine.isResting
@@ -228,6 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     @objc private func pauseIndefinite() { model.action { $0.setPause(.indefinite, now: Date()) } }
     @objc private func openAbout() { settingsNavigation.page = .about; openSettings() }
     @objc func openSettings() {
+        guard model.settings.onboardingComplete else { openWelcome(); return }
         if settingsWindow == nil {
             let initialContent = NSWindow.contentRect(
                 forFrameRect: NSRect(origin: .zero, size: SettingsWindowLayout.minimumFrameSize),
@@ -362,9 +370,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         }
         return nil
     }
-    private func openWelcome() {
+    @objc private func openWelcome() {
+        if let welcomeWindow { show(welcomeWindow); return }
         welcomeWindow = makeWindow(title: L10n.text("welcome.title"), size: NSSize(width: 580, height: 1), content: WelcomeView(model: model, finish: { [weak self] in
-            self?.model.update { $0.onboardingComplete = true }
             self?.welcomeWindow?.close()
         }, layoutChanged: { [weak self] in self?.resizeWelcome() }))
         welcomeWindow?.styleMask.remove(.resizable)

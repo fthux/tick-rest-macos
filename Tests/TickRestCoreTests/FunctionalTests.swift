@@ -32,7 +32,7 @@ extension EngineTests {
         #expect(s.validationError == nil)
         #expect(s.shortInterval == 1200 && s.shortDuration == 20)
         #expect(s.longInterval == 3600 && s.longDuration == 300)
-        #expect(s.style == .gentle && s.prewarning == 10)
+        #expect(s.style == .overlay && s.prewarning == 10)
         #expect(s.breakStartMode == .automatic)
         #expect(!s.detectIdle && s.idleTimeout == 300 && s.avoidFullscreen)
         #expect(!s.scheduleEnabled && !s.sound && !s.onboardingComplete)

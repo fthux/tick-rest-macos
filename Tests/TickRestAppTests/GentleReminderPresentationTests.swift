@@ -9,6 +9,7 @@ final class GentleReminderPresentationTests: XCTestCase {
 
     private func settings(manual: Bool = false) -> Settings {
         var settings = Settings()
+        settings.style = .gentle
         settings.prewarning = 0
         settings.breakStartMode = manual ? .manual : .automatic
         return settings

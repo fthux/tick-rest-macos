@@ -37,9 +37,9 @@ public struct Settings: Codable, Equatable {
     public var longInterval: Double = RestPlan().longInterval
     public var longDuration: Double = RestPlan().longDuration
     public var prewarning: Double = 10
-    public var style: ReminderStyle = .gentle
+    public var style: ReminderStyle = .overlay
     public var gentleReminderSize: GentleReminderSize = .normal
-    public var gentleReminderPosition: GentleReminderPosition = .topCenter
+    public var gentleReminderPosition: GentleReminderPosition = .topRight
     public static let defaultOverlayBackgroundColor = SRGBColor(red: 0.10, green: 0.18, blue: 0.15)
     public var overlayBackgroundColor = Settings.defaultOverlayBackgroundColor
     public var overlayBackground = OverlayBackground()
@@ -83,7 +83,7 @@ public struct Settings: Codable, Equatable {
         prewarning = try values.decode(Double.self, forKey: .prewarning)
         style = try values.decode(ReminderStyle.self, forKey: .style)
         gentleReminderSize = try values.decodeIfPresent(GentleReminderSize.self, forKey: .gentleReminderSize) ?? .normal
-        gentleReminderPosition = (try? values.decode(GentleReminderPosition.self, forKey: .gentleReminderPosition)) ?? .topCenter
+        gentleReminderPosition = (try? values.decode(GentleReminderPosition.self, forKey: .gentleReminderPosition)) ?? .topRight
         overlayBackgroundColor = (try? values.decode(SRGBColor.self, forKey: .overlayBackgroundColor)) ?? Self.defaultOverlayBackgroundColor
         overlayBackground = ((try? values.decode(OverlayBackground.self, forKey: .overlayBackground)) ?? OverlayBackground()).normalized
         // Existing configurations adopt automatic starts without losing other preferences.

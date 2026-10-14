@@ -17,8 +17,8 @@ extension EngineTests {
     }
 
     @Test(arguments: [false, true])
-    func missingOrUnknownPositionDefaultsToTopCenterWithoutLosingData(_ unknown: Bool) throws {
-        #expect(Settings().gentleReminderPosition == .topCenter)
+    func missingOrUnknownPositionDefaultsToTopRightWithoutLosingData(_ unknown: Bool) throws {
+        #expect(Settings().gentleReminderPosition == .topRight)
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("tickrest-legacy-position-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = DataStore(url: directory.appendingPathComponent("state.json"))

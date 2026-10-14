@@ -214,7 +214,7 @@
 "welcome.ready" = "Ready to begin";
 "welcome.rhythm" = "Choose your break routine";
 "welcome.rhythm_help" = "Recommended: rest your eyes for 20 seconds every 20 minutes, and move for 5 minutes every 60 minutes. You can adjust this later in settings.";
-"welcome.step" = "Step %d of 3";
+"welcome.step" = "Step %d of 4";
 "welcome.style" = "Choose a reminder style";
 "welcome.title" = "Welcome to {appName}";
 "idea.short.0" = "Look into the distance, blink naturally, and relax your eyes and shoulders.";
@@ -459,3 +459,27 @@
 "debug.reset_body" = "Deletes settings, statistics, timer state, and wallpaper imports, caches, and backups, and disables launch at login. This cannot be undone. Debug and Release share this data. The app will quit; reopen it to start the first-run guide. macOS notification permissions are not reset.";
 "debug.reset_help" = "Restore the app to its first-run state. After clearing, reopen the app to test onboarding. macOS notification permissions are managed separately.";
 "debug.reset_error" = "Could not clear all data: %@";
+
+/* First-run introduction and setup */
+"welcome.intro_title" = "Take a break, even on busy days";
+"welcome.intro_body" = "{appName} reminds you to rest your eyes and get up from your desk while you use your computer, helping you make room for regular breaks.";
+"welcome.work" = "Work";
+"welcome.adjust_later" = "Lives in your menu bar. You can change your routine and reminder style anytime.";
+"welcome.configure" = "Set up my break routine";
+"welcome.use_plan" = "Use this routine";
+"welcome.plan_help" = "Start with a preset. You can adjust it later in settings.";
+"welcome.recommended_plan" = "{appName} recommended";
+"welcome.plan.tickrest" = "20 min work → 20 sec eye break\n60 min accumulated work → 5 min movement break";
+"welcome.plan.eye202020" = "20 min work → 20 sec looking into the distance";
+"welcome.plan.fiftyTen" = "50 min work → 10 min break";
+"welcome.plan.pomodoro" = "25 min focus → 5 min break\nAfter 4 focus sessions → 15 min break";
+"welcome.custom_later" = "Custom routines and detailed timing controls are available in settings.";
+"welcome.default" = "Default";
+"welcome.style.overlay" = "Covers your screen to remind you to step away from work.";
+"welcome.style.gentle" = "A floating window keeps your work visible.";
+"welcome.preview_help" = "Preview closes automatically after 5 seconds and does not count toward your break statistics.";
+"welcome.more_options" = "More options";
+"welcome.menu_location" = "Top of your screen";
+"welcome.optional" = "Optional: launch at login and advance notifications";
+"welcome.start_help" = "Your first work timer starts when you click Get started.";
+"welcome.continue" = "Continue setup";

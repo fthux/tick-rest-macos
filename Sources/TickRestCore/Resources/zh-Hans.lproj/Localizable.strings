@@ -214,7 +214,7 @@
 "welcome.ready" = "准备开始";
 "welcome.rhythm" = "选择你的休息计划";
 "welcome.rhythm_help" = "推荐每使用电脑 20 分钟，让眼睛休息 20 秒；每使用 60 分钟，起身活动 5 分钟。之后可以在设置中调整。";
-"welcome.step" = "第 %d 步，共 3 步";
+"welcome.step" = "第 %d 步，共 4 步";
 "welcome.style" = "选择提醒样式";
 "welcome.title" = "欢迎使用{appName}";
 "idea.short.0" = "看向远处，自然眨眼，放松眼睛与肩膀。";
@@ -459,3 +459,27 @@
 "debug.reset_body" = "将删除设置、统计、计时状态、导入的壁纸、缓存及备份，并关闭开机启动。删除后无法恢复。Debug 与 Release 共用这些数据。应用将退出，重新打开后进入首次引导。不会重置 macOS 通知权限。";
 "debug.reset_help" = "恢复到首次启动状态。清除后重新打开应用，即可测试完整引导。macOS 通知权限需单独管理。";
 "debug.reset_error" = "无法清除所有数据：%@";
+
+/* First-run introduction and setup */
+"welcome.intro_title" = "忙碌时，也别忘了休息";
+"welcome.intro_body" = "{appName} 会在你使用电脑时，定时提醒你休息眼睛、起身活动，帮助你建立工作与休息的节奏。";
+"welcome.work" = "工作";
+"welcome.adjust_later" = "常驻菜单栏，休息节奏和提醒方式都可以随时调整。";
+"welcome.configure" = "设置我的休息节奏";
+"welcome.use_plan" = "使用这个计划";
+"welcome.plan_help" = "先选一个预设，之后可以在设置中调整。";
+"welcome.recommended_plan" = "{appName} 推荐";
+"welcome.plan.tickrest" = "每工作 20 分钟 → 护眼休息 20 秒\n累计工作 60 分钟 → 活动休息 5 分钟";
+"welcome.plan.eye202020" = "每工作 20 分钟 → 望向远处 20 秒";
+"welcome.plan.fiftyTen" = "每工作 50 分钟 → 休息 10 分钟";
+"welcome.plan.pomodoro" = "每专注 25 分钟 → 休息 5 分钟\n完成第 4 段专注后 → 休息 15 分钟";
+"welcome.custom_later" = "自定义计划和详细时长可以在设置中调整。";
+"welcome.default" = "默认";
+"welcome.style.overlay" = "覆盖屏幕，提醒你暂时放下工作。";
+"welcome.style.gentle" = "显示悬浮小窗，保留工作画面。";
+"welcome.preview_help" = "预览 5 秒后自动关闭，不计入休息统计。";
+"welcome.more_options" = "更多选项";
+"welcome.menu_location" = "屏幕顶部菜单栏";
+"welcome.optional" = "可选设置：开机启动与提前通知";
+"welcome.start_help" = "点击“开始使用”后，首次工作计时才会开始。";
+"welcome.continue" = "继续引导";
