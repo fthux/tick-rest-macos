@@ -4,35 +4,6 @@ import SwiftUI
 import TickRestCore
 import UniformTypeIdentifiers
 
-/// Anchor the native picker to its own button instead of guessing a window position.
-struct NativeShareButton: NSViewRepresentable {
-    func makeCoordinator() -> Coordinator { Coordinator() }
-    func makeNSView(context: Context) -> NSButton {
-        let button = NSButton(title: L10n.text("about.share"), target: context.coordinator,
-                              action: #selector(Coordinator.share(_:)))
-        button.bezelStyle = .rounded
-        button.image = NSImage(systemSymbolName: "square.and.arrow.up", accessibilityDescription: nil)
-        button.imagePosition = .imageLeading
-        button.setContentHuggingPriority(.required, for: .horizontal)
-        button.setContentCompressionResistancePriority(.required, for: .horizontal)
-        return button
-    }
-    func updateNSView(_ button: NSButton, context: Context) {
-        button.title = L10n.text("about.share")
-        button.toolTip = L10n.text("about.share_description")
-        button.invalidateIntrinsicContentSize()
-    }
-
-    final class Coordinator: NSObject {
-        private var picker: NSSharingServicePicker?
-        @objc func share(_ sender: NSButton) {
-            let picker = NSSharingServicePicker(items: [L10n.text("about.share_message"), AboutLinks.website])
-            self.picker = picker
-            picker.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
-        }
-    }
-}
-
 enum AboutQRCode {
     static func image(for url: URL) -> CGImage? {
         let filter = CIFilter.qrCodeGenerator()

@@ -24,7 +24,6 @@ struct AboutView: View {
     var errorMessage: String?
     var dismissError: () -> Void = {}
     @State private var copyrightDate = Date()
-    @State private var showsQRCode = false
 
     // The About page and the .icns are exported from the same icon artwork.
     private static let icon = L10n.resourceBundle.url(forResource: "AppIcon", withExtension: "png")
@@ -77,7 +76,7 @@ struct AboutView: View {
         VStack(spacing: 12) {
             if let icon = Self.icon {
                 Image(nsImage: icon).resizable().interpolation(.high)
-                    .frame(width: 88, height: 88).accessibilityHidden(true)
+                    .frame(width: 70.4, height: 70.4).accessibilityHidden(true)
             }
             Text(L10n.text("app.name")).font(.system(size: 28, weight: .bold)).padding(.top, 4)
             Text(buildInfo.shortVersionDescription).font(.callout).foregroundStyle(.secondary)
@@ -156,13 +155,9 @@ struct AboutView: View {
     private var sharingSection: some View {
         AboutSection(title: "about.group.sharing") {
             AboutCard {
-                AboutRow(title: "about.share_app", description: L10n.text("about.share_description")) {
-                    HStack(spacing: 8) {
-                        NativeShareButton()
-                        CopyFeedbackButton(title: "about.copy_link", value: AboutLinks.website.absoluteString)
-                        Button(L10n.text("about.qr_code")) { showsQRCode = true }
-                            .popover(isPresented: $showsQRCode, arrowEdge: .bottom) { AboutQRCodeView() }
-                    }
+                AboutRow(title: "about.share_app", description: L10n.text("about.share_description"),
+                         stacksActionsWhenNeeded: false) {
+                    AboutShareMenu()
                 }
             }
         }
@@ -203,21 +198,32 @@ private struct AboutCard<Content: View>: View {
 private struct AboutRow<Actions: View>: View {
     let title: String
     var description: String? = nil
+    var stacksActionsWhenNeeded = true
     @ViewBuilder var actions: Actions
     var body: some View {
-        // Stack the actions below the label when translations exceed the available width.
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 20) {
-                label
-                Spacer(minLength: 12)
-                actions.fixedSize(horizontal: true, vertical: false)
+        rowContent
+            .padding(.horizontal, 18).padding(.vertical, 16)
+    }
+    @ViewBuilder private var rowContent: some View {
+        if stacksActionsWhenNeeded {
+            // Stack the actions below the label when translations exceed the available width.
+            ViewThatFits(in: .horizontal) {
+                horizontalContent
+                VStack(alignment: .leading, spacing: 12) {
+                    label
+                    actions
+                }
             }
-            VStack(alignment: .leading, spacing: 12) {
-                label
-                actions
-            }
+        } else {
+            horizontalContent
         }
-        .padding(.horizontal, 18).padding(.vertical, 16)
+    }
+    private var horizontalContent: some View {
+        HStack(spacing: 20) {
+            label
+            Spacer(minLength: 12)
+            actions.fixedSize(horizontal: true, vertical: false)
+        }
     }
     private var label: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -226,6 +232,39 @@ private struct AboutRow<Actions: View>: View {
                 Text(description).font(.callout).foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
             }
+        }
+    }
+}
+
+private struct AboutShareMenu: View {
+    @State private var copied = false
+    @State private var showsQRCode = false
+
+    var body: some View {
+        Menu {
+            ShareLink(item: AboutLinks.website,
+                      subject: Text(L10n.text("about.share_app")),
+                      message: Text(L10n.text("about.share_message"))) {
+                Label(L10n.text("about.share"), systemImage: "square.and.arrow.up")
+            }
+            Button {
+                NSPasteboard.general.clearContents()
+                copied = NSPasteboard.general.setString(AboutLinks.website.absoluteString, forType: .string)
+            } label: {
+                Label(L10n.text(copied ? "about.copied" : "about.copy_link"),
+                      systemImage: copied ? "checkmark" : "doc.on.doc")
+            }
+            Button { showsQRCode = true } label: {
+                Label(L10n.text("about.qr_code"), systemImage: "qrcode")
+            }
+        } label: {
+            Label(L10n.text("about.share"), systemImage: "square.and.arrow.up")
+        }
+        .popover(isPresented: $showsQRCode, arrowEdge: .bottom) { AboutQRCodeView() }
+        .task(id: copied) {
+            guard copied else { return }
+            do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
+            copied = false
         }
     }
 }
