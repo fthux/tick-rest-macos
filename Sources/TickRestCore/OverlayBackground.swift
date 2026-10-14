@@ -120,7 +120,7 @@ public struct OverlayBackground: Codable, Equatable {
             ?? WallpaperProtection(value: protection)
     }
     private static func clampedProtection(_ value: Double) -> Double {
-        value.isFinite ? min(0.9, max(0.6, value)) : 0.65
+        value.isFinite ? min(1, max(0, value)) : 0.65
     }
     public var normalized: Self {
         var result = self

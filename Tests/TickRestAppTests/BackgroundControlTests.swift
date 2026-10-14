@@ -60,29 +60,31 @@ final class BackgroundControlTests: XCTestCase {
             var data = SavedData(); data.settings.overlayBackground = background
             writer.schedule(data) { _ in XCTFail("Unexpected persistence failure") }
         })
-        let coordinator = ContinuousBackgroundSlider.Coordinator(value: value, range: 60...90, step: 1)
-        coordinator.receive(60)
-        XCTAssertEqual(background.activeProtection, 0.6)
+        let coordinator = ContinuousBackgroundSlider.Coordinator(value: value, range: 0...100, step: 1)
+        coordinator.receive(0)
+        XCTAssertEqual(background.activeProtection, 0)
+        coordinator.receive(25)
+        XCTAssertEqual(background.activeProtection, 0.25)
         coordinator.receive(75)
         XCTAssertEqual(background.activeProtection, 0.75)
-        coordinator.receive(90)
-        XCTAssertEqual(background.activeProtection, 0.9)
+        coordinator.receive(100)
+        XCTAssertEqual(background.activeProtection, 1)
         coordinator.receive(65, enabled: false)
-        XCTAssertEqual(received, [0.6, 0.75, 0.9])
+        XCTAssertEqual(received, [0, 0.25, 0.75, 1])
         XCTAssertEqual(background.wallpaperProtection.desktop, 0.65)
         XCTAssertEqual(background.wallpaperProtection.custom, 0.65)
         XCTAssertEqual(background.protection, 0.65)
         // These are the actual backing opacities used by both previews. Over
-        // white their remaining brightness changes from 40% to 10%.
-        XCTAssertEqual(1 - received.first!, 0.4, accuracy: 0.0001)
-        XCTAssertEqual(1 - received.last!, 0.1, accuracy: 0.0001)
+        // white their remaining brightness changes from 100% to 0%.
+        XCTAssertEqual(1 - received.first!, 1, accuracy: 0.0001)
+        XCTAssertEqual(1 - received.last!, 0, accuracy: 0.0001)
         try writer.flush(SavedData())
     }
     func testContinuousSliderClampsAndQuantizesWithoutLosingEndpoints() {
-        XCTAssertEqual(SliderValue.quantized(73.6, range: 60...90, step: 1), 74)
-        XCTAssertEqual(SliderValue.quantized(-20, range: 60...90, step: 1), 60)
-        XCTAssertEqual(SliderValue.quantized(120, range: 60...90, step: 1), 90)
-        XCTAssertEqual(SliderValue.quantized(.nan, range: 60...90, step: 1), 60)
+        XCTAssertEqual(SliderValue.quantized(73.6, range: 0...100, step: 1), 74)
+        XCTAssertEqual(SliderValue.quantized(-20, range: 0...100, step: 1), 0)
+        XCTAssertEqual(SliderValue.quantized(120, range: 0...100, step: 1), 100)
+        XCTAssertEqual(SliderValue.quantized(.nan, range: 0...100, step: 1), 0)
         XCTAssertEqual(SliderValue.quantized(0.33, range: 0...1, step: 0.1), 0.3, accuracy: 0.0001)
     }
 }

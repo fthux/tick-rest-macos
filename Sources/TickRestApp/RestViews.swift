@@ -261,6 +261,11 @@ struct OverlayPalette {
                          blue: background.blue * (1 - amount) + target * amount)
     }
     func buttonBackground(prominent: Bool, highlighted: Bool = false) -> Color {
+        if protected {
+            // Let the wallpaper and its adjustable text backing show through.
+            let opacity = (prominent ? 0.16 : 0.06) + (highlighted ? 0.06 : 0)
+            return Color.white.opacity(opacity)
+        }
         let color = buttonBackgroundComponents(prominent: prominent, highlighted: highlighted)
         return Color(.sRGB, red: color.red, green: color.green, blue: color.blue)
     }

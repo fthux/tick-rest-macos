@@ -122,7 +122,7 @@ struct BackgroundSettingsView<StyleSelection: View, AdditionalSettings: View>: V
         VStack(alignment: .leading, spacing: 8) {
             BackgroundNumberControl(title: L10n.text("background.protection_scope", protectionScope), value: Binding(
                 get: { background.activeProtection * 100 },
-                set: { binding(\.activeProtection).wrappedValue = $0 / 100 }), range: 60...90, step: 1, suffix: "%")
+                set: { binding(\.activeProtection).wrappedValue = $0 / 100 }), range: 0...100, step: 1, suffix: "%")
             Button { showingProtectionPreview.toggle() } label: {
                 Label(L10n.text("background.protection_preview"), systemImage: "magnifyingglass").font(.caption)
             }

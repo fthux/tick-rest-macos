@@ -4,15 +4,16 @@ import Testing
 @testable import TickRestCore
 
 struct FullscreenBackgroundTests {
-    @Test func wallpaperProtectionValuesAreIndependentAndSurviveDiskRoundTrip() throws {
+    @Test(arguments: [0.0, 0.25, 1.0])
+    func wallpaperProtectionValuesAreIndependentAndSurviveDiskRoundTrip(_ protection: Double) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let store = DataStore(url: directory.appendingPathComponent("state.json"))
         var data = SavedData()
         data.settings.overlayBackground.kind = .gradient
-        data.settings.overlayBackground.activeProtection = 0.72
+        data.settings.overlayBackground.activeProtection = protection
         data.settings.overlayBackground.kind = .wallpaper
-        let expected: [WallpaperSource: Double] = [.desktop: 0.6, .system: 0.8, .custom: 0.9]
+        let expected: [WallpaperSource: Double] = [.desktop: protection, .system: 0.25, .custom: 1 - protection]
         for source in WallpaperSource.allCases {
             data.settings.overlayBackground.wallpaper.source = source
             data.settings.overlayBackground.activeProtection = expected[source]!
@@ -24,7 +25,7 @@ struct FullscreenBackgroundTests {
             #expect(loaded.normalized.activeProtection == expected[source])
         }
         loaded.kind = .gradient
-        #expect(loaded.activeProtection == 0.72)
+        #expect(loaded.activeProtection == protection)
         #expect(store.loadErrorKey == nil)
     }
 
@@ -52,8 +53,8 @@ struct FullscreenBackgroundTests {
         background.protection = 0.78
         let result = background.normalized
         #expect(result.wallpaperProtection.desktop == 0.65)
-        #expect(result.wallpaperProtection.system == 0.6)
-        #expect(result.wallpaperProtection.custom == 0.9)
+        #expect(result.wallpaperProtection.system == 0)
+        #expect(result.wallpaperProtection.custom == 1)
         #expect(result.protection == 0.78)
     }
 
