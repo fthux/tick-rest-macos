@@ -246,19 +246,23 @@ private struct AboutShareMenu: View {
                       subject: Text(L10n.text("about.share_app")),
                       message: Text(L10n.text("about.share_message"))) {
                 Label(L10n.text("about.share"), systemImage: "square.and.arrow.up")
+                    .labelStyle(.titleAndIcon)
             }
             Button {
                 NSPasteboard.general.clearContents()
                 copied = NSPasteboard.general.setString(AboutLinks.website.absoluteString, forType: .string)
             } label: {
                 Label(L10n.text("about.copy_link"), systemImage: "doc.on.doc")
+                    .labelStyle(.titleAndIcon)
             }
             Button { showsQRCode = true } label: {
                 Label(L10n.text("about.qr_code"), systemImage: "qrcode")
+                    .labelStyle(.titleAndIcon)
             }
         } label: {
             Label(L10n.text("about.share"), systemImage: "square.and.arrow.up")
         }
+        .tint(.primary)
         .popover(isPresented: $showsQRCode, arrowEdge: .bottom) { AboutQRCodeView() }
         .overlay(alignment: .bottom) {
             if copied {
