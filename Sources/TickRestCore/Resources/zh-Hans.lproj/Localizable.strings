@@ -103,7 +103,7 @@
 "menu.pause_indefinite" = "暂停，直到手动恢复";
 "menu.pause_today" = "今天不再提醒";
 "menu.paused_short" = "已暂停";
-"menu.quit" = "退出";
+"menu.quit" = "退出 Tick Rest";
 "menu.remaining" = "距离%@还有 %@";
 "menu.resume" = "恢复提醒";
 "menu.settings" = "设置…";

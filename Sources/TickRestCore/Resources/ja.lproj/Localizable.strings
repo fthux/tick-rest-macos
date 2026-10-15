@@ -103,7 +103,7 @@
 "menu.pause_indefinite" = "手動で再開するまで";
 "menu.pause_today" = "今日は通知しない";
 "menu.paused_short" = "一時停止中";
-"menu.quit" = "終了";
+"menu.quit" = "Tick Rest を終了";
 "menu.remaining" = "%@まであと%@";
 "menu.resume" = "通知を再開";
 "menu.settings" = "設定…";

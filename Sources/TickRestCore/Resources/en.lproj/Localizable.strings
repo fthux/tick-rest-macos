@@ -103,7 +103,7 @@
 "menu.pause_indefinite" = "Until manually resumed";
 "menu.pause_today" = "Pause for today";
 "menu.paused_short" = "Paused";
-"menu.quit" = "Quit";
+"menu.quit" = "Quit Tick Rest";
 "menu.remaining" = "%@: %@ remaining";
 "menu.resume" = "Resume reminders";
 "menu.settings" = "Settings…";

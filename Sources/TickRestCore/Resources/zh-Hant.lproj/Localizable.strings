@@ -103,7 +103,7 @@
 "menu.pause_indefinite" = "暫停，直到手動恢復";
 "menu.pause_today" = "今天不再提醒";
 "menu.paused_short" = "已暫停";
-"menu.quit" = "結束";
+"menu.quit" = "結束 Tick Rest";
 "menu.remaining" = "距離%@還有 %@";
 "menu.resume" = "恢復提醒";
 "menu.settings" = "設定…";

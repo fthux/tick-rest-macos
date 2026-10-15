@@ -103,7 +103,7 @@
 "menu.pause_indefinite" = "직접 재개할 때까지";
 "menu.pause_today" = "오늘은 알림 끄기";
 "menu.paused_short" = "일시 정지 중";
-"menu.quit" = "종료";
+"menu.quit" = "Tick Rest 종료";
 "menu.remaining" = "%@까지 %@ 남음";
 "menu.resume" = "알림 재개";
 "menu.settings" = "설정…";
