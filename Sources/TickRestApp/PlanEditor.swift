@@ -6,6 +6,7 @@ struct PlanEditor: View {
     @ObservedObject var model: AppController
     @State private var draft = RestPlan()
     @State private var reference = RestPlan()
+    @State private var advancedExpanded = false
     private var changed: Bool { draft != reference }
     private var validation: String? {
         var candidate = model.settings; candidate.restPlan = draft
@@ -74,7 +75,7 @@ struct PlanEditor: View {
                 Text(L10n.text("plan.actions_help")).font(.caption).foregroundStyle(.secondary)
                 Text(L10n.text(draft.model == .rounds ? "plan.rounds_away" : "plan.away_help")).font(.caption).foregroundStyle(.secondary)
                 Text(L10n.text("plan.switch_help")).font(.caption).foregroundStyle(.secondary)
-                DisclosureGroup(L10n.text("plan.advanced")) {
+                DisclosureGroup(isExpanded: $advancedExpanded) {
                     if draft.model == .single {
                         duration("plan.postpone_minutes", \.singlePostpone, range: 60...1800, step: 60, minutes: true)
                     } else {
@@ -84,6 +85,13 @@ struct PlanEditor: View {
                     Stepper(value: binding(\.postponeLimit), in: 0...10) { Text(L10n.text("plan.postpone_limit", draft.postponeLimit)) }
                         .controlSize(.small)
                     Text(L10n.text("plan.postpone_help")).font(.caption).foregroundStyle(.secondary)
+                } label: {
+                    Text(L10n.text("plan.advanced"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation { advancedExpanded.toggle() }
+                        }
                 }.controlSize(.small)
             }
             Section {

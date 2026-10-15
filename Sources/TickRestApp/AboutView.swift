@@ -191,7 +191,12 @@ private struct AboutCard<Content: View>: View {
     var body: some View {
         VStack(spacing: 0) { content }
             .frame(maxWidth: .infinity)
-            .background(Color(nsColor: SettingsPalette.aboutCard), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color(nsColor: SettingsPalette.card), in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                    .allowsHitTesting(false)
+            }
     }
 }
 
