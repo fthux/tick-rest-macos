@@ -46,7 +46,7 @@ public struct Settings: Codable, Equatable {
     public var breakStartMode: BreakStartMode = .automatic
     public var displayScope: DisplayScope = .all
     public var selectedDisplayID: String?
-    public var sound = false
+    public var sound = true
     public var reminderSound: ReminderSound = .glass
     public var detectIdle = false
     public var idleTimeout: Double = 300
