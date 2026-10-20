@@ -1,7 +1,7 @@
 import Foundation
 
 public struct SavedData: Codable {
-    public var version = 2
+    public var version = 3
     public var settings = Settings()
     public var records: [Record] = []
     public var snapshot = Snapshot()
@@ -21,16 +21,20 @@ public final class DataStore {
         guard FileManager.default.fileExists(atPath: url.path) else { return SavedData() }
         do {
             var result = try JSONDecoder().decode(SavedData.self, from: Data(contentsOf: url))
-            guard (1...2).contains(result.version), result.settings.validationError == nil,
+            guard (1...3).contains(result.version) else { throw CocoaError(.fileReadCorruptFile) }
+            if result.version < 3 {
+                result.records = result.records.map(Self.migrateCalendarDay)
+            }
+            guard result.settings.validationError == nil,
                   Self.validSnapshot(result.snapshot, settings: result.settings),
                   result.records.allSatisfy(Self.validRecord),
                   Set(result.records.map(\.id)).count == result.records.count else {
                 throw CocoaError(.fileReadCorruptFile)
             }
-            if result.version == 1 {
-                let backup = url.deletingLastPathComponent().appendingPathComponent("state-v1-backup.json")
+            if result.version < 3 {
+                let backup = url.deletingLastPathComponent().appendingPathComponent("state-v\(result.version)-backup.json")
                 if !FileManager.default.fileExists(atPath: backup.path) { try FileManager.default.copyItem(at: url, to: backup) }
-                result.version = 2
+                result.version = 3
             }
             return result
         } catch {
@@ -43,6 +47,29 @@ public final class DataStore {
         }
     }
     private var canWrite = true
+    /// Versions 1/2 used Calendar.current but did not persist its identifier.
+    /// Recognize a legacy key against its timestamp and original UTC offset,
+    /// rather than interpreting an arbitrary invalid date as recoverable data.
+    private static func migrateCalendarDay(_ record: Record) -> Record {
+        guard record.date.timeIntervalSinceReferenceDate.isFinite,
+              let zone = TimeZone(secondsFromGMT: record.timeZoneOffset) else { return record }
+        var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+        let canonical = Record.dayKey(record.date, calendar: calendar)
+        guard record.day != canonical else { return record }
+        let identifiers: [Calendar.Identifier] = [.buddhist, .chinese, .coptic,
+            .ethiopicAmeteMihret, .ethiopicAmeteAlem, .hebrew, .indian, .islamic,
+            .islamicCivil, .japanese, .persian, .republicOfChina, .islamicTabular, .islamicUmmAlQura]
+        for identifier in identifiers {
+            var legacy = Calendar(identifier: identifier); legacy.timeZone = zone
+            let parts = legacy.dateComponents([.year, .month, .day], from: record.date)
+            let key = String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+            if key == record.day {
+                var migrated = record; migrated.day = canonical
+                return migrated
+            }
+        }
+        return record
+    }
     private static func validSnapshot(_ snapshot: Snapshot, settings: Settings) -> Bool {
         let durations = [snapshot.shortElapsed, snapshot.longElapsed,
                          snapshot.shortCooldown, snapshot.longCooldown]

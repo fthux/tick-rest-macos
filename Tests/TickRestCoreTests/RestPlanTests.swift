@@ -263,7 +263,7 @@ extension EngineTests {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             try legacy.write(to: store.url)
             let loaded = store.load()
-            #expect(store.loadError == nil && loaded.version == 2)
+            #expect(store.loadError == nil && loaded.version == 3)
             #expect(loaded.settings.planID == (custom ? .custom : .tickrest) && loaded.settings.sound)
             #expect(loaded.snapshot.shortElapsed == 1000 && loaded.snapshot.longCooldown == 200 && loaded.snapshot.deferredRemaining == 42)
             #expect(loaded.records.first?.planID == nil && loaded.records.count == 1)
