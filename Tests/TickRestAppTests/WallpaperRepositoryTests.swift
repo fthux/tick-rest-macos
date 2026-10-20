@@ -229,7 +229,8 @@ final class WallpaperRepositoryTests: XCTestCase {
         XCTAssertTrue(repo.load().items.isEmpty)
     }
     func testProtectionMaintainsTextAndButtonContrastEvenOverWhite() {
-        // Worst case is white underneath the minimum-opacity dark backing.
+        // Worst case at the default protection is white imagery. Deliberately
+        // ignore the shadow so this does not depend on its blur or position.
         let opacity = OverlayBackground().normalized.protection
         let surface = SRGBColor(red: 1 - opacity, green: 1 - opacity, blue: 1 - opacity)
         let palette = OverlayPalette(background: .init(red: 0, green: 0, blue: 0), protected: true)
@@ -237,9 +238,15 @@ final class WallpaperRepositoryTests: XCTestCase {
         let linear = pow((surface.red + 0.055) / 1.055, 2.4)
         XCTAssertGreaterThanOrEqual(1.05 / (linear + 0.05), 4.5)
         for prominent in [false, true] {
-            let color = palette.buttonBackgroundComponents(prominent: prominent, highlighted: true)
-            let luminance = color.red <= 0.04045 ? color.red / 12.92 : pow((color.red + 0.055) / 1.055, 2.4)
-            XCTAssertGreaterThanOrEqual(1.05 / (luminance + 0.05), 4.5)
+            for highlighted in [false, true] {
+                // The protected SwiftUI path renders this exact fill over the
+                // backing; do not substitute the palette's placeholder black.
+                let fill = palette.buttonFill(prominent: prominent, highlighted: highlighted)
+                let color = palette.buttonBackgroundComponents(prominent: prominent, highlighted: highlighted, over: surface)
+                XCTAssertEqual(color.red, surface.red * (1 - fill.opacity) + fill.color.red * fill.opacity, accuracy: 0.00001)
+                let luminance = color.red <= 0.04045 ? color.red / 12.92 : pow((color.red + 0.055) / 1.055, 2.4)
+                XCTAssertGreaterThanOrEqual(1.05 / (luminance + 0.05), 4.5)
+            }
         }
     }
 

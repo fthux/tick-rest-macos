@@ -4,7 +4,7 @@ import Testing
 @testable import TickRestCore
 
 struct FullscreenBackgroundTests {
-    @Test(arguments: [0.0, 0.25, 1.0])
+    @Test(arguments: [0.0, 0.25, 0.45, 1.0])
     func wallpaperProtectionValuesAreIndependentAndSurviveDiskRoundTrip(_ protection: Double) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -29,20 +29,21 @@ struct FullscreenBackgroundTests {
         #expect(store.loadErrorKey == nil)
     }
 
-    @Test func legacySharedProtectionMigratesWithoutChangingTheCurrentAppearance() throws {
+    @Test(arguments: [0.0, 0.45, 0.83, 1.0])
+    func legacySharedProtectionMigratesWithoutChangingTheCurrentAppearance(_ oldProtection: Double) throws {
         var old = OverlayBackground()
-        old.kind = .wallpaper; old.wallpaper.source = .system; old.protection = 0.83
+        old.kind = .wallpaper; old.wallpaper.source = .system; old.protection = oldProtection
         var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(old)) as? [String: Any])
         json.removeValue(forKey: "wallpaperProtection")
         var migrated = try JSONDecoder().decode(OverlayBackground.self, from: JSONSerialization.data(withJSONObject: json))
-        #expect(migrated.activeProtection == 0.83)
+        #expect(migrated.activeProtection == oldProtection)
         migrated.activeProtection = 0.7
         migrated.wallpaper.source = .desktop
-        #expect(migrated.activeProtection == 0.83)
+        #expect(migrated.activeProtection == oldProtection)
         migrated.wallpaper.source = .custom
-        #expect(migrated.activeProtection == 0.83)
+        #expect(migrated.activeProtection == oldProtection)
         migrated.kind = .gradient
-        #expect(migrated.activeProtection == 0.83)
+        #expect(migrated.activeProtection == oldProtection)
     }
 
     @Test func eachWallpaperProtectionIsNormalizedIndependently() {
@@ -52,7 +53,7 @@ struct FullscreenBackgroundTests {
         background.wallpaperProtection.custom = 2
         background.protection = 0.78
         let result = background.normalized
-        #expect(result.wallpaperProtection.desktop == 0.45)
+        #expect(result.wallpaperProtection.desktop == OverlayBackground.defaultProtection)
         #expect(result.wallpaperProtection.system == 0)
         #expect(result.wallpaperProtection.custom == 1)
         #expect(result.protection == 0.78)
@@ -144,7 +145,7 @@ struct FullscreenBackgroundTests {
         #expect(normalized.gradient.angle == 45 && normalized.gradient.radius == 0.1)
         #expect(normalized.gradient.center == .init(x: 0.5, y: 1))
         #expect(normalized.wallpaper.position == .init(x: 0, y: 0.5))
-        #expect(normalized.protection == 0.45)
+        #expect(normalized.protection == OverlayBackground.defaultProtection)
         #expect(BackgroundGeometry.imageRect(image: .zero, viewport: .zero, fit: .fill, position: .init()) == .zero)
         background.gradient.stops = []
         #expect(background.normalized.gradient.stops.count == 2)

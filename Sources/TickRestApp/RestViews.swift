@@ -251,20 +251,26 @@ struct OverlayPalette {
     }
     var colorScheme: ColorScheme { usesDarkText ? .light : .dark }
 
-    func buttonBackgroundComponents(prominent: Bool, highlighted: Bool = false) -> SRGBColor {
+    func buttonFill(prominent: Bool, highlighted: Bool = false) -> (color: SRGBColor, opacity: Double) {
         // Blend toward the opposite of the text to keep contrast at least as
         // strong as on the original background, including saturated colors.
         let amount = (prominent ? 0.16 : 0.06) + (highlighted ? 0.06 : 0)
         let target = usesDarkText ? 1.0 : 0.0
-        return SRGBColor(red: background.red * (1 - amount) + target * amount,
-                         green: background.green * (1 - amount) + target * amount,
-                         blue: background.blue * (1 - amount) + target * amount)
+        return (SRGBColor(red: target, green: target, blue: target), amount)
+    }
+    func buttonBackgroundComponents(prominent: Bool, highlighted: Bool = false, over surface: SRGBColor? = nil) -> SRGBColor {
+        let fill = buttonFill(prominent: prominent, highlighted: highlighted)
+        let base = surface ?? background
+        return SRGBColor(red: base.red * (1 - fill.opacity) + fill.color.red * fill.opacity,
+                         green: base.green * (1 - fill.opacity) + fill.color.green * fill.opacity,
+                         blue: base.blue * (1 - fill.opacity) + fill.color.blue * fill.opacity)
     }
     func buttonBackground(prominent: Bool, highlighted: Bool = false) -> Color {
         if protected {
-            // Let the wallpaper and its adjustable text backing show through.
-            let opacity = (prominent ? 0.16 : 0.06) + (highlighted ? 0.06 : 0)
-            return Color.white.opacity(opacity)
+            // Use the same fill as the contrast calculation; keep the user's
+            // adjustable backing visible without brightening it under white text.
+            let fill = buttonFill(prominent: prominent, highlighted: highlighted)
+            return Color(.sRGB, red: fill.color.red, green: fill.color.green, blue: fill.color.blue, opacity: fill.opacity)
         }
         let color = buttonBackgroundComponents(prominent: prominent, highlighted: highlighted)
         return Color(.sRGB, red: color.red, green: color.green, blue: color.blue)
