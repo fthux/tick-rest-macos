@@ -181,14 +181,12 @@ struct SettingsView: View {
                 fullscreenAppearance
             } else {
                 ScrollView(.vertical, showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 0) {
                         reminderStyleCard
                         appearanceError
                         appearance
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .id(model.interfaceLanguage)
@@ -220,12 +218,14 @@ struct SettingsView: View {
     }
     @ViewBuilder private var appearanceError: some View {
         if let error = model.errorMessage {
-            HStack(alignment: .top) {
-                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-                Text(error).font(.callout)
-                Spacer()
-                Button { model.dismissError() } label: { Image(systemName: "xmark") }
-                    .accessibilityLabel(L10n.text("common.dismiss"))
+            SettingsSectionCard {
+                HStack(alignment: .top) {
+                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                    Text(error).font(.callout)
+                    Spacer()
+                    Button { model.dismissError() } label: { Image(systemName: "xmark") }
+                        .accessibilityLabel(L10n.text("common.dismiss"))
+                }
             }
         }
     }
@@ -615,19 +615,48 @@ struct SettingsExternalLink: View {
     }
 }
 
-/// Shared grouping for settings rendered outside the native grouped Form.
+/// Use the same native section decoration as the other settings pages, while
+/// sizing to content inside the appearance scroll view and pinned preview layout.
 struct SettingsSectionCard<Content: View>: View {
     let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) { content }
-            .padding(16).frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(nsColor: SettingsPalette.card), in: RoundedRectangle(cornerRadius: 10))
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                    .allowsHitTesting(false)
+        Form {
+            SettingsFormSection { content }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// A native section that can share a Form with other settings groups.
+struct SettingsFormSection<Content: View>: View {
+    let content: Content
+    let title: String?
+    let footer: Text?
+    let spacing: CGFloat
+    init(title: String? = nil, footer: Text? = nil, spacing: CGFloat = 12,
+         @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.footer = footer
+        self.spacing = spacing
+        self.content = content()
+    }
+    var body: some View {
+        Section {
+            VStack(alignment: .leading, spacing: spacing) { content }
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } header: {
+            if let title { Text(title) }
+        } footer: {
+            if let footer {
+                footer.font(.caption).foregroundStyle(.secondary).tint(.orange)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
     }
 }
 

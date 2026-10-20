@@ -993,7 +993,8 @@ extension AppIntegrationTests {
             for (page, style, name, labels) in [
                 (SettingsPage.general, ReminderStyle.gentle, "dark-general", ["general.login"]),
                 (.appearance, .gentle, "dark-gentle", ["reminder.style", "reminder.size"]),
-                (.appearance, .overlay, "dark-overlay", ["reminder.style", "background.title"])
+                (.appearance, .overlay, "dark-overlay", ["reminder.style", "background.title"]),
+                (.about, .gentle, "dark-about", ["about.package"])
             ] {
                 navigation.page = page
                 model.update { $0.style = style }

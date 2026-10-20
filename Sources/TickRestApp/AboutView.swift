@@ -31,7 +31,7 @@ struct AboutView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 0) {
                 if let errorMessage {
                     HStack(alignment: .top) {
                         Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
@@ -39,20 +39,25 @@ struct AboutView: View {
                         Spacer()
                         Button(action: dismissError) { Image(systemName: "xmark") }
                             .accessibilityLabel(L10n.text("common.dismiss"))
-                    }
+                    }.padding(.horizontal, 20)
                 }
-                header
-                applicationSection
-                openSourceSection
-                feedbackSection
-                sharingSection
-                creditsSection
+                header.padding(.horizontal, 20)
+                Form {
+                    applicationSection
+                    openSourceSection
+                    feedbackSection
+                    sharingSection
+                    creditsSection
+                }
+                .formStyle(.grouped)
+                .scrollContentBackground(.hidden)
+                .fixedSize(horizontal: false, vertical: true)
                 Text(AboutCopyright.text(on: copyrightDate))
                     .font(.caption).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity).padding(.top, 4)
             }
             .frame(maxWidth: 900)
-            .padding(.horizontal, 28).padding(.top, 32).padding(.bottom, 32)
+            .padding(.top, 32).padding(.bottom, 32)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
@@ -89,34 +94,28 @@ struct AboutView: View {
     }
 
     private var applicationSection: some View {
-        AboutSection(title: "about.group.application") {
-            AboutCard {
-                AboutRow(title: "about.package") {
-                    Text(buildInfo.packageDescription).foregroundStyle(.secondary).textSelection(.enabled)
-                }
-                if let country {
-                    Divider().padding(.horizontal, 18)
-                    AboutRow(title: "about.availability", description: country.availabilityText) {
-                        Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
-                            .accessibilityHidden(true)
-                    }
+        SettingsFormSection(title: L10n.text("about.group.application"),
+                            footer: Text(L10n.text("about.health")), spacing: 0) {
+            AboutRow(title: "about.package") {
+                Text(buildInfo.packageDescription).foregroundStyle(.secondary).textSelection(.enabled)
+            }
+            if let country {
+                Divider()
+                AboutRow(title: "about.availability", description: country.availabilityText) {
+                    Image(systemName: "checkmark.seal.fill").foregroundStyle(.orange)
+                        .accessibilityHidden(true)
                 }
             }
-            Text(L10n.text("about.health")).font(.caption).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
         }
     }
 
     private var openSourceSection: some View {
-        AboutSection(title: "about.group.open_source") {
-            AboutCard {
-                AboutRow(title: "about.source", description: L10n.text("about.source_description")) {
-                    Link(L10n.text("about.view_github"), destination: AboutLinks.source)
-                        .buttonStyle(.plain).foregroundStyle(.orange)
-                }
+        SettingsFormSection(title: L10n.text("about.group.open_source"),
+                            footer: Text(starInvitation), spacing: 0) {
+            AboutRow(title: "about.source", description: L10n.text("about.source_description")) {
+                Link(L10n.text("about.view_github"), destination: AboutLinks.source)
+                    .buttonStyle(.plain).foregroundStyle(.orange)
             }
-            Text(starInvitation).font(.caption).foregroundStyle(.secondary).tint(.orange)
-                .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4)
         }
     }
 
@@ -130,73 +129,41 @@ struct AboutView: View {
     }
 
     private var feedbackSection: some View {
-        AboutSection(title: "about.group.feedback") {
-            AboutCard {
-                AboutRow(title: "about.website", description: AboutLinks.website.absoluteString) {
-                    Link(L10n.text("about.open_website"), destination: AboutLinks.website)
-                        .buttonStyle(.plain).foregroundStyle(.orange)
-                }
-                Divider().padding(.horizontal, 18)
-                AboutRow(title: "about.report_bug", description: L10n.text("about.feedback_description")) {
-                    Link(L10n.text("about.open_issue"), destination: AboutLinks.issues)
-                        .buttonStyle(.plain).foregroundStyle(.orange)
-                }
-                Divider().padding(.horizontal, 18)
-                AboutRow(title: "about.email", description: AboutLinks.email) {
-                    HStack(spacing: 8) {
-                        CopyFeedbackButton(title: "about.copy_email", value: AboutLinks.email)
-                        Link(L10n.text("about.send_email"), destination: AboutLinks.mail)
-                    }
+        SettingsFormSection(title: L10n.text("about.group.feedback"), spacing: 0) {
+            AboutRow(title: "about.website", description: AboutLinks.website.absoluteString) {
+                Link(L10n.text("about.open_website"), destination: AboutLinks.website)
+                    .buttonStyle(.plain).foregroundStyle(.orange)
+            }
+            Divider()
+            AboutRow(title: "about.report_bug", description: L10n.text("about.feedback_description")) {
+                Link(L10n.text("about.open_issue"), destination: AboutLinks.issues)
+                    .buttonStyle(.plain).foregroundStyle(.orange)
+            }
+            Divider()
+            AboutRow(title: "about.email", description: AboutLinks.email) {
+                HStack(spacing: 8) {
+                    CopyFeedbackButton(title: "about.copy_email", value: AboutLinks.email)
+                    Link(L10n.text("about.send_email"), destination: AboutLinks.mail)
                 }
             }
         }
     }
 
     private var sharingSection: some View {
-        AboutSection(title: "about.group.sharing") {
-            AboutCard {
-                AboutRow(title: "about.share_app", description: L10n.text("about.share_description"),
-                         stacksActionsWhenNeeded: false) {
-                    AboutShareMenu()
-                }
+        SettingsFormSection(title: L10n.text("about.group.sharing"), spacing: 0) {
+            AboutRow(title: "about.share_app", description: L10n.text("about.share_description"),
+                     stacksActionsWhenNeeded: false) {
+                AboutShareMenu()
             }
         }
     }
 
     private var creditsSection: some View {
-        AboutSection(title: "about.group.credits") {
-            AboutCard {
-                AboutRow(title: "about.created_by") {
-                    Text(AboutLinks.author).foregroundStyle(.secondary).textSelection(.enabled)
-                }
+        SettingsFormSection(title: L10n.text("about.group.credits"), spacing: 0) {
+            AboutRow(title: "about.created_by") {
+                Text(AboutLinks.author).foregroundStyle(.secondary).textSelection(.enabled)
             }
         }
-    }
-}
-
-private struct AboutSection<Content: View>: View {
-    let title: String
-    @ViewBuilder var content: Content
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(L10n.text(title)).font(.headline).foregroundStyle(.secondary)
-                .padding(.horizontal, 4).accessibilityAddTraits(.isHeader)
-            content
-        }
-    }
-}
-
-private struct AboutCard<Content: View>: View {
-    @ViewBuilder var content: Content
-    var body: some View {
-        VStack(spacing: 0) { content }
-            .frame(maxWidth: .infinity)
-            .background(Color(nsColor: SettingsPalette.card), in: RoundedRectangle(cornerRadius: 12))
-            .overlay {
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
-                    .allowsHitTesting(false)
-            }
     }
 }
 
@@ -207,7 +174,7 @@ private struct AboutRow<Actions: View>: View {
     @ViewBuilder var actions: Actions
     var body: some View {
         rowContent
-            .padding(.horizontal, 18).padding(.vertical, 16)
+            .padding(.vertical, 6)
     }
     @ViewBuilder private var rowContent: some View {
         if stacksActionsWhenNeeded {

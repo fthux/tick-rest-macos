@@ -10,9 +10,6 @@ enum SettingsWindowLayout {
 enum SettingsPalette {
     static let content = adaptiveColor(red: 234, green: 235, blue: 236)
     static let sidebar = adaptiveColor(red: 222, green: 223, blue: 224)
-    // Match the raised background of native grouped Form cards in dark mode.
-    static let card = adaptiveColor(red: 230, green: 231, blue: 232,
-                                    dark: NSColor(srgbRed: 53 / 255, green: 53 / 255, blue: 53 / 255, alpha: 1))
 
     private static func adaptiveColor(red: CGFloat, green: CGFloat, blue: CGFloat, dark: NSColor = .windowBackgroundColor) -> NSColor {
         NSColor(name: nil) { appearance in

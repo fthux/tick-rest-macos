@@ -41,9 +41,8 @@ struct BackgroundSettingsView<StyleSelection: View, AdditionalSettings: View>: V
             ScrollView(.vertical, showsIndicators: true) {
                 LazyVStack(alignment: .leading, spacing: 0, pinnedViews: [.sectionHeaders]) {
                     styleSelection
-                        .padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 12)
                     Section {
-                        VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 0) {
                             SettingsSectionCard {
                                 BackgroundMenuPicker(title: L10n.text("background.type"), selection: binding(\.kind),
                                                        choices: OverlayBackgroundKind.allCases) { L10n.text("background.type.\($0.rawValue)") }
@@ -59,13 +58,15 @@ struct BackgroundSettingsView<StyleSelection: View, AdditionalSettings: View>: V
                                 }
                             }
                             additionalSettings
-                        }.padding(.horizontal, 20).padding(.top, 20).padding(.bottom, 32)
+                        }.padding(.bottom, 12)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } header: {
                         SettingsSectionCard {
                             previewPanel(height: min(220, max(110, geometry.size.height * 0.28)))
                         }
-                        .padding(.horizontal, 20).padding(.bottom, 12)
+                        // Tighten the Form's outer top margin so the pinned
+                        // preview stays close to the titlebar, as before.
+                        .padding(.top, -12)
                         // Keep the scrolling controls from showing through the pinned preview.
                         .background(Color(nsColor: SettingsPalette.content))
                         .overlay(alignment: .bottom) { Divider() }
