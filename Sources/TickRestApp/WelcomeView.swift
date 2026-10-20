@@ -63,6 +63,9 @@ struct WelcomeView: View {
         .onChange(of: step) { _ in resize() }
         .onChange(of: showingOptions) { _ in resize() }
         .onChange(of: model.interfaceLanguage) { _ in resize() }
+        .onChange(of: model.notificationStatus) { _ in resize() }
+        .onChange(of: model.loginNeedsApproval) { _ in resize() }
+        .onChange(of: model.errorMessage) { _ in resize() }
     }
 
     private func resize() { DispatchQueue.main.async(execute: layoutChanged) }
@@ -226,9 +229,16 @@ struct WelcomeView: View {
                 .background(Color.orange.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
             Text(L10n.text("welcome.optional")).font(.caption).foregroundStyle(.secondary)
             Toggle(L10n.text("general.login"), isOn: Binding(get: { model.launchAtLogin }, set: model.setLogin))
-            Button(L10n.text("general.request_notifications")) { model.requestNotifications() }
+            LoginApprovalNotice(model: model)
+            Text(L10n.text(model.notificationStatus)).font(.caption).foregroundStyle(.secondary)
+            NotificationPermissionControls(model: model)
             Text(L10n.text("general.notifications_help")).font(.caption).foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if let error = model.errorMessage {
+                Text(error).font(.caption).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button(L10n.text("common.close")) { model.dismissError() }
+            }
             Text(L10n.text("welcome.start_help")).font(.caption).foregroundStyle(.secondary)
         }
     }

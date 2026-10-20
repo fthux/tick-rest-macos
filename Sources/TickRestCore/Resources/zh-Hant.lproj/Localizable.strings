@@ -484,3 +484,9 @@
 "welcome.start_help" = "按一下「開始使用」後，首次工作計時才會開始。";
 "welcome.continue" = "繼續引導";
 "welcome.background_help" = "支援純色、漸層和圖片背景，可在設定 → %@ 中調整。";
+
+"general.notification_settings" = "通知設定…";
+"general.notifications_denied_help" = "如需開啟提前通知，請前往系統設定 → 通知 → {appName}，開啟「允許通知」。";
+"general.login_approval_help" = "已登記登入時啟動，正在等待核准。請前往系統設定 → 一般 → 登入項目，允許 {appName}。";
+"general.login_settings" = "登入項目設定…";
+"error.notification_settings" = "無法開啟系統設定。請手動前往系統設定 → 通知 → {appName}，管理通知權限。";

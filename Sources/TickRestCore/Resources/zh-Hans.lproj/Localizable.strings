@@ -484,3 +484,9 @@
 "welcome.start_help" = "点击“开始使用”后，首次工作计时才会开始。";
 "welcome.continue" = "继续引导";
 "welcome.background_help" = "支持纯色、渐变和图片背景，可在设置 → %@ 中调整。";
+
+"general.notification_settings" = "通知设置…";
+"general.notifications_denied_help" = "如需开启提前通知，请前往系统设置 → 通知 → {appName}，开启“允许通知”。";
+"general.login_approval_help" = "已登记开机启动，正在等待批准。请前往系统设置 → 通用 → 登录项，允许 {appName}。";
+"general.login_settings" = "登录项设置…";
+"error.notification_settings" = "无法打开系统设置。请手动前往系统设置 → 通知 → {appName}，管理通知权限。";

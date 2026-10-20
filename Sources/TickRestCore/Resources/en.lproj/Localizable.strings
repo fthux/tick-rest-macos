@@ -484,3 +484,9 @@
 "welcome.start_help" = "Your first work timer starts when you click Get started.";
 "welcome.continue" = "Continue setup";
 "welcome.background_help" = "Supports solid colors, gradients, and images. Customize in Settings → %@.";
+
+"general.notification_settings" = "Notification settings…";
+"general.notifications_denied_help" = "To enable advance notifications, open System Settings → Notifications → {appName} and turn on Allow Notifications.";
+"general.login_approval_help" = "Launch at login is registered and waiting for approval. Allow {appName} in System Settings → General → Login Items.";
+"general.login_settings" = "Login item settings…";
+"error.notification_settings" = "Could not open System Settings. Open System Settings → Notifications → {appName} to manage notification permission.";

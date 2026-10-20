@@ -18,7 +18,9 @@ final class AppController: ObservableObject {
         return L10n.text(errorKey)
     }
     @Published var launchAtLogin = false
+    @Published private(set) var loginNeedsApproval = false
     @Published var notificationStatus = "permission.unknown"
+    @Published private(set) var notificationActionPending = false
     @Published var fullscreenUnavailable = false
     let engine: Engine
     let store: DataStore
@@ -37,6 +39,13 @@ final class AppController: ObservableObject {
     private var idleAtSystemAway = false
     private let observers = NotificationObservations()
     private var notificationEnabled = false
+    private let systemAccess: SystemAccess
+    // UNUserNotificationCenter holds its delegate weakly.
+    private let notificationDelegate = ReminderNotificationDelegate()
+    var notificationActionTitle: String {
+        notificationStatus == "permission.unknown" ? "general.request_notifications" : "general.notification_settings"
+    }
+    var canManageNotifications: Bool { systemAccess.notificationsAvailable && !notificationActionPending }
     private var lastRestTick: Date?
 #if DEBUG
     private(set) var debugDataCleared = false
@@ -74,14 +83,19 @@ final class AppController: ObservableObject {
     }
 #endif
 
-    init(store disk: DataStore = DataStore()) {
+    init(store disk: DataStore = DataStore(), systemAccess: SystemAccess = .live) {
+        self.systemAccess = systemAccess
         let loaded = disk.load()
         store = disk; saved = loaded; settings = loaded.settings
         L10n.language = loaded.settings.language
         interfaceLanguage = L10n.resolvedLanguage
         engine = Engine(settings: loaded.settings, snapshot: loaded.settings.onboardingComplete && FileManager.default.fileExists(atPath: disk.url.path) ? loaded.snapshot : nil)
         errorKey = disk.loadErrorKey
+        if systemAccess.notificationsAvailable { systemAccess.installNotificationDelegate(notificationDelegate) }
         refreshLogin(); refreshNotificationStatus()
+        observers.observe(.default, name: NSApplication.didBecomeActiveNotification) { [weak self] _ in
+            self?.refreshLogin(); self?.refreshNotificationStatus()
+        }
         menuCountdown = MenuBarCountdown(engine: engine, uptime: lastTick)
     }
     deinit { timer?.invalidate() }
@@ -268,29 +282,53 @@ final class AppController: ObservableObject {
             return false
         }
     }
-    func refreshLogin() { launchAtLogin = SMAppService.mainApp.status == .enabled }
+    func refreshLogin() {
+        let status = systemAccess.loginStatus()
+        loginNeedsApproval = status == .requiresApproval
+        launchAtLogin = status == .enabled || loginNeedsApproval
+    }
     func setLogin(_ enabled: Bool) {
-        do { if enabled { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() } }
+        do { if enabled { try systemAccess.registerLogin() } else { try systemAccess.unregisterLogin() } }
         catch { showError("error.login", detail: error.localizedDescription) }
         refreshLogin()
     }
+    func openLoginSettings() { systemAccess.openLoginSettings() }
+    private func applyNotificationStatus(_ status: UNAuthorizationStatus) {
+        notificationEnabled = status == .authorized || status == .provisional
+        switch status {
+        case .authorized, .provisional: notificationStatus = "permission.allowed"
+        case .denied: notificationStatus = "permission.denied"
+        default: notificationStatus = "permission.unknown"
+        }
+    }
     func refreshNotificationStatus() {
         // UNUserNotificationCenter requires a proper .app bundle.
-        guard Bundle.main.bundleURL.pathExtension == "app" else { notificationStatus = "permission.bundle"; return }
-        UNUserNotificationCenter.current().getNotificationSettings { [weak self] result in
-            DispatchQueue.main.async {
-                self?.notificationEnabled = result.authorizationStatus == .authorized || result.authorizationStatus == .provisional
-                switch result.authorizationStatus {
-                case .authorized, .provisional: self?.notificationStatus = "permission.allowed"
-                case .denied: self?.notificationStatus = "permission.denied"
-                default: self?.notificationStatus = "permission.unknown"
-                }
-            }
+        guard systemAccess.notificationsAvailable else { notificationStatus = "permission.bundle"; return }
+        systemAccess.notificationStatus { [weak self] status in
+            DispatchQueue.main.async { self?.applyNotificationStatus(status) }
         }
     }
     func requestNotifications() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] _, error in
-            DispatchQueue.main.async { if error != nil { self?.showError("error.notification") }; self?.refreshNotificationStatus() }
+        guard canManageNotifications else { return }
+        notificationActionPending = true
+        systemAccess.notificationStatus { [weak self] status in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.applyNotificationStatus(status)
+                if status == .notDetermined {
+                    self.systemAccess.requestNotifications { [weak self] error in
+                        DispatchQueue.main.async {
+                            guard let self else { return }
+                            self.notificationActionPending = false
+                            if error != nil { self.showError("error.notification") }
+                            self.refreshNotificationStatus()
+                        }
+                    }
+                } else {
+                    self.notificationActionPending = false
+                    if !self.systemAccess.openNotificationSettings() { self.showError("error.notification_settings") }
+                }
+            }
         }
     }
     func notifyWarning(_ kind: BreakKind, fallback: @escaping () -> Void) {
@@ -299,7 +337,7 @@ final class AppController: ObservableObject {
         content.title = L10n.text("app.name")
         content.body = L10n.text("warning.body", Int(settings.prewarning), settings.breakTitle(kind), L10n.duration(settings.duration(kind)))
         let request = UNNotificationRequest(identifier: AppIdentity.identifier("prewarning"), content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request) { error in if error != nil { DispatchQueue.main.async(execute: fallback) } }
+        systemAccess.addNotification(request) { error in if error != nil { DispatchQueue.main.async(execute: fallback) } }
     }
     func removeNotifications() {
         guard Bundle.main.bundleURL.pathExtension == "app" else { return }

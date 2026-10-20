@@ -484,3 +484,9 @@
 "welcome.start_help" = "시작하기를 클릭하면 첫 작업 타이머가 시작됩니다.";
 "welcome.continue" = "설정 계속";
 "welcome.background_help" = "단색, 그라데이션, 이미지 배경을 지원합니다. 설정 → %@에서 변경할 수 있습니다.";
+
+"general.notification_settings" = "알림 설정…";
+"general.notifications_denied_help" = "사전 알림을 켜려면 시스템 설정 → 알림 → {appName}에서 알림 허용을 켜세요.";
+"general.login_approval_help" = "로그인 시 실행이 등록되었으며 승인을 기다리고 있습니다. 시스템 설정 → 일반 → 로그인 항목에서 {appName}을 허용하세요.";
+"general.login_settings" = "로그인 항목 설정…";
+"error.notification_settings" = "시스템 설정을 열 수 없습니다. 시스템 설정 → 알림 → {appName}을 직접 열어 알림 권한을 관리하세요.";

@@ -287,6 +287,7 @@ struct SettingsView: View {
                     Toggle(L10n.text("general.login"), isOn: Binding(get: { model.launchAtLogin }, set: model.setLogin))
                         .labelsHidden().fixedSize()
                 }
+                LoginApprovalNotice(model: model)
             }
             Section(L10n.text("general.menu_bar")) {
                 row("general.countdown", "general.countdown_help") { toggle("general.countdown", \.showCountdown) }
@@ -326,7 +327,7 @@ struct SettingsView: View {
                 row("general.notifications", "general.notifications_help") {
                     Text(L10n.text(model.notificationStatus)).foregroundStyle(.secondary)
                 }
-                Button(L10n.text("general.request_notifications")) { model.requestNotifications() }
+                NotificationPermissionControls(model: model)
             }
         }
     }

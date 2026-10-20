@@ -484,3 +484,9 @@
 "welcome.start_help" = "「使い始める」をクリックすると、最初の作業タイマーが開始します。";
 "welcome.continue" = "設定を続ける";
 "welcome.background_help" = "単色・グラデーション・画像の背景に対応。設定 → %@で変更できます。";
+
+"general.notification_settings" = "通知設定…";
+"general.notifications_denied_help" = "事前通知を有効にするには、システム設定 → 通知 → {appName} で「通知を許可」をオンにしてください。";
+"general.login_approval_help" = "ログイン時の起動は登録済みで、承認待ちです。システム設定 → 一般 → ログイン項目で {appName} を許可してください。";
+"general.login_settings" = "ログイン項目の設定…";
+"error.notification_settings" = "システム設定を開けませんでした。システム設定 → 通知 → {appName} を手動で開き、通知の許可を変更してください。";
