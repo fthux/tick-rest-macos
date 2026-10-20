@@ -25,19 +25,8 @@ enum SettingsPalette {
 }
 
 struct SettingsSidebarBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
     var body: some View {
-        if colorScheme == .dark {
-            Color(nsColor: SettingsPalette.sidebar)
-        } else {
-            LinearGradient(stops: [
-                .init(color: Color(nsColor: SettingsPalette.sidebar), location: 0),
-                .init(color: Color(nsColor: SettingsPalette.sidebar), location: 0.84),
-                .init(color: Color(.sRGB, red: 215 / 255, green: 217 / 255, blue: 221 / 255), location: 0.88),
-                .init(color: Color(.sRGB, red: 203 / 255, green: 208 / 255, blue: 215 / 255), location: 0.92),
-                .init(color: Color(.sRGB, red: 196 / 255, green: 202 / 255, blue: 210 / 255), location: 1)
-            ], startPoint: .top, endPoint: .bottom)
-        }
+        Color(nsColor: SettingsPalette.sidebar)
     }
 }
 
