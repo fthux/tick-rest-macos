@@ -21,6 +21,8 @@ public final class Engine {
     public private(set) var roundRestKind: BreakKind?
     public private(set) var pendingPlan: RestPlan?
     private var grace: Double = 0
+    // Recovery must leave enough time for the configured prewarning.
+    private var recoveryGrace: Double { max(30, settings.prewarning) }
     private var shortCooldown: Double = 0
     private var longCooldown: Double = 0
     private var priorWorkingTime: Bool?
@@ -51,7 +53,7 @@ public final class Engine {
                 pausedRestID = saved.pausedRestID
             }
             if let pending = pendingPlan { installPlan(pending, now: now) }
-            grace = 30
+            grace = recoveryGrace
         }
         if case .until(let end) = pause, end <= now { pause = nil }
     }
@@ -93,7 +95,7 @@ public final class Engine {
         let active = reminder
         settings = value
         if let active, !value.enabled(active.kind) { phase = .working; effects.append(.hide) }
-        grace = 30; warnedKind = nil
+        grace = recoveryGrace; warnedKind = nil
     }
     public func applyPlan(_ plan: RestPlan, now: Date) {
         var candidate = settings; candidate.restPlan = plan
@@ -164,13 +166,13 @@ public final class Engine {
     }
     public func tick(seconds: Double, now: Date) {
         let delta = max(0, seconds)
-        if case .until(let date) = pause, now >= date { pause = nil; grace = 30; warnedKind = nil }
+        if case .until(let date) = pause, now >= date { pause = nil; grace = recoveryGrace; warnedKind = nil }
         let workingTime = settings.isWorkingTime(now)
         outsideSchedule = !workingTime
         // A manual break can span the start of a scheduled work session.
         // Retain its progress and any pending plan until the break settles.
         if priorWorkingTime == false && workingTime {
-            reset(.long); completedRounds = 0; warnedKind = nil; grace = 30
+            reset(.long); completedRounds = 0; warnedKind = nil; grace = recoveryGrace
             if reminder == nil {
                 roundRestKind = nil; phase = .working; applyPending(now: now)
             }
@@ -338,7 +340,7 @@ public final class Engine {
                 effects.append(.hide)
             }
         } else {
-            grace = 30; warnedKind = nil
+            grace = recoveryGrace; warnedKind = nil
             if case .waiting = phase { phase = .working }
         }
     }
@@ -409,7 +411,7 @@ public final class Engine {
             phase = .deferred(retained, 0)
         }
         if pendingPlan != nil && reminder == nil { applyPending(now: now) }
-        grace = 30; warnedKind = nil
+        grace = recoveryGrace; warnedKind = nil
     }
     private func reset(_ kind: BreakKind) {
         shortElapsed = 0; shortCooldown = 0

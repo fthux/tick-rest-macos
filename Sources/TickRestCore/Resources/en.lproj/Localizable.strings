@@ -158,7 +158,7 @@
 "schedule.enabled" = "Remind only during work hours";
 "schedule.end" = "End time";
 "schedule.fullscreen" = "Hold reminders during fullscreen use";
-"schedule.fullscreen_help" = "The app checks the active window size to detect fullscreen use. Usage time still counts while fullscreen is active. Reminders resume 30 seconds after you leave fullscreen.";
+"schedule.fullscreen_help" = "The app checks the active window size to detect fullscreen use. Usage time still counts while fullscreen is active. After leaving fullscreen, reminders wait at least 30 seconds, or the full prewarning duration if longer.";
 "schedule.fullscreen_unavailable" = "Fullscreen detection is unavailable. You can pause reminders from the menu.";
 "schedule.help" = "When this is off, reminders can appear at any time of day. Each new work period starts fresh break cycles.";
 "schedule.idle" = "Detect time away automatically";

@@ -158,7 +158,7 @@
 "schedule.enabled" = "仅在工作时段提醒";
 "schedule.end" = "结束时间";
 "schedule.fullscreen" = "使用全屏应用时暂缓提醒";
-"schedule.fullscreen_help" = "根据当前窗口大小判断是否正在使用全屏应用。全屏期间仍累计使用时间，退出全屏 30 秒后恢复提醒。";
+"schedule.fullscreen_help" = "根据当前窗口大小判断是否正在使用全屏应用。全屏期间仍累计使用时间；退出全屏后至少缓冲 30 秒，提前提醒时间更长时按该时间等待。";
 "schedule.fullscreen_unavailable" = "暂时无法检测全屏状态，你可以通过菜单暂停提醒。";
 "schedule.help" = "关闭后，全天都可收到提醒。每个新的工作时段开始时，休息间隔会重新计时。";
 "schedule.idle" = "自动识别离席";

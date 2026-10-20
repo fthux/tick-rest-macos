@@ -35,7 +35,7 @@ extension EngineTests {
         #expect(s.style == .overlay && s.prewarning == 10)
         #expect(s.breakStartMode == .automatic)
         #expect(!s.detectIdle && s.idleTimeout == 300 && s.avoidFullscreen)
-        #expect(!s.scheduleEnabled && !s.sound && !s.onboardingComplete)
+        #expect(!s.scheduleEnabled && s.sound && !s.onboardingComplete)
         #expect(AppIdentity.name == "Tick Rest")
         #expect(AppIdentity.bundleIdentifier == "app.tickrest.desktop")
         #expect(AppIdentity.dataDirectory == "Tick Rest")
