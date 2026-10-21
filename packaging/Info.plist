@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key><string>$(APP_NAME)</string>
     <key>AppResourceBundle</key><string>$(APP_RESOURCE_BUNDLE)</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>0.1.0</string>
+    <key>CFBundleShortVersionString</key><string>1.0.0</string>
     <key>CFBundleVersion</key><string>1</string>
     <key>AppBuildArchitecture</key><string>$(APP_BUILD_ARCHITECTURE)</string>
     <key>AppBuildConfiguration</key><string>$(APP_BUILD_CONFIGURATION)</string>
