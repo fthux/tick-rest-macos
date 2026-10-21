@@ -24,6 +24,7 @@ final class AppController: ObservableObject {
     @Published var fullscreenUnavailable = false
     let engine: Engine
     let store: DataStore
+    let updates = HomebrewUpdateController()
     private lazy var stateWriter = DebouncedStateWriter { [store] in try store.save($0) }
     lazy var wallpapers = WallpaperLibrary(directory: store.url.deletingLastPathComponent().appendingPathComponent("Wallpapers", isDirectory: true))
     var saved: SavedData

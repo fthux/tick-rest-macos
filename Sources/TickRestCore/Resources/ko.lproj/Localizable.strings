@@ -490,3 +490,36 @@
 "general.login_approval_help" = "로그인 시 실행이 등록되었으며 승인을 기다리고 있습니다. 시스템 설정 → 일반 → 로그인 항목에서 {appName}을 허용하세요.";
 "general.login_settings" = "로그인 항목 설정…";
 "error.notification_settings" = "시스템 설정을 열 수 없습니다. 시스템 설정 → 알림 → {appName}을 직접 열어 알림 권한을 관리하세요.";
+
+/* Homebrew updates */
+"update.title" = "소프트웨어 업데이트";
+"update.check" = "업데이트 확인…";
+"update.idle" = "{appName}의 새 버전을 확인합니다.";
+"update.checking" = "업데이트 확인 중…";
+"update.up_to_date" = "최신 버전입니다(%@).";
+"update.available" = "새 버전 %@을(를) 사용할 수 있습니다.";
+"update.menu_available" = "새 버전 %@ · 업데이트 방법…";
+"update.requires_system" = "버전 %@에는 macOS %@ 이상이 필요합니다.";
+"update.current" = "현재 버전: %@";
+"update.instructions" = "Homebrew로 업데이트";
+"update.automatic" = "자동으로 업데이트 확인";
+"update.auto_help" = "하루에 한 번 GitHub에서 확인하고 메뉴에 새 버전을 표시합니다. Homebrew로 업데이트를 직접 설치하세요.";
+"update.last_checked" = "마지막 확인: %@";
+"update.steps" = "1. 아래 명령을 복사하세요.\n2. {appName}을(를) 종료하세요.\n3. 터미널을 열고 명령을 붙여넣어 실행하세요.\n4. 업데이트가 끝나면 {appName}을(를) 다시 여세요.";
+"update.copy" = "업데이트 명령 복사";
+"update.copy_quit" = "명령 복사 후 종료";
+"update.copied" = "복사됨";
+"update.copy_failed" = "명령을 복사하지 못했습니다. 텍스트를 선택하여 직접 복사하세요.";
+"update.release_notes" = "업데이트 내용 보기";
+"update.error_manifest" = "업데이트 정보를 읽지 못했습니다. 나중에 다시 시도하세요.";
+"update.error_version" = "현재 앱 버전을 확인할 수 없습니다. 설치된 앱을 열고 업데이트를 확인하세요.";
+"update.error_unavailable" = "업데이트 정보를 사용할 수 없습니다. 나중에 다시 시도하세요.";
+"update.error_network" = "업데이트를 확인하지 못했습니다. 네트워크 연결을 확인하고 다시 시도하세요.";
+"update.history" = "릴리스 기록";
+"update.window_title" = "소프트웨어 업데이트 · {appName}";
+"update.latest_title" = "최신 버전입니다!";
+"update.latest_body" = "{appName} %@은(는) 현재 사용 가능한 최신 버전입니다.";
+"update.ok" = "확인";
+"update.failed_title" = "업데이트를 확인할 수 없습니다";
+"update.retry" = "다시 시도";
+"update.found" = "새 버전을 사용할 수 있습니다";

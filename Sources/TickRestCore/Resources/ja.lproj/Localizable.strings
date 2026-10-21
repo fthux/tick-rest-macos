@@ -490,3 +490,36 @@
 "general.login_approval_help" = "ログイン時の起動は登録済みで、承認待ちです。システム設定 → 一般 → ログイン項目で {appName} を許可してください。";
 "general.login_settings" = "ログイン項目の設定…";
 "error.notification_settings" = "システム設定を開けませんでした。システム設定 → 通知 → {appName} を手動で開き、通知の許可を変更してください。";
+
+/* Homebrew updates */
+"update.title" = "ソフトウェアアップデート";
+"update.check" = "アップデートを確認…";
+"update.idle" = "{appName} の新しいバージョンを確認します。";
+"update.checking" = "アップデートを確認中…";
+"update.up_to_date" = "最新バージョンです（%@）。";
+"update.available" = "新しいバージョン %@ が利用できます。";
+"update.menu_available" = "新バージョン %@ · 更新方法…";
+"update.requires_system" = "バージョン %@ には macOS %@ 以降が必要です。";
+"update.current" = "現在のバージョン：%@";
+"update.instructions" = "Homebrew で更新";
+"update.automatic" = "アップデートを自動で確認";
+"update.auto_help" = "GitHub で1日1回確認し、新しいバージョンをメニューに表示します。更新は Homebrew で手動でインストールしてください。";
+"update.last_checked" = "最終確認：%@";
+"update.steps" = "1. 下のコマンドをコピーします。\n2. {appName} を終了します。\n3. ターミナルを開き、コマンドを貼り付けて実行します。\n4. 更新完了後に {appName} を再度開きます。";
+"update.copy" = "更新コマンドをコピー";
+"update.copy_quit" = "コマンドをコピーして終了";
+"update.copied" = "コピーしました";
+"update.copy_failed" = "コピーできませんでした。テキストを選択して手動でコピーしてください。";
+"update.release_notes" = "更新内容を見る";
+"update.error_manifest" = "更新情報を読み込めませんでした。時間をおいて再試行してください。";
+"update.error_version" = "現在のバージョンを確認できません。インストール済みのアプリを開いて確認してください。";
+"update.error_unavailable" = "更新情報を取得できません。時間をおいて再試行してください。";
+"update.error_network" = "更新を確認できませんでした。ネットワーク接続を確認して再試行してください。";
+"update.history" = "リリース履歴";
+"update.window_title" = "ソフトウェアアップデート · {appName}";
+"update.latest_title" = "最新バージョンです！";
+"update.latest_body" = "{appName} %@ は現在利用できる最新バージョンです。";
+"update.ok" = "OK";
+"update.failed_title" = "アップデートを確認できませんでした";
+"update.retry" = "再試行";
+"update.found" = "新しいバージョンがあります";

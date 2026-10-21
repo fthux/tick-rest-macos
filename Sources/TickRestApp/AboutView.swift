@@ -21,6 +21,7 @@ enum AboutCopyright {
 struct AboutView: View {
     let buildInfo: AppBuildInfo
     @Binding var country: AboutCountry?
+    let updates: HomebrewUpdateController
     var errorMessage: String?
     var dismissError: () -> Void = {}
     @State private var copyrightDate = Date()
@@ -44,6 +45,7 @@ struct AboutView: View {
                 header.padding(.horizontal, 20)
                 Form {
                     applicationSection
+                    HomebrewUpdateSection(updates: updates)
                     openSourceSection
                     feedbackSection
                     sharingSection

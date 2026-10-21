@@ -28,6 +28,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var settingsScrollSubscription: AnyCancellable?
     private var settingsVisibilitySubscription: AnyCancellable?
     private var languageSubscription: AnyCancellable?
+    private var updateSubscription: AnyCancellable?
+    private var updateWindows: HomebrewUpdateWindowController?
+    private var menuUpdateItem: NSMenuItem?
     private weak var settingsSplitController: NSSplitViewController?
     private let sidebarToolbarIdentifier = NSToolbarItem.Identifier(AppIdentity.identifier("sidebar"))
     private let separatorToolbarIdentifier = NSToolbarItem.Identifier(AppIdentity.identifier("sidebarSeparator"))
@@ -56,6 +59,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             NSApp.terminate(nil); return
         }
         model = injectedStore.map { AppController(store: $0) } ?? AppController(); windows = WindowCoordinator(model: model)
+        updateWindows = HomebrewUpdateWindowController(updates: model.updates)
         windows.showSettings = { [weak self] in self?.openSettings() }
         model.onEffects = { [weak self] effects in self?.windows.apply(effects) }
         model.applyAppearance()
@@ -74,9 +78,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         let menu = NSMenu(); menu.delegate = self; status.menu = menu
         languageSubscription = model.$interfaceLanguage.removeDuplicates().dropFirst().sink { [weak self] _ in
             self?.updateStatus()
+            Task { @MainActor [weak self] in self?.updateWindows?.refresh() }
         }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(openSettings), name: NSNotification.Name(AppIdentity.identifier("showSettings")), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(previewRest(_:)), name: .previewRest, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(quit), name: .quitForHomebrewUpdate, object: nil)
+        updateSubscription = model.updates.$status.receive(on: DispatchQueue.main).sink { [weak self] _ in
+            guard let self else { return }
+            self.menuUpdateItem?.title = self.model.updates.menuTitle
+        }
 #if DEBUG
         NotificationCenter.default.addObserver(self, selector: #selector(clearAllDataForDebug), name: .debugResetAllData, object: nil)
 #endif
@@ -85,6 +95,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         // Revisions refresh state/layout; the lightweight timer only updates countdown text.
         statusSubscription = model.$revision.dropFirst().receive(on: DispatchQueue.main).sink { [weak self] _ in
             self?.updateStatus()
+            self?.startUpdateChecksIfReady()
         }
         countdownTimer = Timer(timeInterval: 0.2, repeats: true) { [weak self] _ in
             self?.updateMenuBarCountdown()
@@ -93,11 +104,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         RunLoop.main.add(countdownTimer!, forMode: .common)
         RunLoop.main.add(countdownTimer!, forMode: .eventTracking)
         if !model.settings.onboardingComplete { openWelcome() }
+        startUpdateChecksIfReady()
+    }
+    @MainActor private func startUpdateChecksIfReady() {
+        // Native launch fixtures use an injected store and must never contact the live feed.
+        guard injectedStore == nil, model.settings.onboardingComplete else { return }
+        model.updates.start()
     }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { openSettings(); return false }
     func applicationWillTerminate(_ notification: Notification) {
         countdownTimer?.invalidate(); countdownTimer = nil
         statusSubscription?.cancel()
+        updateSubscription?.cancel()
+        updateWindows?.close()
+        model?.updates.stop()
 #if DEBUG
         if model?.debugDataCleared != true { model?.consume(); model?.persist() }
 #else
@@ -199,6 +219,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         add(menu, L10n.text("menu.settings"), #selector(openSettings), key: ",")
             .image = NSImage(systemSymbolName: SettingsPage.general.symbol, accessibilityDescription: nil)
         add(menu, L10n.text("menu.about"), #selector(openAbout)).image = NSImage(systemSymbolName: SettingsPage.about.symbol, accessibilityDescription: nil)
+        menuUpdateItem = add(menu, model.updates.menuTitle, #selector(checkForUpdates))
+        menuUpdateItem?.image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: nil)
         menu.addItem(.separator())
         add(menu, L10n.text("menu.quit"), #selector(quit), key: "q")
             .image = NSImage(systemSymbolName: "power", accessibilityDescription: nil)
@@ -210,6 +232,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         if let item = menuRoundItem { item.isHidden = item.title == display.menuStateText }
     }
     func menuDidClose(_ menu: NSMenu) {
+        menuUpdateItem = nil
         menuStateItem = nil; menuPlan = nil; menuLanguage = nil; menuRoundItem = nil; menuSkipItem = nil
         menuPaused = false
         menuCountdownItems.removeAll()
@@ -234,6 +257,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     @objc private func pauseToday() { model.pauseToday() }
     @objc private func pauseIndefinite() { model.action { $0.setPause(.indefinite, now: Date()) } }
     @objc private func openAbout() { settingsNavigation.page = .about; openSettings() }
+    @MainActor @objc private func checkForUpdates() {
+        model.updates.checkInteractively()
+    }
     @objc func openSettings() {
         guard model.settings.onboardingComplete else { openWelcome(); return }
         if settingsWindow == nil {

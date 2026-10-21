@@ -490,3 +490,36 @@
 "general.login_approval_help" = "已登記登入時啟動，正在等待核准。請前往系統設定 → 一般 → 登入項目，允許 {appName}。";
 "general.login_settings" = "登入項目設定…";
 "error.notification_settings" = "無法開啟系統設定。請手動前往系統設定 → 通知 → {appName}，管理通知權限。";
+
+/* Homebrew updates */
+"update.title" = "軟體更新";
+"update.check" = "檢查更新…";
+"update.idle" = "檢查 {appName} 是否有新版本。";
+"update.checking" = "正在檢查更新…";
+"update.up_to_date" = "已是最新版本（%@）。";
+"update.available" = "新版本 %@ 已可更新。";
+"update.menu_available" = "新版本 %@ · 查看更新方法…";
+"update.requires_system" = "版本 %@ 需要 macOS %@ 或以上版本。";
+"update.current" = "目前版本：%@";
+"update.instructions" = "透過 Homebrew 更新";
+"update.automatic" = "自動檢查更新";
+"update.auto_help" = "每天從 GitHub 檢查一次，在選單中提示新版本。請使用 Homebrew 手動安裝更新。";
+"update.last_checked" = "上次檢查：%@";
+"update.steps" = "1. 複製下方指令。\n2. 結束 {appName}。\n3. 開啟終端機，貼上並執行指令。\n4. 更新完成後重新開啟 {appName}。";
+"update.copy" = "複製更新指令";
+"update.copy_quit" = "複製指令並結束";
+"update.copied" = "已複製";
+"update.copy_failed" = "無法複製指令，請選取文字後手動複製。";
+"update.release_notes" = "查看更新說明";
+"update.error_manifest" = "無法讀取更新資訊，請稍後再試。";
+"update.error_version" = "無法確定目前 App 的版本，請開啟已安裝的 App 後檢查更新。";
+"update.error_unavailable" = "更新資訊暫時無法使用，請稍後再試。";
+"update.error_network" = "檢查更新失敗，請檢查網路連線後再試。";
+"update.history" = "版本歷史";
+"update.window_title" = "軟體更新 · {appName}";
+"update.latest_title" = "已是最新版本！";
+"update.latest_body" = "{appName} %@ 目前是可用的最新版本。";
+"update.ok" = "好";
+"update.failed_title" = "無法檢查更新";
+"update.retry" = "重試";
+"update.found" = "發現新版本";

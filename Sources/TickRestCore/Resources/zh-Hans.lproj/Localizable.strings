@@ -490,3 +490,36 @@
 "general.login_approval_help" = "已登记开机启动，正在等待批准。请前往系统设置 → 通用 → 登录项，允许 {appName}。";
 "general.login_settings" = "登录项设置…";
 "error.notification_settings" = "无法打开系统设置。请手动前往系统设置 → 通知 → {appName}，管理通知权限。";
+
+/* Homebrew updates */
+"update.title" = "软件更新";
+"update.check" = "检查更新…";
+"update.idle" = "检查 {appName} 是否有新版本。";
+"update.checking" = "正在检查更新…";
+"update.up_to_date" = "已是最新版本（%@）。";
+"update.available" = "新版本 %@ 已可更新。";
+"update.menu_available" = "新版本 %@ · 查看更新方法…";
+"update.requires_system" = "版本 %@ 需要 macOS %@ 或更高版本。";
+"update.current" = "当前版本：%@";
+"update.instructions" = "通过 Homebrew 更新";
+"update.automatic" = "自动检查更新";
+"update.auto_help" = "每天从 GitHub 检查一次，在菜单中提示新版本。请使用 Homebrew 手动安装更新。";
+"update.last_checked" = "上次检查：%@";
+"update.steps" = "1. 复制下方命令。\n2. 退出 {appName}。\n3. 打开终端，粘贴并运行命令。\n4. 更新完成后重新打开 {appName}。";
+"update.copy" = "复制更新命令";
+"update.copy_quit" = "复制命令并退出";
+"update.copied" = "已复制";
+"update.copy_failed" = "无法复制命令，请选中文本后手动复制。";
+"update.release_notes" = "查看更新说明";
+"update.error_manifest" = "无法读取更新信息，请稍后重试。";
+"update.error_version" = "无法确定当前应用的版本，请打开已安装的应用后检查更新。";
+"update.error_unavailable" = "更新信息暂不可用，请稍后重试。";
+"update.error_network" = "检查更新失败，请检查网络连接后重试。";
+"update.history" = "版本历史";
+"update.window_title" = "软件更新 · {appName}";
+"update.latest_title" = "已是最新版本！";
+"update.latest_body" = "{appName} %@ 目前是可用的最新版本。";
+"update.ok" = "好的";
+"update.failed_title" = "无法检查更新";
+"update.retry" = "重试";
+"update.found" = "发现新版本";

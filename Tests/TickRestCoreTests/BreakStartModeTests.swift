@@ -47,7 +47,9 @@ extension EngineTests {
     @Test(arguments: ReminderStyle.allCases, BreakKind.allCases)
     func automaticRestCanBePostponedTwiceAndRestartsWithSameIdentity(_ style: ReminderStyle, _ kind: BreakKind) throws {
         var s = Settings(); s.style = style; s.prewarning = 0
-        var now = Date(); let e = Engine(settings: s)
+        // This assertion sums a single day's records; late-night runs must not cross midnight.
+        var now = Calendar.current.startOfDay(for: Date()).addingTimeInterval(12 * 3600)
+        let e = Engine(settings: s, now: now)
         e.tick(seconds: s.interval(kind), now: now)
         let id = try #require(e.reminder?.id)
         for count in 1...2 {

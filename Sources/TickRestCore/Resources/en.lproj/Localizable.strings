@@ -490,3 +490,36 @@
 "general.login_approval_help" = "Launch at login is registered and waiting for approval. Allow {appName} in System Settings → General → Login Items.";
 "general.login_settings" = "Login item settings…";
 "error.notification_settings" = "Could not open System Settings. Open System Settings → Notifications → {appName} to manage notification permission.";
+
+/* Homebrew updates */
+"update.title" = "Software updates";
+"update.check" = "Check for updates…";
+"update.idle" = "Check for a new version of {appName}.";
+"update.checking" = "Checking for updates…";
+"update.up_to_date" = "You’re up to date (version %@).";
+"update.available" = "New version %@ is available.";
+"update.menu_available" = "New version %@ · Update instructions…";
+"update.requires_system" = "Version %@ requires macOS %@ or later.";
+"update.current" = "Current version: %@";
+"update.instructions" = "Update with Homebrew";
+"update.automatic" = "Automatically check for updates";
+"update.auto_help" = "Checks GitHub once a day and shows available updates in the menu. Install updates yourself with Homebrew.";
+"update.last_checked" = "Last checked: %@";
+"update.steps" = "1. Copy the command below.\n2. Quit {appName}.\n3. Open Terminal, paste the command, and run it.\n4. Reopen {appName} after the update finishes.";
+"update.copy" = "Copy update command";
+"update.copy_quit" = "Copy command and quit";
+"update.copied" = "Copied";
+"update.copy_failed" = "Could not copy the command. Select and copy it manually.";
+"update.release_notes" = "View release notes";
+"update.error_manifest" = "Could not read the update information. Please try again later.";
+"update.error_version" = "Could not determine this app’s version. Open the installed app to check for updates.";
+"update.error_unavailable" = "Update information is unavailable. Please try again later.";
+"update.error_network" = "Could not check for updates. Check your connection and try again.";
+"update.history" = "Release history";
+"update.window_title" = "Software update · {appName}";
+"update.latest_title" = "You’re up to date!";
+"update.latest_body" = "{appName} %@ is currently the newest version available.";
+"update.ok" = "OK";
+"update.failed_title" = "Could not check for updates";
+"update.retry" = "Try again";
+"update.found" = "A new version is available";

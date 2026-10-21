@@ -173,7 +173,7 @@ struct SettingsView: View {
     }
     @ViewBuilder private func settingsContent(for page: SettingsPage) -> some View {
         if page == .about {
-            AboutView(buildInfo: buildInfo, country: $aboutCountry,
+            AboutView(buildInfo: buildInfo, country: $aboutCountry, updates: model.updates,
                       errorMessage: model.errorMessage, dismissError: { model.dismissError() })
                 .id(model.interfaceLanguage)
         } else if page == .appearance {
