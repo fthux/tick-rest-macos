@@ -506,7 +506,7 @@
 "update.auto_help" = "하루에 한 번 GitHub에서 확인하고 메뉴에 새 버전을 표시합니다. Homebrew로 업데이트를 직접 설치하세요.";
 "update.last_checked" = "마지막 확인: %@";
 "update.steps" = "1. 아래 명령을 복사하세요.\n2. {appName}을(를) 종료하세요.\n3. 터미널을 열고 명령을 붙여넣어 실행하세요.\n4. 업데이트가 끝나면 {appName}을(를) 다시 여세요.";
-"update.copy" = "업데이트 명령 복사";
+"update.copy" = "명령 복사";
 "update.copy_quit" = "명령 복사 후 종료";
 "update.copied" = "복사됨";
 "update.copy_failed" = "명령을 복사하지 못했습니다. 텍스트를 선택하여 직접 복사하세요.";
@@ -523,3 +523,8 @@
 "update.failed_title" = "업데이트를 확인할 수 없습니다";
 "update.retry" = "다시 시도";
 "update.found" = "새 버전을 사용할 수 있습니다";
+"update.prompt_window_title" = "소프트웨어 업데이트";
+"update.prompt_heading" = "{appName}의 새 버전을 사용할 수 있습니다!";
+"update.prompt_body" = "{appName} %@을(를) 사용할 수 있습니다. 현재 버전은 %@입니다. 지금 설치하시겠습니까?";
+"update.release_notes_heading" = "릴리스 노트:";
+"update.no_release_notes" = "릴리스 노트가 없습니다.";

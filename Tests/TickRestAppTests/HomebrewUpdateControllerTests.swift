@@ -192,7 +192,7 @@ final class HomebrewUpdateControllerTests: XCTestCase {
         XCTAssertNil(controller().availableUpdate)
     }
 
-    @MainActor func testInstructionsFitAllLanguagesAndCapLongSummaries() async throws {
+    @MainActor func testUnifiedPromptFitsAllLanguagesAndCapsLongSummaries() async throws {
         _ = NSApplication.shared
         let previousLanguage = L10n.language
         defer { L10n.language = previousLanguage }
@@ -202,7 +202,6 @@ final class HomebrewUpdateControllerTests: XCTestCase {
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         for language in ["en", "zh-Hans", "zh-Hant", "ja", "ko"] {
             L10n.language = language
-            var shortHeight: CGFloat = 0
             for longSummary in [false, true] {
                 setManifest()
                 if longSummary {
@@ -212,18 +211,13 @@ final class HomebrewUpdateControllerTests: XCTestCase {
                 }
                 let updates = controller()
                 await updates.check()
-                let view = NSHostingView(rootView: HomebrewUpdateInstructions(updates: updates)
+                let view = NSHostingView(rootView: HomebrewUpdatePrompt(updates: updates, openHistory: {})
                     .environment(\.locale, L10n.locale)
                     .background(Color(nsColor: .windowBackgroundColor)))
                 let size = view.fittingSize
-                XCTAssertEqual(size.width, 560, accuracy: 1)
-                if longSummary {
-                    XCTAssertGreaterThan(size.height, shortHeight)
-                    XCTAssertLessThanOrEqual(size.height, shortHeight + 140, "Long summaries must scroll")
-                } else {
-                    shortHeight = size.height
-                    XCTAssertLessThan(size.height, 380, "Short summaries must fit a compact update window")
-                }
+                XCTAssertEqual(size.width, HomebrewUpdatePrompt.contentSize.width, accuracy: 1)
+                XCTAssertEqual(size.height, HomebrewUpdatePrompt.contentSize.height, accuracy: 1,
+                               "Long notes must scroll without pushing Homebrew steps and actions out of the window")
                 let window = NSWindow(contentRect: NSRect(origin: .zero, size: size),
                                       styleMask: [.borderless], backing: .buffered, defer: false)
                 window.isReleasedWhenClosed = false
@@ -239,6 +233,37 @@ final class HomebrewUpdateControllerTests: XCTestCase {
                 window.close()
             }
         }
+    }
+
+    @MainActor func testCopyCommandStaysOpenAndQuitRequiresSuccessfulCopy() {
+        let pasteboard = NSPasteboard.withUniqueName()
+        defer { pasteboard.releaseGlobally() }
+        var quitCount = 0
+        let actions = HomebrewUpdateActions(writeText: { text in
+            pasteboard.clearContents()
+            return pasteboard.setString(text, forType: .string)
+        }, quit: {
+            XCTAssertEqual(pasteboard.string(forType: .string), HomebrewUpdateConfiguration.upgradeCommand)
+            quitCount += 1
+        })
+        XCTAssertTrue(actions.copyCommand(canUpgrade: true))
+        XCTAssertEqual(pasteboard.string(forType: .string), HomebrewUpdateConfiguration.upgradeCommand)
+        XCTAssertEqual(quitCount, 0)
+        XCTAssertTrue(actions.copyCommandAndQuit(canUpgrade: true))
+        XCTAssertEqual(quitCount, 1)
+
+        var attemptedWrite = false
+        let failing = HomebrewUpdateActions(writeText: { _ in
+            attemptedWrite = true
+            return false
+        }, quit: { XCTFail("A failed copy must never quit the application") })
+        XCTAssertFalse(failing.copyCommand(canUpgrade: false))
+        XCTAssertFalse(attemptedWrite, "Incompatible updates must block copying before accessing the clipboard")
+        XCTAssertFalse(failing.copyCommandAndQuit(canUpgrade: false))
+        XCTAssertFalse(attemptedWrite, "Incompatible updates must not write a command")
+        XCTAssertFalse(failing.copyCommandAndQuit(canUpgrade: true))
+        XCTAssertTrue(attemptedWrite)
+        XCTAssertFalse(failing.copyCommand(canUpgrade: true))
     }
 
     @MainActor func testConcurrentChecksShareSingleRequest() async {
@@ -342,6 +367,11 @@ final class HomebrewUpdateControllerTests: XCTestCase {
                 if state != "checking" { await waitForCheck(updates) }
                 try await Task.sleep(nanoseconds: 100_000_000)
                 let window = try XCTUnwrap(presenter.window)
+                if state == "available" || state == "incompatible" {
+                    XCTAssertNil(presenter.alert)
+                    XCTAssertEqual(window.title, L10n.text("update.prompt_window_title"))
+                    XCTAssertEqual(window.contentView?.frame.size, HomebrewUpdatePrompt.contentSize)
+                }
                 if state == "latest" {
                     XCTAssertEqual(presenter.alert?.messageText, L10n.text("update.latest_title"))
                     XCTAssertEqual(presenter.alert?.informativeText, L10n.text("update.latest_body", "1.10.0"))

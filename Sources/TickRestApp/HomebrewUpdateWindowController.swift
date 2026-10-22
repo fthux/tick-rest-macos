@@ -28,7 +28,7 @@ import TickRestCore
             close()
             switch updates.status {
             case .idle, .checking: makeProgressWindow()
-            case .available, .incompatible: makeInstructionsWindow(updates)
+            case .available, .incompatible: makePromptWindow(updates)
             case .upToDate, .failed: makeResultAlert(updates)
             }
             renderedStatus = updates.status
@@ -130,14 +130,18 @@ import TickRestCore
         window = result.window
     }
 
-    private func makeInstructionsWindow(_ updates: HomebrewUpdateController) {
-        let content = NSHostingView(rootView: HomebrewUpdateInstructions(updates: updates)
-            .environment(\.locale, L10n.locale))
-        let panel = UpdateCheckPanel(contentRect: NSRect(origin: .zero, size: content.fittingSize),
+    private func makePromptWindow(_ updates: HomebrewUpdateController) {
+        let content = NSHostingView(rootView: HomebrewUpdatePrompt(
+            updates: updates,
+            openHistory: { [weak self] in self?.openHistory() }
+        ).environment(\.locale, L10n.locale))
+        let size = HomebrewUpdatePrompt.contentSize
+        let panel = UpdateCheckPanel(contentRect: NSRect(origin: .zero, size: size),
                                      styleMask: [.titled, .closable], backing: .buffered, defer: false)
-        panel.title = L10n.text("update.window_title")
+        panel.title = L10n.text("update.prompt_window_title")
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
+        content.frame = NSRect(origin: .zero, size: size)
         panel.contentView = content
         panel.delegate = self
         window = panel

@@ -40,6 +40,7 @@ struct HomebrewUpdateSection: View {
         HStack(spacing: 8) {
             if updates.isChecking { ProgressView().controlSize(.small) }
             Text(updates.statusText).fixedSize(horizontal: false, vertical: true)
+                .foregroundStyle(updates.status == .incompatible ? Color.red : Color.primary)
                 .textSelection(.enabled)
         }.accessibilityElement(children: .combine)
     }
@@ -49,80 +50,158 @@ struct HomebrewUpdateSection: View {
     }
 }
 
-struct HomebrewUpdateInstructions: View {
+/// Clipboard operations must succeed before the application is asked to quit.
+struct HomebrewUpdateActions {
+    var writeText: (String) -> Bool = { text in
+        NSPasteboard.general.clearContents()
+        return NSPasteboard.general.setString(text, forType: .string)
+    }
+    var quit: () -> Void = {
+        NotificationCenter.default.post(name: .quitForHomebrewUpdate, object: nil)
+    }
+
+    func copyCommand(canUpgrade: Bool) -> Bool {
+        guard canUpgrade else { return false }
+        return writeText(HomebrewUpdateConfiguration.upgradeCommand)
+    }
+
+    func copyCommandAndQuit(canUpgrade: Bool) -> Bool {
+        guard copyCommand(canUpgrade: canUpgrade) else { return false }
+        quit()
+        return true
+    }
+}
+
+/// One update window contains release notes, Homebrew steps, and clipboard actions.
+struct HomebrewUpdatePrompt: View {
+    static let contentSize = NSSize(width: 720, height: 514)
+    private static let icon = L10n.resourceBundle.url(forResource: "AppIcon", withExtension: "png")
+        .flatMap(NSImage.init(contentsOf:))
+
     @ObservedObject var updates: HomebrewUpdateController
-    @State private var copied = false
-    @State private var copyFailed = false
+    var openHistory: () -> Void
+    @State private var copiedCommand = false
+    @State private var copyError: String?
+    private let actions = HomebrewUpdateActions()
+
+    private var releaseNotes: [String] {
+        guard let summary = updates.availableUpdate?.summary else { return [] }
+        return summary.split(whereSeparator: \.isNewline).compactMap { line in
+            var text = line.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let prefix = ["• ", "- ", "* "].first(where: { text.hasPrefix($0) }) {
+                text.removeFirst(prefix.count)
+                text = text.trimmingCharacters(in: .whitespaces)
+            }
+            return text.isEmpty ? nil : text
+        }
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                Image(nsImage: NSApp.applicationIconImage).resizable().frame(width: 40, height: 40)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L10n.text("update.found")).font(.title3.bold())
-                    Text(L10n.text("update.current", updates.currentVersion)).foregroundStyle(.secondary)
-                }
-            }
-            if let update = updates.availableUpdate {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(L10n.text("update.available", update.version)).font(.headline)
-                    if !update.summary.isEmpty {
-                        ViewThatFits(in: .vertical) {
-                            summary(update.summary).fixedSize(horizontal: false, vertical: true)
-                            ScrollView { summary(update.summary) }
-                        }
-                        .frame(maxHeight: 140)
+        HStack(alignment: .top, spacing: 28) {
+            Image(nsImage: Self.icon ?? NSApp.applicationIconImage)
+                .resizable()
+                .interpolation(.high)
+                .scaledToFit()
+                .frame(width: 64, height: 64)
+                .padding(.top, 18)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(L10n.text("update.prompt_heading"))
+                    .font(.system(size: 16, weight: .bold))
+                    .fixedSize(horizontal: false, vertical: true)
+                if let update = updates.availableUpdate {
+                    Text(L10n.text("update.prompt_body", update.version, updates.currentVersion))
+                        .font(.system(size: 13))
                         .fixedSize(horizontal: false, vertical: true)
-                    }
-                    Link(L10n.text("update.release_notes"), destination: update.historyDetailsURL)
-                        .buttonStyle(.link)
                 }
-                if updates.canUpgrade {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(L10n.text("update.instructions")).font(.headline)
-                        Text(L10n.text("update.steps")).fixedSize(horizontal: false, vertical: true)
-                        Text(HomebrewUpdateConfiguration.upgradeCommand)
-                            .font(.system(.callout, design: .monospaced)).textSelection(.enabled)
-                            .padding(10).frame(maxWidth: .infinity, alignment: .leading)
-                            .background(.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
-                        if copyFailed { Text(L10n.text("update.copy_failed")).foregroundStyle(.red) }
+                Text(L10n.text("update.release_notes_heading"))
+                    .font(.system(size: 13, weight: .semibold))
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 5) {
+                        if releaseNotes.isEmpty {
+                            Text(L10n.text("update.no_release_notes"))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            ForEach(Array(releaseNotes.enumerated()), id: \.offset) { _, note in
+                                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                    Text("•")
+                                    Text(note).fixedSize(horizontal: false, vertical: true)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
                     }
-                } else {
-                    Text(L10n.text("update.requires_system", update.version, update.minimumSystemVersion))
-                        .foregroundStyle(.orange).fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .font(.system(size: 14))
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 16)
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(Color(nsColor: .textBackgroundColor))
+                .overlay(Rectangle().stroke(Color(nsColor: .separatorColor), lineWidth: 1))
+                .accessibilityLabel(L10n.text("update.release_notes_heading"))
+
+                homebrewInstructions
                 Divider()
                 HStack(spacing: 12) {
-                    Link(L10n.text("update.history"), destination: updates.releaseHistoryURL)
-                    if updates.canUpgrade {
-                        Button(L10n.text(copied ? "update.copied" : "update.copy")) { copyCommand() }
-                        Button(L10n.text("update.copy_quit")) {
-                            guard copyCommand() else { return }
-                            NotificationCenter.default.post(name: .quitForHomebrewUpdate, object: nil)
-                        }
+                    Button(L10n.text("update.history"), action: openHistory)
+                    Spacer(minLength: 12)
+                    Button(L10n.text(copiedCommand ? "update.copied" : "update.copy")) {
+                        guard updates.canUpgrade else { return }
+                        copiedCommand = actions.copyCommand(canUpgrade: updates.canUpgrade)
+                        copyError = copiedCommand ? nil : "update.copy_failed"
                     }
+                    .disabled(!updates.canUpgrade)
+                    Button(L10n.text("update.copy_quit")) {
+                        guard updates.canUpgrade else { return }
+                        copyError = actions.copyCommandAndQuit(canUpgrade: updates.canUpgrade)
+                            ? nil : "update.copy_failed"
+                    }
+                        .disabled(!updates.canUpgrade)
+                        .buttonStyle(.borderedProminent)
+                        .tint(Color(nsColor: .systemBlue))
+                        .keyboardShortcut(.defaultAction)
                 }
-                .fixedSize(horizontal: true, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .controlSize(.regular)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+        .padding(.horizontal, 28)
+        .padding(.vertical, 20)
+        .frame(width: Self.contentSize.width, height: Self.contentSize.height)
+        .background(Color(nsColor: .windowBackgroundColor))
+        .buttonStyle(.bordered)
+        .task(id: copiedCommand) {
+            guard copiedCommand else { return }
+            do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
+            copiedCommand = false
+        }
+    }
+
+    private var homebrewInstructions: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.text("update.instructions")).font(.headline)
+            if let update = updates.availableUpdate, !updates.canUpgrade {
+                Text(L10n.text("update.requires_system", update.version, update.minimumSystemVersion))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(L10n.text("update.steps"))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(HomebrewUpdateConfiguration.upgradeCommand)
+                .font(.system(.callout, design: .monospaced))
+                .textSelection(.enabled)
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
+            if let copyError {
+                Text(L10n.text(copyError)).font(.caption).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(20).frame(width: 560)
-        .buttonStyle(.bordered).tint(.orange)
-        .task(id: copied) {
-            guard copied else { return }
-            do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
-            copied = false
-        }
-    }
-
-    private func summary(_ text: String) -> some View {
-        Text(text).frame(maxWidth: .infinity, alignment: .leading).textSelection(.enabled)
-    }
-
-    @discardableResult private func copyCommand() -> Bool {
-        NSPasteboard.general.clearContents()
-        copied = NSPasteboard.general.setString(HomebrewUpdateConfiguration.upgradeCommand, forType: .string)
-        copyFailed = !copied
-        return copied
+        .font(.system(size: 13))
     }
 }

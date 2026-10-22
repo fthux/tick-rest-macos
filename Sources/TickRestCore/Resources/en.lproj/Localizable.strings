@@ -506,7 +506,7 @@
 "update.auto_help" = "Checks GitHub once a day and shows available updates in the menu. Install updates yourself with Homebrew.";
 "update.last_checked" = "Last checked: %@";
 "update.steps" = "1. Copy the command below.\n2. Quit {appName}.\n3. Open Terminal, paste the command, and run it.\n4. Reopen {appName} after the update finishes.";
-"update.copy" = "Copy update command";
+"update.copy" = "Copy command";
 "update.copy_quit" = "Copy command and quit";
 "update.copied" = "Copied";
 "update.copy_failed" = "Could not copy the command. Select and copy it manually.";
@@ -523,3 +523,8 @@
 "update.failed_title" = "Could not check for updates";
 "update.retry" = "Try again";
 "update.found" = "A new version is available";
+"update.prompt_window_title" = "Software Update";
+"update.prompt_heading" = "A new version of {appName} is available!";
+"update.prompt_body" = "{appName} %@ is now available—you have %@. Would you like to install it now?";
+"update.release_notes_heading" = "Release Notes:";
+"update.no_release_notes" = "No release notes available.";

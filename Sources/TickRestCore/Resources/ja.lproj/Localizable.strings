@@ -506,7 +506,7 @@
 "update.auto_help" = "GitHub で1日1回確認し、新しいバージョンをメニューに表示します。更新は Homebrew で手動でインストールしてください。";
 "update.last_checked" = "最終確認：%@";
 "update.steps" = "1. 下のコマンドをコピーします。\n2. {appName} を終了します。\n3. ターミナルを開き、コマンドを貼り付けて実行します。\n4. 更新完了後に {appName} を再度開きます。";
-"update.copy" = "更新コマンドをコピー";
+"update.copy" = "コマンドをコピー";
 "update.copy_quit" = "コマンドをコピーして終了";
 "update.copied" = "コピーしました";
 "update.copy_failed" = "コピーできませんでした。テキストを選択して手動でコピーしてください。";
@@ -523,3 +523,8 @@
 "update.failed_title" = "アップデートを確認できませんでした";
 "update.retry" = "再試行";
 "update.found" = "新しいバージョンがあります";
+"update.prompt_window_title" = "ソフトウェアアップデート";
+"update.prompt_heading" = "{appName} の新しいバージョンがあります！";
+"update.prompt_body" = "{appName} %@ が利用可能です。現在のバージョンは %@ です。今すぐインストールしますか？";
+"update.release_notes_heading" = "リリースノート：";
+"update.no_release_notes" = "リリースノートはありません。";

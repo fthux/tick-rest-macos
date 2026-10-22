@@ -506,7 +506,7 @@
 "update.auto_help" = "每天從 GitHub 檢查一次，在選單中提示新版本。請使用 Homebrew 手動安裝更新。";
 "update.last_checked" = "上次檢查：%@";
 "update.steps" = "1. 複製下方指令。\n2. 結束 {appName}。\n3. 開啟終端機，貼上並執行指令。\n4. 更新完成後重新開啟 {appName}。";
-"update.copy" = "複製更新指令";
+"update.copy" = "複製指令";
 "update.copy_quit" = "複製指令並結束";
 "update.copied" = "已複製";
 "update.copy_failed" = "無法複製指令，請選取文字後手動複製。";
@@ -523,3 +523,8 @@
 "update.failed_title" = "無法檢查更新";
 "update.retry" = "重試";
 "update.found" = "發現新版本";
+"update.prompt_window_title" = "軟體更新";
+"update.prompt_heading" = "{appName} 有新版本可用！";
+"update.prompt_body" = "{appName} %@ 現已可用——目前版本為 %@。是否現在安裝？";
+"update.release_notes_heading" = "更新說明：";
+"update.no_release_notes" = "目前沒有更新說明。";
