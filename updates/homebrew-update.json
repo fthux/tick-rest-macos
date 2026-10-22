@@ -3,6 +3,6 @@
   "version": "1.0.0",
   "minimumSystemVersion": "13.0",
   "releaseNotesURL": "https://github.com/fthux/tick-rest-macos/releases/tag/v{version}",
-  "summary": "v1.0.0",
+  "summary": "Take regular breaks from your computer to rest your eyes, relax, and move around.",
   "releaseHistoryURL": "https://fthux.github.io/tick-rest-macos/release-history.html"
 }
