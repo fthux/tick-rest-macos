@@ -5,6 +5,11 @@ export CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/ModuleCache"
 configuration="${1:-release}"
 architecture="${2:-all}"
+distribution_channel="${TICKREST_DISTRIBUTION_CHANNEL:-stable}"
+if [[ "$distribution_channel" != "stable" && "$distribution_channel" != "dev" ]]; then
+    printf 'TICKREST_DISTRIBUTION_CHANNEL must be stable or dev\n' >&2
+    exit 1
+fi
 if [ "$#" -gt 2 ] || [[ "$configuration" != "debug" && "$configuration" != "release" ]] || [[ "$architecture" != "all" && "$architecture" != "native" && "$architecture" != "arm64" && "$architecture" != "x86_64" && "$architecture" != "universal" ]]; then
     printf 'Usage: %s [debug|release] [all|native|arm64|x86_64|universal]\n' "$0" >&2
     exit 1
@@ -57,7 +62,7 @@ package_app() {
     fi
     # Native and Xcode builds use different resource bundle layouts.
     cp -R "$binary_dir/$resource_bundle.bundle" "$app_dir/Contents/Resources/"
-    python3 - "$identity_file" "$resource_bundle" "$app_dir/Contents/Info.plist" "$output_architecture" "$configuration" <<'PY'
+    python3 - "$identity_file" "$resource_bundle" "$app_dir/Contents/Info.plist" "$output_architecture" "$configuration" "$distribution_channel" <<'PY'
 import json
 import plistlib
 import sys
@@ -72,13 +77,36 @@ values = {
     "$(APP_RESOURCE_BUNDLE)": sys.argv[2],
     "$(APP_BUILD_ARCHITECTURE)": sys.argv[4],
     "$(APP_BUILD_CONFIGURATION)": sys.argv[5],
+    "$(APP_DISTRIBUTION_CHANNEL)": sys.argv[6],
 }
 info = {key: values.get(value, value) if isinstance(value, str) else value for key, value in info.items()}
 with open(sys.argv[3], "wb") as destination:
     plistlib.dump(info, destination)
 PY
     if [ -f packaging/AppIcon.icns ]; then cp packaging/AppIcon.icns "$app_dir/Contents/Resources/AppIcon.icns"; fi
-    codesign --force --deep --sign - "$app_dir"
+    local helper_dir="$app_dir/Contents/Helpers/Tick Rest Updater.app"
+    mkdir -p "$helper_dir/Contents/MacOS" "$helper_dir/Contents/Resources"
+    if [[ "$architecture" = "all" && "$output_architecture" != "universal" ]]; then
+        lipo "$binary_dir/Tick Rest Updater" -thin "$output_architecture" -output "$helper_dir/Contents/MacOS/Tick Rest Updater"
+    else
+        cp "$binary_dir/Tick Rest Updater" "$helper_dir/Contents/MacOS/Tick Rest Updater"
+    fi
+    chmod +x "$helper_dir/Contents/MacOS/Tick Rest Updater"
+    cp -R "$binary_dir/$resource_bundle.bundle" "$helper_dir/Contents/Resources/"
+    if [ -f packaging/AppIcon.icns ]; then cp packaging/AppIcon.icns "$helper_dir/Contents/Resources/AppIcon.icns"; fi
+    python3 - "$app_dir/Contents/Info.plist" "$helper_dir/Contents/Info.plist" <<'PY'
+import plistlib
+import sys
+with open(sys.argv[1], "rb") as source:
+    info = plistlib.load(source)
+info["CFBundleIdentifier"] += ".updater"
+for key in ("CFBundleName", "CFBundleDisplayName", "CFBundleExecutable"):
+    info[key] = "Tick Rest Updater"
+with open(sys.argv[2], "wb") as destination:
+    plistlib.dump(info, destination)
+PY
+    codesign --force --sign - "$helper_dir"
+    codesign --force --sign - "$app_dir"
     codesign --verify --deep --strict "$app_dir"
     printf 'Built: %s\n' "$app_dir"
 }

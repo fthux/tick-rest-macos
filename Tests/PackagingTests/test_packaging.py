@@ -55,9 +55,39 @@ class PackagingTests(unittest.TestCase):
     def test_about_build_metadata_matches_packaged_variant(self):
         self.assertEqual(self.info["AppBuildArchitecture"], self.architecture)
         self.assertEqual(self.info["AppBuildConfiguration"], CONFIGURATION)
+        self.assertEqual(self.info["AppDistributionChannel"], os.environ.get("TICKREST_DISTRIBUTION_CHANNEL", "stable"))
         template = plistlib.loads((ROOT / "packaging/Info.plist").read_bytes())
         for key in ("CFBundleShortVersionString", "CFBundleVersion"):
             self.assertEqual(self.info[key], template[key])
+
+    def test_independent_updater_is_signed_and_can_be_copied_outside_app(self):
+        import shutil
+        import tempfile
+
+        helper = self.app / "Contents/Helpers/Tick Rest Updater.app"
+        info = plistlib.loads((helper / "Contents/Info.plist").read_bytes())
+        self.assertEqual(info["CFBundleIdentifier"], IDENTITY["bundleIdentifier"] + ".updater")
+        self.assertEqual(info["CFBundleExecutable"], "Tick Rest Updater")
+        for key in ("AppBuildArchitecture", "AppBuildConfiguration", "AppDistributionChannel", "CFBundleVersion"):
+            self.assertEqual(info[key], self.info[key])
+        executable = helper / "Contents/MacOS" / info["CFBundleExecutable"]
+        architectures = set(subprocess.check_output(["lipo", "-archs", str(executable)], text=True).split())
+        expected = {"arm64", "x86_64"} if self.architecture == "universal" else {self.architecture}
+        self.assertEqual(architectures, expected)
+        resources = helper / "Contents/Resources" / (info["AppResourceBundle"] + ".bundle")
+        if (resources / "Contents/Resources").is_dir():
+            resources /= "Contents/Resources"
+        self.assertTrue((resources / "en.lproj/Localizable.strings").is_file())
+        with tempfile.TemporaryDirectory(prefix="tickrest-helper-package-") as directory:
+            copied = Path(directory) / helper.name
+            shutil.copytree(helper, copied, symlinks=True)
+            result = subprocess.run(["codesign", "--verify", "--deep", "--strict", str(copied)], capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+        linked = subprocess.check_output(["otool", "-L", str(executable)], text=True)
+        for line in linked.splitlines():
+            if line.startswith(("\t", " ")):
+                dependency = line.strip().split(" (", 1)[0]
+                self.assertTrue(dependency.startswith(("/System/Library/", "/usr/lib/", "@rpath/")), dependency)
 
     def test_embedded_identity_matches_source(self):
         self.assertEqual(json.loads((self.resources / "AppIdentity.json").read_text()), IDENTITY)

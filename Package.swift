@@ -15,10 +15,12 @@ let package = Package(
     name: appName,
     defaultLocalization: "en",
     platforms: [.macOS(.v13)],
-    products: [.executable(name: appName, targets: [appTarget])],
+    products: [.executable(name: appName, targets: [appTarget]),
+               .executable(name: "Tick Rest Updater", targets: ["TickRestUpdater"])],
     targets: [
         .target(name: coreTarget, path: "Sources/TickRestCore", resources: [.process("Resources")]),
         .executableTarget(name: appTarget, dependencies: [.byName(name: coreTarget)], path: "Sources/TickRestApp"),
+        .executableTarget(name: "TickRestUpdater", dependencies: [.byName(name: coreTarget)], path: "Sources/TickRestUpdater"),
         .testTarget(name: "\(coreTarget)Tests", dependencies: [.byName(name: coreTarget)], path: "Tests/TickRestCoreTests"),
         .testTarget(name: "\(appTarget)Tests", dependencies: [.byName(name: appTarget), .byName(name: coreTarget)], path: "Tests/TickRestAppTests")
     ],

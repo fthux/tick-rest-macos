@@ -2,10 +2,6 @@ import AppKit
 import SwiftUI
 import TickRestCore
 
-extension Notification.Name {
-    static let quitForHomebrewUpdate = Notification.Name(AppIdentity.identifier("quitForHomebrewUpdate"))
-}
-
 struct HomebrewUpdateSection: View {
     @ObservedObject var updates: HomebrewUpdateController
 
@@ -24,13 +20,31 @@ struct HomebrewUpdateSection: View {
                 Text(L10n.text("update.last_checked", checked.formatted(date: .abbreviated, time: .shortened)))
                     .font(.caption).foregroundStyle(.secondary)
             }
-            if let update = updates.availableUpdate {
-                Button(L10n.text("update.menu_available", update.version)) { updates.showAvailableUpdate() }
+            if updates.installer.isActive {
+                HStack {
+                    Button(L10n.text("update.show_progress")) { updates.installer.showProgress() }
+                    Spacer()
+                    if updates.installer.canCancel {
+                        Button(L10n.text("common.cancel")) { updates.installer.cancel() }
+                    }
+                }
+            } else if updates.availableUpdate != nil {
+                HStack {
+                    Button(L10n.text("update.view_update")) { updates.showAvailableUpdate() }
+                    Spacer()
+                    Button(L10n.text("update.install")) { updates.installUpdate() }
+                        .disabled(!updates.canUpgrade || updates.installer.isActive)
+                        .tint(Color(nsColor: .systemBlue))
+                }
+            }
+            if let error = updates.installer.errorMessage {
+                Text(error).font(.callout).foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             Link(L10n.text("update.history"), destination: updates.releaseHistoryURL)
             Divider()
-            Toggle(L10n.text("update.automatic"), isOn: Binding(
-                get: { updates.automaticChecks }, set: { updates.setAutomaticChecks($0) }
+            Toggle(L10n.text("update.automatic_install"), isOn: Binding(
+                get: { updates.automaticInstallation }, set: { updates.setAutomaticInstallation($0) }
             ))
             .toggleStyle(.switch).controlSize(.small)
         }
@@ -38,7 +52,7 @@ struct HomebrewUpdateSection: View {
 
     private var status: some View {
         HStack(spacing: 8) {
-            if updates.isChecking { ProgressView().controlSize(.small) }
+            if updates.isChecking || updates.installer.isActive { ProgressView().controlSize(.small) }
             Text(updates.statusText).fixedSize(horizontal: false, vertical: true)
                 .foregroundStyle(updates.status == .incompatible ? Color.red : Color.primary)
                 .textSelection(.enabled)
@@ -47,42 +61,17 @@ struct HomebrewUpdateSection: View {
 
     private var checkButton: some View {
         Button(L10n.text("update.check")) { updates.checkInteractively() }.fixedSize()
+            .disabled(updates.installer.isActive)
     }
 }
 
-/// Clipboard operations must succeed before the application is asked to quit.
-struct HomebrewUpdateActions {
-    var writeText: (String) -> Bool = { text in
-        NSPasteboard.general.clearContents()
-        return NSPasteboard.general.setString(text, forType: .string)
-    }
-    var quit: () -> Void = {
-        NotificationCenter.default.post(name: .quitForHomebrewUpdate, object: nil)
-    }
-
-    func copyCommand(canUpgrade: Bool) -> Bool {
-        guard canUpgrade else { return false }
-        return writeText(HomebrewUpdateConfiguration.upgradeCommand)
-    }
-
-    func copyCommandAndQuit(canUpgrade: Bool) -> Bool {
-        guard copyCommand(canUpgrade: canUpgrade) else { return false }
-        quit()
-        return true
-    }
-}
-
-/// One update window contains release notes, Homebrew steps, and clipboard actions.
+/// Compact native update prompt. Installation continues in the independent helper.
 struct HomebrewUpdatePrompt: View {
-    static let contentSize = NSSize(width: 720, height: 514)
+    static let contentSize = NSSize(width: 620, height: 370)
     private static let icon = L10n.resourceBundle.url(forResource: "AppIcon", withExtension: "png")
         .flatMap(NSImage.init(contentsOf:))
 
     @ObservedObject var updates: HomebrewUpdateController
-    var openHistory: () -> Void
-    @State private var copiedCommand = false
-    @State private var copyError: String?
-    private let actions = HomebrewUpdateActions()
 
     private var releaseNotes: [String] {
         guard let summary = updates.availableUpdate?.summary else { return [] }
@@ -102,7 +91,7 @@ struct HomebrewUpdatePrompt: View {
                 .resizable()
                 .interpolation(.high)
                 .scaledToFit()
-                .frame(width: 64, height: 64)
+                .frame(width: 52, height: 52)
                 .padding(.top, 18)
                 .accessibilityHidden(true)
 
@@ -110,8 +99,8 @@ struct HomebrewUpdatePrompt: View {
                 Text(L10n.text("update.prompt_heading"))
                     .font(.system(size: 16, weight: .bold))
                     .fixedSize(horizontal: false, vertical: true)
-                if let update = updates.availableUpdate {
-                    Text(L10n.text("update.prompt_body", update.version, updates.currentVersion))
+                if updates.availableUpdate != nil {
+                    Text(L10n.text("update.prompt_body", updates.availableVersionText, updates.currentVersionText))
                         .font(.system(size: 13))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -124,6 +113,10 @@ struct HomebrewUpdatePrompt: View {
                             Text(L10n.text("update.no_release_notes"))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                            if let update = updates.availableUpdate {
+                                Link(L10n.text("update.release_notes"), destination: update.releaseNotesURL)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
                         } else {
                             ForEach(Array(releaseNotes.enumerated()), id: \.offset) { _, note in
                                 HStack(alignment: .firstTextBaseline, spacing: 10) {
@@ -144,23 +137,25 @@ struct HomebrewUpdatePrompt: View {
                 .overlay(Rectangle().stroke(Color(nsColor: .separatorColor), lineWidth: 1))
                 .accessibilityLabel(L10n.text("update.release_notes_heading"))
 
-                homebrewInstructions
-                Divider()
-                HStack(spacing: 12) {
-                    Button(L10n.text("update.history"), action: openHistory)
-                    Spacer(minLength: 12)
-                    Button(L10n.text(copiedCommand ? "update.copied" : "update.copy")) {
-                        guard updates.canUpgrade else { return }
-                        copiedCommand = actions.copyCommand(canUpgrade: updates.canUpgrade)
-                        copyError = copiedCommand ? nil : "update.copy_failed"
-                    }
-                    .disabled(!updates.canUpgrade)
-                    Button(L10n.text("update.copy_quit")) {
-                        guard updates.canUpgrade else { return }
-                        copyError = actions.copyCommandAndQuit(canUpgrade: updates.canUpgrade)
-                            ? nil : "update.copy_failed"
-                    }
-                        .disabled(!updates.canUpgrade)
+                if let error = updates.installer.errorMessage {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let update = updates.availableUpdate, !updates.canUpgrade {
+                    Text(L10n.text("update.requires_system", update.version, update.minimumSystemVersion))
+                        .font(.caption).foregroundStyle(.red)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Toggle(L10n.text("update.automatic_install"), isOn: Binding(
+                    get: { updates.automaticInstallation }, set: { updates.setAutomaticInstallation($0) }
+                ))
+                .toggleStyle(.checkbox).font(.system(size: 13))
+                HStack(spacing: 10) {
+                    Button(L10n.text("update.skip_version")) { updates.skipVersion() }
+                    Spacer(minLength: 8)
+                    Button(L10n.text("update.remind_later")) { updates.remindLater() }
+                    Button(L10n.text("update.install")) { updates.installUpdate() }
+                        .disabled(!updates.canUpgrade || updates.installer.isActive)
                         .buttonStyle(.borderedProminent)
                         .tint(Color(nsColor: .systemBlue))
                         .keyboardShortcut(.defaultAction)
@@ -174,34 +169,5 @@ struct HomebrewUpdatePrompt: View {
         .frame(width: Self.contentSize.width, height: Self.contentSize.height)
         .background(Color(nsColor: .windowBackgroundColor))
         .buttonStyle(.bordered)
-        .task(id: copiedCommand) {
-            guard copiedCommand else { return }
-            do { try await Task.sleep(nanoseconds: 2_000_000_000) } catch { return }
-            copiedCommand = false
-        }
-    }
-
-    private var homebrewInstructions: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.text("update.instructions")).font(.headline)
-            if let update = updates.availableUpdate, !updates.canUpgrade {
-                Text(L10n.text("update.requires_system", update.version, update.minimumSystemVersion))
-                    .foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Text(L10n.text("update.steps"))
-                .fixedSize(horizontal: false, vertical: true)
-            Text(HomebrewUpdateConfiguration.upgradeCommand)
-                .font(.system(.callout, design: .monospaced))
-                .textSelection(.enabled)
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 8))
-            if let copyError {
-                Text(L10n.text(copyError)).font(.caption).foregroundStyle(.red)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .font(.system(size: 13))
     }
 }

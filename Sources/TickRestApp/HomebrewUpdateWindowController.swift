@@ -53,7 +53,7 @@ import TickRestCore
 
     private func makeProgressWindow() {
         let panel = UpdateCheckPanel(contentRect: NSRect(x: 0, y: 0, width: 560, height: 164),
-                                     styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                                     styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false
         panel.title = L10n.text("update.window_title")
@@ -132,12 +132,11 @@ import TickRestCore
 
     private func makePromptWindow(_ updates: HomebrewUpdateController) {
         let content = NSHostingView(rootView: HomebrewUpdatePrompt(
-            updates: updates,
-            openHistory: { [weak self] in self?.openHistory() }
+            updates: updates
         ).environment(\.locale, L10n.locale))
         let size = HomebrewUpdatePrompt.contentSize
         let panel = UpdateCheckPanel(contentRect: NSRect(origin: .zero, size: size),
-                                     styleMask: [.titled, .closable], backing: .buffered, defer: false)
+                                     styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         panel.title = L10n.text("update.prompt_window_title")
         panel.isReleasedWhenClosed = false
         panel.hidesOnDeactivate = false

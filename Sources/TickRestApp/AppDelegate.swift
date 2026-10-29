@@ -59,6 +59,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
             NSApp.terminate(nil); return
         }
         model = injectedStore.map { AppController(store: $0) } ?? AppController(); windows = WindowCoordinator(model: model)
+        model.updates.installer.isResting = { [weak self] in self?.model?.engine.isResting == true }
+        model.updates.installer.prepareForInstallation = { [weak self] in
+            guard let model = self?.model else { throw HomebrewUpgradeFailure.parentGone }
+            try model.prepareForUpdate()
+        }
+        model.updates.installer.quitForInstallation = { NSApp.terminate(nil) }
         updateWindows = HomebrewUpdateWindowController(updates: model.updates)
         windows.showSettings = { [weak self] in self?.openSettings() }
         model.onEffects = { [weak self] effects in self?.windows.apply(effects) }
@@ -82,7 +88,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         }
         DistributedNotificationCenter.default().addObserver(self, selector: #selector(openSettings), name: NSNotification.Name(AppIdentity.identifier("showSettings")), object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(previewRest(_:)), name: .previewRest, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(quit), name: .quitForHomebrewUpdate, object: nil)
         updateSubscription = model.updates.$status.receive(on: DispatchQueue.main).sink { [weak self] _ in
             guard let self else { return }
             self.menuUpdateItem?.title = self.model.updates.menuTitle
@@ -91,6 +96,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         NotificationCenter.default.addObserver(self, selector: #selector(clearAllDataForDebug), name: .debugResetAllData, object: nil)
 #endif
         model.begin(); updateStatus()
+        if injectedStore == nil {
+            HomebrewUpgradeCoordinator.acknowledgeRelaunch()
+            model.updates.installer.recoverPreviousJobs()
+        }
         // Published emits before mutation; refresh on the main queue after the engine/settings commit.
         // Revisions refresh state/layout; the lightweight timer only updates countdown text.
         statusSubscription = model.$revision.dropFirst().receive(on: DispatchQueue.main).sink { [weak self] _ in

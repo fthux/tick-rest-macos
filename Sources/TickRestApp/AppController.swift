@@ -265,6 +265,13 @@ final class AppController: ObservableObject {
             do { try stateWriter.flush(saved) } catch { showError("error.save") }
         }
     }
+    /// Installation may replace the bundle only after the latest state is durably saved.
+    func prepareForUpdate() throws {
+        if engine.isResting { engine.finish(now: Date()) }
+        consume()
+        captureSavedState()
+        try stateWriter.flush(saved)
+    }
     private func captureSavedState() {
         saved.settings = settings; saved.snapshot = engine.snapshot(now: Date())
     }
