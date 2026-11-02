@@ -549,6 +549,8 @@
 "update.stage.verifying" = "Verifying the installation…";
 "update.stage.relaunching" = "Restarting the app…";
 "update.stage.completed" = "Update installed successfully";
+"update.notification_title" = "Update successful";
+"update.notification_body" = "{appName} has been updated to %@ and restarted.";
 "update.stage.failed" = "Could not install the update";
 "update.stage.cancelled" = "Update cancelled";
 "update.failure.homebrewMissing" = "Homebrew was not found. Install this app using your Homebrew tap to enable in-app updates.";

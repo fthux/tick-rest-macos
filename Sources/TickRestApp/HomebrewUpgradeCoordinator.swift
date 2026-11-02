@@ -177,14 +177,18 @@ final class HomebrewUpgradeCoordinator: ObservableObject {
     }
 
     /// Called by a newly launched app only after its single-instance lock and model are ready.
-    @MainActor static func acknowledgeRelaunch(arguments: [String] = CommandLine.arguments) {
-        guard let index = arguments.firstIndex(of: "--tickrest-update-job"), arguments.indices.contains(index + 1) else { return }
+    @discardableResult
+    @MainActor static func acknowledgeRelaunch(arguments: [String] = CommandLine.arguments) -> UpdateJobStore? {
+        guard let index = arguments.firstIndex(of: "--tickrest-update-job"), arguments.indices.contains(index + 1) else { return nil }
         let store = UpdateJobStore(directory: URL(fileURLWithPath: arguments[index + 1], isDirectory: true))
         guard let job = try? store.validatedJob(), store.state?.phase == .relaunching,
               job.installation.app.standardizedFileURL.resolvingSymlinksInPath() == Bundle.main.bundleURL.standardizedFileURL.resolvingSymlinksInPath(),
               (try? HomebrewUpgradeEngine.verifyApplication(Bundle.main.bundleURL, required: job.required,
                                                             architecture: job.installation.architecture,
-                                                            channel: job.installation.channel)) != nil else { return }
-        try? store.signal("started.json")
+                                                            channel: job.installation.channel)) != nil else { return nil }
+        do {
+            try store.signal("started.json")
+            return store
+        } catch { return nil }
     }
 }

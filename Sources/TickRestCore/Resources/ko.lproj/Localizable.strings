@@ -549,6 +549,8 @@
 "update.stage.verifying" = "설치 확인 중…";
 "update.stage.relaunching" = "앱 다시 시작 중…";
 "update.stage.completed" = "업데이트 설치 완료";
+"update.notification_title" = "업데이트 완료";
+"update.notification_body" = "{appName}을(를) %@ 버전으로 업데이트하고 다시 시작했습니다.";
 "update.stage.failed" = "업데이트를 설치할 수 없습니다";
 "update.stage.cancelled" = "업데이트 취소됨";
 "update.failure.homebrewMissing" = "Homebrew를 찾을 수 없습니다. 앱 내 업데이트를 사용하려면 Homebrew Tap으로 설치하세요.";

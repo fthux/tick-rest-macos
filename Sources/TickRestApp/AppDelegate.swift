@@ -30,6 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
     private var languageSubscription: AnyCancellable?
     private var updateSubscription: AnyCancellable?
     private var updateWindows: HomebrewUpdateWindowController?
+    private var updateCompletionTask: Task<Void, Never>?
     private var menuUpdateItem: NSMenuItem?
     private weak var settingsSplitController: NSSplitViewController?
     private let sidebarToolbarIdentifier = NSToolbarItem.Identifier(AppIdentity.identifier("sidebar"))
@@ -97,7 +98,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
 #endif
         model.begin(); updateStatus()
         if injectedStore == nil {
-            HomebrewUpgradeCoordinator.acknowledgeRelaunch()
+            if let store = HomebrewUpgradeCoordinator.acknowledgeRelaunch() {
+                updateCompletionTask = Task { @MainActor in
+                    await UpdateCompletionNotification().notifyWhenCompleted(store)
+                }
+            }
             model.updates.installer.recoverPreviousJobs()
         }
         // Published emits before mutation; refresh on the main queue after the engine/settings commit.
@@ -125,6 +130,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSTool
         countdownTimer?.invalidate(); countdownTimer = nil
         statusSubscription?.cancel()
         updateSubscription?.cancel()
+        updateCompletionTask?.cancel(); updateCompletionTask = nil
         updateWindows?.close()
         model?.updates.stop()
 #if DEBUG

@@ -549,6 +549,8 @@
 "update.stage.verifying" = "正在驗證安裝結果…";
 "update.stage.relaunching" = "正在重新啟動應用程式…";
 "update.stage.completed" = "更新安裝成功";
+"update.notification_title" = "更新成功";
+"update.notification_body" = "{appName} 已更新至 %@ 並重新啟動。";
 "update.stage.failed" = "無法安裝更新";
 "update.stage.cancelled" = "更新已取消";
 "update.failure.homebrewMissing" = "找不到 Homebrew。請透過你的 Homebrew Tap 安裝應用程式以使用內建更新。";

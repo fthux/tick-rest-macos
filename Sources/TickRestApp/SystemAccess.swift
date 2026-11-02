@@ -44,7 +44,7 @@ struct SystemAccess {
 
 final class ReminderNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     static func presentationOptions(for identifier: String) -> UNNotificationPresentationOptions {
-        identifier == AppIdentity.identifier("prewarning") ? [.banner, .list] : []
+        [AppIdentity.identifier("prewarning"), AppIdentity.identifier("updateCompleted")].contains(identifier) ? [.banner, .list] : []
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,

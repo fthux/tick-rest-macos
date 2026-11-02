@@ -549,6 +549,8 @@
 "update.stage.verifying" = "インストールを検証中…";
 "update.stage.relaunching" = "アプリを再起動中…";
 "update.stage.completed" = "更新をインストールしました";
+"update.notification_title" = "更新が完了しました";
+"update.notification_body" = "{appName} を %@ に更新して再起動しました。";
 "update.stage.failed" = "更新をインストールできませんでした";
 "update.stage.cancelled" = "更新をキャンセルしました";
 "update.failure.homebrewMissing" = "Homebrew が見つかりません。アプリ内更新を使うには Homebrew Tap からインストールしてください。";
