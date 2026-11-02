@@ -538,6 +538,8 @@
 "update.rest_body" = "The download is ready. Installing now ends this break and restarts the app. You can update later instead.";
 "update.waiting_help" = "Waiting for the app to save and quit. Automatic installation waits until your break finishes.";
 "update.progress_help" = "Your settings and statistics are preserved. Keep this window open until the update finishes.";
+"update.completed_help" = "Tick Rest has been updated and restarted. This window will close automatically.";
+"update.finished_help" = "Your settings and statistics are preserved. You can close this window.";
 "update.show_log" = "Show Details";
 "update.stage.preparing" = "Preparing update…";
 "update.stage.refreshing" = "Getting the latest update…";

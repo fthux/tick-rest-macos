@@ -538,6 +538,8 @@
 "update.rest_body" = "ダウンロードが完了しました。今インストールすると休憩を終了して再起動します。後で更新することもできます。";
 "update.waiting_help" = "アプリの保存と終了を待っています。自動インストールは休憩の終了後に行います。";
 "update.progress_help" = "設定と統計情報は保持されます。更新が完了するまでお待ちください。";
+"update.completed_help" = "Tick Rest を更新して再起動しました。このウインドウは自動的に閉じます。";
+"update.finished_help" = "設定と統計情報は保持されます。このウインドウを閉じることができます。";
 "update.show_log" = "詳細を表示";
 "update.stage.preparing" = "更新を準備中…";
 "update.stage.refreshing" = "最新の更新情報を取得中…";

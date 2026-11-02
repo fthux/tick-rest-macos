@@ -538,6 +538,8 @@
 "update.rest_body" = "更新套件已下載。立即安裝將結束本次休息並重新啟動應用程式，也可以稍後再更新。";
 "update.waiting_help" = "正在等待應用程式儲存並結束。自動安裝會等到本次休息結束。";
 "update.progress_help" = "設定和統計資料會保留，請等待更新完成。";
+"update.completed_help" = "Tick Rest 已更新並重新啟動，此視窗將自動關閉。";
+"update.finished_help" = "設定和統計資料會保留，你可以關閉此視窗。";
 "update.show_log" = "顯示詳細資訊";
 "update.stage.preparing" = "正在準備更新…";
 "update.stage.refreshing" = "正在取得最新更新…";

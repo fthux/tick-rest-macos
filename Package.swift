@@ -22,6 +22,7 @@ let package = Package(
         .executableTarget(name: appTarget, dependencies: [.byName(name: coreTarget)], path: "Sources/TickRestApp"),
         .executableTarget(name: "TickRestUpdater", dependencies: [.byName(name: coreTarget)], path: "Sources/TickRestUpdater"),
         .testTarget(name: "\(coreTarget)Tests", dependencies: [.byName(name: coreTarget)], path: "Tests/TickRestCoreTests"),
+        .testTarget(name: "TickRestUpdaterTests", dependencies: ["TickRestUpdater", .byName(name: coreTarget)], path: "Tests/TickRestUpdaterTests"),
         .testTarget(name: "\(appTarget)Tests", dependencies: [.byName(name: appTarget), .byName(name: coreTarget)], path: "Tests/TickRestAppTests")
     ],
     swiftLanguageModes: [.v5]

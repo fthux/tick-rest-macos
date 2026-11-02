@@ -2,11 +2,11 @@ import AppKit
 import TickRestCore
 
 @MainActor final class UpdaterDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
-    private var window: NSWindow!
-    private let heading = NSTextField(wrappingLabelWithString: "")
-    private let detail = NSTextField(wrappingLabelWithString: "")
-    private let progress = NSProgressIndicator()
-    private let action = NSButton()
+    private(set) var window: NSWindow!
+    let heading = NSTextField(wrappingLabelWithString: "")
+    let detail = NSTextField(wrappingLabelWithString: "")
+    let progress = NSProgressIndicator()
+    let action = NSButton()
     private let logView = NSTextView()
     private var logScroll: NSScrollView!
     private var logText = ""
@@ -19,6 +19,14 @@ import TickRestCore
     private var timer: Timer?
     private var lockFD: Int32 = -1
     private var instanceFD: Int32 = -1
+    private var completionTask: Task<Void, Never>?
+    private let completionDelay: TimeInterval
+    private let terminate: @MainActor () -> Void
+
+    init(completionDelay: TimeInterval = 1.5, terminate: @escaping @MainActor () -> Void = { NSApp.terminate(nil) }) {
+        self.completionDelay = completionDelay; self.terminate = terminate
+        super.init()
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         do {
@@ -101,8 +109,7 @@ import TickRestCore
                 guard Date() < launchDeadline else { throw HomebrewUpgradeFailure.launch }
                 try await Task.sleep(nanoseconds: 200_000_000)
             }
-            guard setState(UpdateJobState(.completed)) else { throw HomebrewUpgradeFailure.permissions }
-            if job.automatic { NSApp.terminate(nil) }
+            try complete(automatic: job.automatic)
         } catch { finish(error) }
     }
 
@@ -112,7 +119,21 @@ import TickRestCore
         }
     }
 
-    @discardableResult private func setState(_ value: UpdateJobState) -> Bool {
+    /// Called only after the replacement app has acknowledged a successful relaunch.
+    func complete(automatic: Bool) throws {
+        guard setState(UpdateJobState(.completed)) else { throw HomebrewUpgradeFailure.permissions }
+        if automatic { terminate(); return }
+        // Briefly show the full progress bar before dismissing a manual update.
+        completionTask = Task { @MainActor [weak self, completionDelay] in
+            do { try await Task.sleep(nanoseconds: UInt64(completionDelay * 1_000_000_000)) }
+            catch { return }
+            guard let self, self.state.phase == .completed else { return }
+            self.terminate()
+        }
+    }
+
+    @discardableResult func setState(_ value: UpdateJobState) -> Bool {
+        completionTask?.cancel(); completionTask = nil
         state = value
         var written = true
         do { try store?.write(value, named: "state.json") }
@@ -122,14 +143,18 @@ import TickRestCore
             releaseInstanceLock()
             if lockFD >= 0 { flock(lockFD, LOCK_UN); close(lockFD); lockFD = -1 }
         }
-        guard window != nil else { return written }
-        heading.stringValue = value.message
-        detail.stringValue = value.phase == .waiting ? L10n.text("update.waiting_help") : L10n.text("update.progress_help")
-        if value.phase.terminal { progress.stopAnimation(nil) } else { progress.startAnimation(nil) }
-        action.title = L10n.text(value.phase.terminal ? "common.close" : "common.cancel")
-        action.isEnabled = value.phase.canCancel || value.phase.terminal
+        renderState()
         if value.phase == .failed { showWindow() }
         return written
+    }
+
+    private func renderState() {
+        guard window != nil else { return }
+        heading.stringValue = state.message
+        detail.stringValue = L10n.text(state.phase.progressHelpKey)
+        if let fraction = state.phase.progressFraction { progress.doubleValue = fraction }
+        action.title = L10n.text(state.phase.terminal ? "common.close" : "common.cancel")
+        action.isEnabled = state.phase.canCancel || state.phase.terminal
     }
 
     private func releaseInstanceLock() {
@@ -169,7 +194,7 @@ import TickRestCore
         }
     }
 
-    private func makeWindow() {
+    func makeWindow(show: Bool = true) {
         window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 250),
                           styleMask: [.titled, .closable, .miniaturizable], backing: .buffered, defer: false)
         window.title = L10n.text("update.prompt_window_title")
@@ -180,7 +205,8 @@ import TickRestCore
         icon.translatesAutoresizingMaskIntoConstraints = false
         heading.stringValue = state.message; heading.font = .boldSystemFont(ofSize: 16)
         detail.stringValue = L10n.text("update.progress_help"); detail.textColor = .secondaryLabelColor
-        progress.style = .bar; progress.isIndeterminate = true; progress.startAnimation(nil)
+        progress.style = .bar; progress.isIndeterminate = false
+        progress.minValue = 0; progress.maxValue = 1
         let details = NSButton(title: L10n.text("update.show_log"), target: self, action: #selector(toggleLog))
         details.bezelStyle = .rounded
         action.title = L10n.text("common.cancel"); action.bezelStyle = .rounded
@@ -211,8 +237,9 @@ import TickRestCore
             logScroll.topAnchor.constraint(equalTo: root.topAnchor, constant: 230),
             logScroll.heightAnchor.constraint(equalToConstant: 230)
         ])
+        renderState()
         window.center()
-        if job?.automatic != true { showWindow() }
+        if show, job?.automatic != true { showWindow() }
     }
     private func showWindow() { NSApp.activate(ignoringOtherApps: true); window.makeKeyAndOrderFront(nil) }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -231,11 +258,11 @@ import TickRestCore
         window.setFrame(NSRect(x: frame.minX, y: frame.maxY - height - 28, width: frame.width, height: height + 28), display: true, animate: true)
     }
     @objc private func performAction() {
-        if state.phase.terminal { NSApp.terminate(nil) }
+        if state.phase.terminal { terminate() }
         else if state.phase.canCancel { runner.cancel(); task?.cancel() }
     }
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        if state.phase.terminal { NSApp.terminate(nil); return true }
+        if state.phase.terminal { terminate(); return true }
         if state.phase.canCancel { performAction() }
         return false
     }
@@ -246,6 +273,7 @@ import TickRestCore
     }
     func applicationWillTerminate(_ notification: Notification) {
         timer?.invalidate()
+        completionTask?.cancel()
         releaseInstanceLock()
         if lockFD >= 0 { flock(lockFD, LOCK_UN); close(lockFD) }
     }
