@@ -219,7 +219,8 @@ final class HomebrewUpdateControllerTests: XCTestCase {
             for longSummary in [false, true] {
                 setManifest()
                 if longSummary {
-                    UpdateURLProtocol.notes = String(repeating: "Release notes with improvements and bug fixes.\n", count: 70)
+                    UpdateURLProtocol.notes = String(repeating:
+                        "## Improvements\n\n- **Fixes** and [details](https://example.com/notes).\n\n```sh\necho 'Tick Rest'\n```\n\n", count: 70)
                 }
                 let updates = controller()
                 await updates.check()

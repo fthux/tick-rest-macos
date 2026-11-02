@@ -73,18 +73,6 @@ struct HomebrewUpdatePrompt: View {
 
     @ObservedObject var updates: HomebrewUpdateController
 
-    private var releaseNotes: [String] {
-        guard let summary = updates.availableUpdate?.summary else { return [] }
-        return summary.split(whereSeparator: \.isNewline).compactMap { line in
-            var text = line.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let prefix = ["• ", "- ", "* "].first(where: { text.hasPrefix($0) }) {
-                text.removeFirst(prefix.count)
-                text = text.trimmingCharacters(in: .whitespaces)
-            }
-            return text.isEmpty ? nil : text
-        }
-    }
-
     var body: some View {
         HStack(alignment: .top, spacing: 28) {
             Image(nsImage: Self.icon ?? NSApp.applicationIconImage)
@@ -109,7 +97,7 @@ struct HomebrewUpdatePrompt: View {
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 5) {
-                        if releaseNotes.isEmpty {
+                        if (updates.availableUpdate?.summary ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             Text(L10n.text("update.no_release_notes"))
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -118,13 +106,7 @@ struct HomebrewUpdatePrompt: View {
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
                         } else {
-                            ForEach(Array(releaseNotes.enumerated()), id: \.offset) { _, note in
-                                HStack(alignment: .firstTextBaseline, spacing: 10) {
-                                    Text("•")
-                                    Text(note).fixedSize(horizontal: false, vertical: true)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
+                            ReleaseNotesMarkdownView(markdown: updates.availableUpdate?.summary ?? "")
                         }
                     }
                     .textSelection(.enabled)
