@@ -1,22 +1,29 @@
 """Read-only integration checks for the actual .app produced by build-app.sh.
 
 Run after building: python3 -m unittest discover -s Tests/PackagingTests -v
-Defaults to all Release variants. TICKREST_BUILD_CONFIGURATION and
-TICKREST_BUILD_ARCHITECTURE select the same options as build-app.sh.
+Defaults to all Release variants. TICKREST_BUILD_CONFIGURATION selects release
+or dev; TICKREST_BUILD_ARCHITECTURE selects the architecture as in build-app.sh.
 No app is launched; the user's preferences and statistics are never modified.
 """
 import json
+import hashlib
 import os
 from pathlib import Path
 import plistlib
 import platform
+import re
 import subprocess
 import unittest
+from urllib.parse import urlparse
+import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[2]
 IDENTITY = json.loads((ROOT / "Sources/TickRestCore/Resources/AppIdentity.json").read_text())
-CONFIGURATION = os.environ.get("TICKREST_BUILD_CONFIGURATION", "release")
+VARIANT = os.environ.get("TICKREST_BUILD_CONFIGURATION", "release")
+CONFIGURATION = "debug" if VARIANT == "dev" else "release"
+TEMPLATE = plistlib.loads((ROOT / "packaging/Info.plist").read_bytes())
+OUTPUT_DIRECTORY = ROOT / "dist" / f"v{TEMPLATE['CFBundleShortVersionString']}-{TEMPLATE['CFBundleVersion']}-{VARIANT}"
 
 
 class PackagingTests(unittest.TestCase):
@@ -24,10 +31,9 @@ class PackagingTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        configuration_suffix = "-debug" if CONFIGURATION == "debug" else ""
-        cls.app = ROOT / "dist" / f"{IDENTITY['name']}-{cls.architecture}{configuration_suffix}.app"
+        cls.app = OUTPUT_DIRECTORY / f"{IDENTITY['name']}-{cls.architecture}.app"
         if not cls.app.is_dir():
-            raise RuntimeError(f"Build the app first: bash scripts/build-app.sh {CONFIGURATION} {cls.architecture}")
+            raise RuntimeError(f"Build the app first: bash scripts/build-app.sh {VARIANT} {cls.architecture}")
         cls.info = plistlib.loads((cls.app / "Contents/Info.plist").read_bytes())
         cls.resources = cls.app / "Contents/Resources" / (cls.info["AppResourceBundle"] + ".bundle")
         if (cls.resources / "Contents/Resources").is_dir():
@@ -55,10 +61,33 @@ class PackagingTests(unittest.TestCase):
     def test_about_build_metadata_matches_packaged_variant(self):
         self.assertEqual(self.info["AppBuildArchitecture"], self.architecture)
         self.assertEqual(self.info["AppBuildConfiguration"], CONFIGURATION)
-        self.assertEqual(self.info["AppDistributionChannel"], os.environ.get("TICKREST_DISTRIBUTION_CHANNEL", "stable"))
-        template = plistlib.loads((ROOT / "packaging/Info.plist").read_bytes())
+        self.assertEqual(self.info["AppDistributionChannel"], "dev" if VARIANT == "dev" else "stable")
         for key in ("CFBundleShortVersionString", "CFBundleVersion"):
-            self.assertEqual(self.info[key], template[key])
+            self.assertEqual(self.info[key], TEMPLATE[key])
+
+    def test_zip_and_remote_cask_match_the_packaged_app(self):
+        version, build = (self.info[key] for key in ("CFBundleShortVersionString", "CFBundleVersion"))
+        is_dev = VARIANT == "dev"
+        token = "tickrest-dev" if is_dev else "tickrest"
+        repository = "tick-rest-macos-dev" if is_dev else "tick-rest-macos"
+        archive = OUTPUT_DIRECTORY / f"TickRest-{version}-{self.architecture}.zip"
+        source = (OUTPUT_DIRECTORY / f"{token}.rb").read_text()
+        self.assertIn(f'cask "{token}" do', source)
+        self.assertIn(f'version "{version},{build}"', source)
+        self.assertNotIn("file://", source)
+        match = re.search(rf'"{self.architecture}" => \[("[^"\n]+"), ("[a-f0-9]+")\]', source)
+        self.assertIsNotNone(match, "Cask must include this build's architecture")
+        url, checksum = (json.loads(value) for value in match.groups())
+        remote = urlparse(url)
+        self.assertEqual(remote.scheme, "https")
+        self.assertEqual(remote.netloc, "github.com")
+        self.assertEqual(remote.path, f"/fthux/{repository}/releases/download/v{version}/{archive.name}")
+        self.assertEqual(hashlib.sha256(archive.read_bytes()).hexdigest(), checksum)
+        with zipfile.ZipFile(archive) as package:
+            root = f"{IDENTITY['name']}-{self.architecture}.app/Contents/"
+            self.assertEqual(plistlib.loads(package.read(root + "Info.plist")), self.info)
+            helper = "Helpers/Tick Rest Updater.app/Contents/Info.plist"
+            self.assertEqual(package.read(root + helper), (self.app / "Contents" / helper).read_bytes())
 
     def test_independent_updater_is_signed_and_can_be_copied_outside_app(self):
         import shutil
@@ -167,7 +196,7 @@ def load_tests(loader, tests, pattern):
     architecture = os.environ.get("TICKREST_BUILD_ARCHITECTURE", "all")
     if architecture == "native":
         architecture = platform.machine()
-    if CONFIGURATION not in ("debug", "release") or architecture not in ("all", "arm64", "x86_64", "universal"):
+    if VARIANT not in ("dev", "release") or architecture not in ("all", "arm64", "x86_64", "universal"):
         raise ValueError("Invalid build configuration or architecture")
     architectures = ("arm64", "x86_64", "universal") if architecture == "all" else (architecture,)
     suite = unittest.TestSuite()

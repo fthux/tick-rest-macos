@@ -6,17 +6,27 @@ require "json"
 require "tmpdir"
 
 root = Pathname(__dir__).parent.parent
-source = Pathname(ENV.fetch("HOMEBREW_TICKREST_DEV_CASK", (root/"tickrest-dev.rb").to_s)).read
-original_arch = ENV["HOMEBREW_TICKREST_DEV_ARCH"]
+variant = ENV.fetch("HOMEBREW_TICKREST_CASK_VARIANT", "dev")
+raise "Invalid variant" unless %w[release dev].include?(variant)
+is_dev = variant == "dev"
+token = is_dev ? "tickrest-dev" : "tickrest"
+other_token = is_dev ? "tickrest" : "tickrest-dev"
+repository = is_dev ? "tick-rest-macos-dev" : "tick-rest-macos"
+arch_variable = is_dev ? "HOMEBREW_TICKREST_DEV_ARCH" : "HOMEBREW_TICKREST_ARCH"
+template = JSON.parse(IO.popen(["/usr/bin/plutil", "-convert", "json", "-o", "-",
+                               (root/"packaging/Info.plist").to_s], &:read))
+build_dir = root/"dist/v#{template.fetch('CFBundleShortVersionString')}-#{template.fetch('CFBundleVersion')}-#{variant}"
+source = Pathname(ENV.fetch("HOMEBREW_TICKREST_CASK", ENV.fetch("HOMEBREW_TICKREST_DEV_CASK", (build_dir/"#{token}.rb").to_s))).read
+original_arch = ENV[arch_variable]
 
 begin
   variants = { nil => "universal", "universal" => "universal", "arm" => "arm64",
                "arm64" => "arm64", "intel" => "x86_64", "x86_64" => "x86_64" }
   variants.each do |selection, expected|
-    selection ? ENV["HOMEBREW_TICKREST_DEV_ARCH"] = selection : ENV.delete("HOMEBREW_TICKREST_DEV_ARCH")
+    selection ? ENV[arch_variable] = selection : ENV.delete(arch_variable)
     cask = Cask::CaskLoader::FromContentLoader.new(source).load(config: nil)
     app = cask.artifacts.find { |artifact| artifact.is_a?(Cask::Artifact::App) }
-    raise "Wrong cask token" unless cask.token == "tickrest-dev"
+    raise "Wrong cask token" unless cask.token == token
     raise "Wrong selected app" unless app.source.basename.to_s == "Tick Rest-#{expected}.app"
     raise "Wrong default target" unless app.target.to_s == "/Applications/Tick Rest.app"
     required_arch = case expected
@@ -24,21 +34,22 @@ begin
     when "x86_64" then [{ type: :intel, bits: 64 }]
     end
     raise "Wrong architecture restriction" unless cask.depends_on.arch == required_arch
-    raise "Wrong conflicts" unless cask.conflicts_with.to_h.fetch(:cask) == ["tickrest"]
+    raise "Wrong conflicts" unless cask.conflicts_with.to_h.fetch(:cask) == [other_token]
+    raise "Cask must use its channel's GitHub Release" unless cask.url.to_s.start_with?("https://github.com/fthux/#{repository}/releases/download/")
     puts "PASS selection #{selection || '(default)'} -> #{expected}"
   end
 
-  ENV["HOMEBREW_TICKREST_DEV_ARCH"] = "invalid"
+  ENV[arch_variable] = "invalid"
   begin
     Cask::CaskLoader::FromContentLoader.new(source).load(config: nil)
     raise "Invalid architecture was accepted"
   rescue ArgumentError => e
-    raise unless e.message.include?("HOMEBREW_TICKREST_DEV_ARCH")
+    raise unless e.message.include?(arch_variable)
   end
   puts "PASS invalid architecture rejected"
 
   %w[universal arm64 x86_64].each do |architecture|
-    ENV["HOMEBREW_TICKREST_DEV_ARCH"] = architecture
+    ENV[arch_variable] = architecture
     Dir.mktmpdir("tickrest cask test ") do |temporary|
       config = Cask::Config.new(explicit: { appdir: temporary })
       cask = Cask::CaskLoader::FromContentLoader.new(source).load(config: config)
@@ -50,11 +61,10 @@ begin
       raise "Unsafe test target" unless app_artifact.target == Pathname(temporary)/"Tick Rest.app"
       uri = URI(cask.url.to_s)
       archive = case uri.scheme
-      when "file"
-        Pathname(URI::DEFAULT_PARSER.unescape(uri.path))
       when "https"
-        if ENV["HOMEBREW_TICKREST_DEV_ARCHIVE_DIR"]
-          Pathname(ENV.fetch("HOMEBREW_TICKREST_DEV_ARCHIVE_DIR"))/File.basename(uri.path)
+        archive_dir = ENV["HOMEBREW_TICKREST_CASK_ARCHIVE_DIR"] || ENV["HOMEBREW_TICKREST_DEV_ARCHIVE_DIR"]
+        if archive_dir
+          Pathname(archive_dir)/File.basename(uri.path)
         else
           download = Pathname(temporary)/"download.zip"
           system "/usr/bin/curl", "-fLsS", "--retry", "2", "--connect-timeout", "15", "--max-time", "120",
@@ -71,6 +81,8 @@ begin
       info = JSON.parse(IO.popen(["/usr/bin/plutil", "-convert", "json", "-o", "-",
                                  (target/"Contents/Info.plist").to_s], &:read))
       raise "Wrong bundle ID" unless info.fetch("CFBundleIdentifier") == "app.tickrest.desktop"
+      raise "Wrong build configuration" unless info.fetch("AppBuildConfiguration") == (is_dev ? "debug" : "release")
+      raise "Wrong distribution channel" unless info.fetch("AppDistributionChannel") == (is_dev ? "dev" : "stable")
       raise "Cask/App version mismatch" unless cask.version.to_s ==
                                                   "#{info.fetch('CFBundleShortVersionString')},#{info.fetch('CFBundleVersion')}"
       executable = target/"Contents/MacOS/Tick Rest"
@@ -94,5 +106,5 @@ begin
     end
   end
 ensure
-  original_arch ? ENV["HOMEBREW_TICKREST_DEV_ARCH"] = original_arch : ENV.delete("HOMEBREW_TICKREST_DEV_ARCH")
+  original_arch ? ENV[arch_variable] = original_arch : ENV.delete(arch_variable)
 end

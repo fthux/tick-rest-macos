@@ -140,6 +140,22 @@ final class HomebrewUpgradeTests: XCTestCase {
         XCTAssertEqual(environment["HOMEBREW_TICKREST_DEV_ARCH"], "arm64")
     }
 
+    func testBothChannelsPreserveInstalledArchitectureDuringUpgrade() {
+        for channel: AppDistributionChannel in [.stable, .dev] {
+            for architecture in ["arm64", "x86_64", "universal"] {
+                let current = HomebrewInstallation(brew: installation.brew, channel: channel,
+                                                   app: installation.app, architecture: architecture,
+                                                   current: installation.current)
+                let environment = current.environment(base: ["HOMEBREW_TICKREST_ARCH": "invalid",
+                                                               "HOMEBREW_TICKREST_DEV_ARCH": "invalid"])
+                let key = channel == .dev ? "HOMEBREW_TICKREST_DEV_ARCH" : "HOMEBREW_TICKREST_ARCH"
+                let other = channel == .dev ? "HOMEBREW_TICKREST_ARCH" : "HOMEBREW_TICKREST_DEV_ARCH"
+                XCTAssertEqual(environment[key], architecture)
+                XCTAssertNil(environment[other])
+            }
+        }
+    }
+
     func testProcessRunnerKeepsArgumentsLiteralAndSeparatesStderrFromJSON() async throws {
         let script = root.appendingPathComponent("fake brew")
         try Data("#!/bin/sh\nprintf '%s\\n' \"$1\"\nprintf 'stderr message' >&2\n".utf8).write(to: script)

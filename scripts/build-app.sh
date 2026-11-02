@@ -3,16 +3,17 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 export CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/ModuleCache"
-configuration="${1:-release}"
+variant="${1:-release}"
 architecture="${2:-all}"
-distribution_channel="${TICKREST_DISTRIBUTION_CHANNEL:-stable}"
-if [[ "$distribution_channel" != "stable" && "$distribution_channel" != "dev" ]]; then
-    printf 'TICKREST_DISTRIBUTION_CHANNEL must be stable or dev\n' >&2
+if [ "$#" -gt 2 ] || [[ "$variant" != "dev" && "$variant" != "release" ]] || [[ "$architecture" != "all" && "$architecture" != "native" && "$architecture" != "arm64" && "$architecture" != "x86_64" && "$architecture" != "universal" ]]; then
+    printf 'Usage: %s [release|dev] [all|native|arm64|x86_64|universal]\n' "$0" >&2
     exit 1
 fi
-if [ "$#" -gt 2 ] || [[ "$configuration" != "debug" && "$configuration" != "release" ]] || [[ "$architecture" != "all" && "$architecture" != "native" && "$architecture" != "arm64" && "$architecture" != "x86_64" && "$architecture" != "universal" ]]; then
-    printf 'Usage: %s [debug|release] [all|native|arm64|x86_64|universal]\n' "$0" >&2
-    exit 1
+configuration="release"
+distribution_channel="stable"
+if [ "$variant" = "dev" ]; then
+    configuration="debug"
+    distribution_channel="dev"
 fi
 if [ "$architecture" = "native" ]; then architecture="$(uname -m)"; fi
 if [[ "$architecture" = "all" || "$architecture" = "universal" ]]; then
@@ -23,7 +24,7 @@ if [[ "$architecture" = "all" || "$architecture" = "universal" ]]; then
             printf 'Using Xcode for multi-architecture build: %s\n' "$DEVELOPER_DIR"
         fi
         if ! xcrun --find xcodebuild >/dev/null 2>&1; then
-            printf 'Multi-architecture builds require full Xcode. Set DEVELOPER_DIR to its Contents/Developer directory, or build with: bash scripts/build-app.sh %s native\n' "$configuration" >&2
+            printf 'Multi-architecture builds require full Xcode. Set DEVELOPER_DIR to its Contents/Developer directory, or build with: bash scripts/build-app.sh %s native\n' "$variant" >&2
             exit 1
         fi
     fi
@@ -38,6 +39,19 @@ else
 fi
 identity_file="Sources/TickRestCore/Resources/AppIdentity.json"
 app_name="$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["name"])' "$identity_file")"
+version_directory="$(python3 - <<'PY'
+import plistlib
+import re
+from pathlib import Path
+
+info = plistlib.loads(Path("packaging/Info.plist").read_bytes())
+version, build = (info[key] for key in ("CFBundleShortVersionString", "CFBundleVersion"))
+if not all(isinstance(value, str) and re.fullmatch(r"\d+(?:\.\d+)*", value) for value in (version, build)):
+    raise SystemExit("App version and build must contain only numbers and dots")
+print(f"v{version}-{build}")
+PY
+)"
+output_dir="$PWD/dist/$version_directory-$variant"
 resource_bundle="${app_name}_TickRestCore"
 "${swift_command[@]}" build "${build_args[@]}"
 binary_dir="$("${swift_command[@]}" build "${build_args[@]}" --show-bin-path)"
@@ -47,9 +61,7 @@ fi
 
 package_app() {
     local output_architecture="$1"
-    local configuration_suffix=""
-    if [ "$configuration" = "debug" ]; then configuration_suffix="-debug"; fi
-    local app_dir="$PWD/dist/$app_name-$output_architecture$configuration_suffix.app"
+    local app_dir="$output_dir/$app_name-$output_architecture.app"
     # Recreate only this variant so rebuilds cannot retain stale resources/signatures.
     rm -rf "$app_dir"
     mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
@@ -119,3 +131,4 @@ fi
 for output_architecture in "${output_architectures[@]}"; do
     package_app "$output_architecture"
 done
+python3 scripts/package-homebrew.py "$variant" --architectures "${output_architectures[@]}"

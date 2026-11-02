@@ -217,7 +217,7 @@ public struct HomebrewInstallation: Codable, Equatable {
         result["HOMEBREW_NO_ENV_HINTS"] = "1"
         result["HOMEBREW_NO_COLOR"] = "1"
         result["NONINTERACTIVE"] = "1"
-        if channel == .dev { result["HOMEBREW_TICKREST_DEV_ARCH"] = architecture }
+        result[channel == .dev ? "HOMEBREW_TICKREST_DEV_ARCH" : "HOMEBREW_TICKREST_ARCH"] = architecture
         return result
     }
     public static let brewCandidates = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"].map { URL(fileURLWithPath: $0) }
