@@ -74,26 +74,41 @@ final class HomebrewUpdateTests: XCTestCase {
         XCTAssertEqual(legacy.releaseNotesURL.absoluteString, legacyURL)
     }
 
-    func testOptionalHistoryLinkAndVersionAnchor() throws {
+    func testOptionalHistoryLinkAndLegacyPagesMigration() throws {
         let oldManifest = try decode()
         XCTAssertNil(oldManifest.releaseHistoryURL)
         XCTAssertEqual(oldManifest.historyDetailsURL.absoluteString,
-                       "https://fthux.github.io/tick-rest-macos/release-history.html#v1-10-0")
+                       "https://github.com/fthux/tick-rest-macos/releases/tag/v1.10.0")
+        XCTAssertEqual(oldManifest.historyURL.absoluteString, "https://github.com/fthux/tick-rest-macos/releases")
         let encoded = try JSONEncoder().encode(oldManifest)
         var fields = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
-        for url in ["https://fthux.github.io/tick-rest-macos/release-history.html",
+        for url in ["https://github.com/fthux/tick-rest-macos/releases",
+                    "https://fthux.github.io/tick-rest-macos/release-history.html",
+                    "https://github.com/fthux/tick-rest-macos-dev/releases",
+                    "http://github.com/fthux/tick-rest-macos/releases",
+                    "https://github.com/fthux/tick-rest-macos/releases?redirect=other",
+                    "https://github.com/fthux/tick-rest-macos/releases#other",
                     "https://evil.example/release-history.html", "http://fthux.github.io/tick-rest-macos/release-history.html",
                     "https://fthux.github.io/other/release-history.html",
                     "https://fthux.github.io/tick-rest-macos/release-history.html?redirect=other"] {
             fields["releaseHistoryURL"] = url
             let update = try JSONDecoder().decode(HomebrewUpdateManifest.self, from: JSONSerialization.data(withJSONObject: fields))
-            if url == HomebrewUpdateManifest.defaultReleaseHistoryURL.absoluteString {
+            if url == HomebrewUpdateManifest.defaultReleaseHistoryURL.absoluteString ||
+                url == "https://fthux.github.io/tick-rest-macos/release-history.html" {
                 XCTAssertNoThrow(try update.validate())
-                XCTAssertEqual(update.historyURL.absoluteString, url)
+                XCTAssertEqual(update.historyURL.absoluteString, "https://github.com/fthux/tick-rest-macos/releases")
             } else {
                 XCTAssertThrowsError(try update.validate())
             }
         }
+    }
+
+    func testDevelopmentHistoryUsesDevelopmentRepository() throws {
+        let update = HomebrewUpdateManifest(release: UpdateRelease(version: "1.10.0"), channel: .dev,
+                                           minimumSystemVersion: "13.0",
+                                           releaseNotesURL: URL(string: "https://github.com/fthux/tick-rest-macos-dev/releases/tag/v1.10.0")!)
+        try update.validate()
+        XCTAssertEqual(update.historyURL.absoluteString, "https://github.com/fthux/tick-rest-macos-dev/releases")
     }
 
     private func decode(version: String = "1.10.0", minimum: String = "13.0", schema: Int = 1,

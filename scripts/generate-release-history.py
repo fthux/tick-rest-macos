@@ -15,7 +15,7 @@ from markdown_it import MarkdownIt
 
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = "fthux/tick-rest-macos"
-HISTORY_URL = "https://fthux.github.io/tick-rest-macos/release-history.html"
+HISTORY_URL = "https://github.com/fthux/tick-rest-macos/releases"
 VERSION = re.compile(r"(?:0|[1-9][0-9]*)(?:\.(?:0|[1-9][0-9]*)){0,2}\Z")
 MARKDOWN = MarkdownIt("commonmark", {"html": False}).enable("table")
 

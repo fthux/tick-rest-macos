@@ -70,15 +70,18 @@ public struct HomebrewUpdateManifest: Codable, Equatable {
         releaseNotesURL = url
     }
 
-    public static let defaultReleaseHistoryURL = URL(string: "https://fthux.github.io/tick-rest-macos/release-history.html")!
+    public static let defaultReleaseHistoryURL = URL(string: "https://github.com/fthux/tick-rest-macos/releases")!
+    private static let legacyReleaseHistoryURL = URL(string: "https://fthux.github.io/tick-rest-macos/release-history.html")!
 
-    public var historyURL: URL { releaseHistoryURL ?? (channel ?? .stable).releaseHistoryURL }
-
-    public var historyDetailsURL: URL {
-        var url = URLComponents(url: historyURL, resolvingAgainstBaseURL: false)!
-        url.fragment = "v" + version.replacingOccurrences(of: ".", with: "-")
-        return url.url!
+    public var historyURL: URL {
+        // Older manifests and caches may still contain the retired Pages address.
+        if releaseHistoryURL == Self.legacyReleaseHistoryURL {
+            return (channel ?? .stable).releaseHistoryURL
+        }
+        return releaseHistoryURL ?? (channel ?? .stable).releaseHistoryURL
     }
+
+    public var historyDetailsURL: URL { releaseNotesURL }
 
     public func validate() throws {
         guard schemaVersion == 1 else { throw HomebrewUpdateError.unsupportedSchema }
@@ -92,10 +95,8 @@ public struct HomebrewUpdateManifest: Codable, Equatable {
             throw HomebrewUpdateError.invalidManifest
         }
         if let releaseHistoryURL {
-            guard let url = URLComponents(url: releaseHistoryURL, resolvingAgainstBaseURL: false),
-                  url.scheme == "https", url.host == "fthux.github.io", url.user == nil,
-                  url.password == nil, url.port == nil, url.query == nil, url.fragment == nil,
-                  url.path == "/tick-rest-macos/release-history.html" else {
+            guard releaseHistoryURL == (channel ?? .stable).releaseHistoryURL ||
+                  releaseHistoryURL == Self.legacyReleaseHistoryURL else {
                 throw HomebrewUpdateError.invalidManifest
             }
         }
