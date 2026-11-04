@@ -42,7 +42,7 @@
 - **Private by design** — No account required and no ads. Your settings and break history are stored locally on your Mac.
 - **A familiar interface** — Supports light and dark appearances and is available in English, Simplified Chinese, Traditional Chinese, Japanese, and Korean.
 
-### Tick Rest for Windows
+## Tick Rest for Windows
 
 Looking for a Windows version? I’m building a native Windows app for Tick Rest. Stay tuned!
 
