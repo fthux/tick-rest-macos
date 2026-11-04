@@ -44,6 +44,8 @@
 
 ## Installation
 
+> Tick Rest is a free, independently maintained open-source project. To keep annual costs manageable, I have not joined the Apple Developer Program. The app is therefore not Developer ID–signed or notarized.
+
 **Homebrew (recommended):**
 
 ```bash
