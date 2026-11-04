@@ -67,7 +67,8 @@ class ReleaseHistoryTests(unittest.TestCase):
             self.assertIn('page=2', get.call_args.args[0].full_url)
 
     def test_cli_requires_homebrew_confirmation_and_refuses_feed_downgrades(self):
-        with tempfile.TemporaryDirectory() as folder:
+        (ROOT / '.build').mkdir(exist_ok=True)
+        with tempfile.TemporaryDirectory(dir=ROOT / '.build') as folder:
             root = Path(folder)
             fixture = root / 'releases.json'
             fixture.write_text(json.dumps([release('1.0.0'), release('1.2.0')]))
@@ -82,6 +83,73 @@ class ReleaseHistoryTests(unittest.TestCase):
             self.assertEqual(feed.read_bytes(), previous)
             self.assertTrue((root / 'site/release-history.html').exists())
             self.assertTrue((root / 'site/index.html').exists())
+
+    def assert_cli_rejects_outputs(self, root, site, feed):
+        arguments = ['generate-release-history.py', '--site-output', str(site),
+                     '--manifest-output', str(feed), '--version', '1.0.0', '--homebrew-ready']
+        with patch.object(MODULE, 'ROOT', root), patch.object(sys, 'argv', arguments), \
+                patch.object(MODULE, 'fetch_releases') as fetch:
+            with self.assertRaisesRegex(ValueError, 'Output path must stay inside'):
+                MODULE.main()
+            fetch.assert_not_called()
+
+    def test_cli_rejects_traversal_absolute_and_prefix_sibling_outputs_before_writing(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve() / 'repository'
+            root.mkdir()
+            outside = root.parent / 'sentinel.json'
+            outside.write_text('unchanged')
+            for directory in ('.build', 'updates'):
+                (root / directory).mkdir()
+            for feed in (outside, root / 'updates/../../sentinel.json',
+                         root / 'updates-other/feed.json', root / 'scripts/feed.json'):
+                with self.subTest(feed=feed):
+                    self.assert_cli_rejects_outputs(root, root / '.build/site', feed)
+                    self.assertFalse((root / '.build/site').exists())
+            for site in (root.parent / 'site', root / '.build/../../site',
+                         root / '.build-other/site', root / 'updates/site'):
+                with self.subTest(site=site):
+                    self.assert_cli_rejects_outputs(root, site, root / 'updates/feed.json')
+                    self.assertFalse((root / 'updates/feed.json').exists())
+            self.assertEqual(outside.read_text(), 'unchanged')
+
+    def test_cli_rejects_symlinked_directories_and_output_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve() / 'repository'
+            site = root / '.build/site'
+            site.mkdir(parents=True)
+            (root / 'updates').mkdir()
+            outside = root.parent / 'sentinel.json'
+            outside.write_text('unchanged')
+            for output in (root / 'updates/feed.json', site / 'release-history.html', site / 'index.html'):
+                with self.subTest(output=output):
+                    output.symlink_to(outside)
+                    self.assert_cli_rejects_outputs(root, site, root / 'updates/feed.json')
+                    self.assertEqual(outside.read_text(), 'unchanged')
+                    output.unlink()
+            for directory in (root / '.build/escape', root / 'updates/escape'):
+                with self.subTest(directory=directory):
+                    directory.symlink_to(root.parent, target_is_directory=True)
+                    if directory.parent.name == '.build':
+                        self.assert_cli_rejects_outputs(root, directory / 'site', root / 'updates/feed.json')
+                    else:
+                        self.assert_cli_rejects_outputs(root, site, directory / 'sentinel.json')
+            # Even an allowlisted root must not redirect writes outside the repository.
+            (root / 'updates/escape').unlink()
+            (root / 'updates').rmdir()
+            (root / 'updates').symlink_to(root.parent, target_is_directory=True)
+            self.assert_cli_rejects_outputs(root, site, root / 'updates/sentinel.json')
+            self.assertEqual(outside.read_text(), 'unchanged')
+
+    def test_output_validation_accepts_workflow_paths_and_normalizes_safe_paths(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder).resolve()
+            allowed = (root / 'updates', root / '.build')
+            for relative in ('updates/homebrew-update.json', '.build/release-site',
+                             '.build/staging/../release-site'):
+                with self.subTest(relative=relative):
+                    path = root / relative
+                    self.assertEqual(MODULE.validated_output_path(path, allowed), path.resolve())
 
 
 if __name__ == '__main__':

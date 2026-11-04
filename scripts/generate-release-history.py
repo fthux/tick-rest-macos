@@ -161,37 +161,57 @@ th,td {{ border:1px solid var(--line); padding:6px 12px; }}
 '''
 
 
+def validated_output_path(path, allowed_directories):
+    """Resolve traversal and symlinks before checking fixed repository boundaries."""
+    resolved = path.resolve()
+    # Do not resolve the allowlist: a symlink at .build/ or updates/ must not
+    # redefine which locations this command is allowed to overwrite.
+    if not any(resolved != directory and resolved.is_relative_to(directory)
+               for directory in allowed_directories):
+        raise ValueError(f"Output path must stay inside {', '.join(map(str, allowed_directories))}: {path}")
+    return resolved
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--releases", type=Path, help="Offline GitHub Releases API JSON fixture")
-    parser.add_argument("--site-output", type=Path, required=True)
-    parser.add_argument("--manifest-output", type=Path)
+    parser.add_argument("--site-output", type=Path, required=True,
+                        help="Site directory inside this repository's .build directory")
+    parser.add_argument("--manifest-output", type=Path,
+                        help="Feed path inside this repository's updates or .build directory")
     parser.add_argument("--version", help="Homebrew-ready version/tag; never inferred from newest Release")
     parser.add_argument("--minimum-system", help="Minimum macOS for the selected release; defaults to packaging/Info.plist")
     parser.add_argument("--homebrew-ready", action="store_true", help="Confirm the selected version is installable from Homebrew")
     args = parser.parse_args()
     if args.manifest_output and not (args.version and args.homebrew_ready):
         parser.error("Generating a feed requires --version and --homebrew-ready")
+    site_directories = (ROOT / ".build",)
+    manifest_directories = (ROOT / "updates", ROOT / ".build")
+    site_output = validated_output_path(args.site_output, site_directories)
+    history_output = validated_output_path(site_output / "release-history.html", site_directories)
+    index_output = validated_output_path(site_output / "index.html", site_directories)
+    manifest_output = (validated_output_path(args.manifest_output, manifest_directories)
+                       if args.manifest_output else None)
     releases = stable_releases(json.loads(args.releases.read_text()) if args.releases else fetch_releases())
     name = json.loads((ROOT / "Sources/TickRestCore/Resources/AppIdentity.json").read_text())["name"]
     manifest = None
-    if args.manifest_output:
+    if manifest_output:
         with (ROOT / "packaging/Info.plist").open("rb") as source:
             minimum = args.minimum_system or plistlib.load(source)["LSMinimumSystemVersion"]
         manifest = make_manifest(releases, args.version, minimum)
-        if args.manifest_output.exists():
-            previous = json.loads(args.manifest_output.read_text())
+        if manifest_output.exists():
+            previous = json.loads(manifest_output.read_text())
             if version_key(manifest["version"]) < version_key(previous["version"]):
                 raise ValueError("Refusing to downgrade the published update feed")
-    args.site_output.mkdir(parents=True, exist_ok=True)
-    (args.site_output / "release-history.html").write_text(render_history(releases, name), encoding="utf-8")
-    (args.site_output / "index.html").write_text(
+    site_output.mkdir(parents=True, exist_ok=True)
+    history_output.write_text(render_history(releases, name), encoding="utf-8")
+    index_output.write_text(
         '<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=release-history.html">'
         '<a href="release-history.html">Release History</a>', encoding="utf-8")
     if manifest:
-        args.manifest_output.parent.mkdir(parents=True, exist_ok=True)
-        args.manifest_output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Generated history for {len(releases)} stable releases in {args.site_output}")
+        manifest_output.parent.mkdir(parents=True, exist_ok=True)
+        manifest_output.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"Generated history for {len(releases)} stable releases in {site_output}")
 
 
 if __name__ == "__main__":

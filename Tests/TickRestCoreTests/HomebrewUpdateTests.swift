@@ -11,7 +11,8 @@ final class HomebrewUpdateTests: XCTestCase {
     }
 
     func testStableFeedRejectsPrereleasesAndMalformedVersions() {
-        for value in ["", "—", "1.0.0-beta.1", "1.0.0+build", "v1.0.0", "1..0", "1.0.", "-1.0", "1.2.3.4",
+        // Four numeric components are invalid versions, even when each component is valid.
+        for value in ["", "—", "1.0.0-beta.1", "1.0.0+build", "v1.0.0", "1..0", "1.0.", "-1.0", "1.2.3.1000",
                       " 1.0", "1.0\n", "01.0.0", "１.0", "999999999999999999999999999"] {
             XCTAssertNil(UpdateVersion(value), value)
         }
