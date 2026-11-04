@@ -5,17 +5,17 @@ export CLANG_MODULE_CACHE_PATH="$PWD/.build/ModuleCache"
 export SWIFTPM_MODULECACHE_OVERRIDE="$PWD/.build/ModuleCache"
 variant="${1:-release}"
 architecture="${2:-all}"
-if [ "$#" -gt 2 ] || [[ "$variant" != "dev" && "$variant" != "release" ]] || [[ "$architecture" != "all" && "$architecture" != "native" && "$architecture" != "arm64" && "$architecture" != "x86_64" && "$architecture" != "universal" ]]; then
+if [[ "$#" -gt 2 ]] || [[ "$variant" != "dev" && "$variant" != "release" ]] || [[ "$architecture" != "all" && "$architecture" != "native" && "$architecture" != "arm64" && "$architecture" != "x86_64" && "$architecture" != "universal" ]]; then
     printf 'Usage: %s [release|dev] [all|native|arm64|x86_64|universal]\n' "$0" >&2
     exit 1
 fi
 configuration="release"
 distribution_channel="stable"
-if [ "$variant" = "dev" ]; then
+if [[ "$variant" = "dev" ]]; then
     configuration="debug"
     distribution_channel="dev"
 fi
-if [ "$architecture" = "native" ]; then architecture="$(uname -m)"; fi
+if [[ "$architecture" = "native" ]]; then architecture="$(uname -m)"; fi
 if [[ "$architecture" = "all" || "$architecture" = "universal" ]]; then
     # SwiftPM's multi-architecture backend requires full Xcode, not Command Line Tools.
     if ! xcrun --find xcodebuild >/dev/null 2>&1; then
@@ -95,7 +95,7 @@ info = {key: values.get(value, value) if isinstance(value, str) else value for k
 with open(sys.argv[3], "wb") as destination:
     plistlib.dump(info, destination)
 PY
-    if [ -f packaging/AppIcon.icns ]; then cp packaging/AppIcon.icns "$app_dir/Contents/Resources/AppIcon.icns"; fi
+    if [[ -f packaging/AppIcon.icns ]]; then cp packaging/AppIcon.icns "$app_dir/Contents/Resources/AppIcon.icns"; fi
     local helper_dir="$app_dir/Contents/Helpers/Tick Rest Updater.app"
     mkdir -p "$helper_dir/Contents/MacOS" "$helper_dir/Contents/Resources"
     if [[ "$architecture" = "all" && "$output_architecture" != "universal" ]]; then
@@ -105,7 +105,7 @@ PY
     fi
     chmod +x "$helper_dir/Contents/MacOS/Tick Rest Updater"
     cp -R "$binary_dir/$resource_bundle.bundle" "$helper_dir/Contents/Resources/"
-    if [ -f packaging/AppIcon.icns ]; then cp packaging/AppIcon.icns "$helper_dir/Contents/Resources/AppIcon.icns"; fi
+    if [[ -f packaging/AppIcon.icns ]]; then cp packaging/AppIcon.icns "$helper_dir/Contents/Resources/AppIcon.icns"; fi
     python3 - "$app_dir/Contents/Info.plist" "$helper_dir/Contents/Info.plist" <<'PY'
 import plistlib
 import sys
@@ -123,7 +123,7 @@ PY
     printf 'Built: %s\n' "$app_dir"
 }
 
-if [ "$architecture" = "all" ]; then
+if [[ "$architecture" = "all" ]]; then
     output_architectures=(arm64 x86_64 universal)
 else
     output_architectures=("$architecture")

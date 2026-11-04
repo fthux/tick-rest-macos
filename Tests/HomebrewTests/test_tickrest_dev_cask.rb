@@ -17,7 +17,7 @@ template = JSON.parse(IO.popen(["/usr/bin/plutil", "-convert", "json", "-o", "-"
                                (root/"packaging/Info.plist").to_s], &:read))
 build_dir = root/"dist/v#{template.fetch('CFBundleShortVersionString')}-#{template.fetch('CFBundleVersion')}-#{variant}"
 source = Pathname(ENV.fetch("HOMEBREW_TICKREST_CASK", ENV.fetch("HOMEBREW_TICKREST_DEV_CASK", (build_dir/"#{token}.rb").to_s))).read
-original_arch = ENV[arch_variable]
+original_arch = ENV.fetch(arch_variable, nil)
 
 begin
   variants = { nil => "universal", "universal" => "universal", "arm" => "arm64",
@@ -62,7 +62,7 @@ begin
       uri = URI(cask.url.to_s)
       archive = case uri.scheme
       when "https"
-        archive_dir = ENV["HOMEBREW_TICKREST_CASK_ARCHIVE_DIR"] || ENV["HOMEBREW_TICKREST_DEV_ARCHIVE_DIR"]
+        archive_dir = ENV.fetch("HOMEBREW_TICKREST_CASK_ARCHIVE_DIR", ENV.fetch("HOMEBREW_TICKREST_DEV_ARCHIVE_DIR", nil))
         if archive_dir
           Pathname(archive_dir)/File.basename(uri.path)
         else

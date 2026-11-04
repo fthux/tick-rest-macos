@@ -7,7 +7,7 @@ audit_dir="$PWD/.build/project-audit/$(date +%Y%m%d-%H%M%S)-$$"
 mkdir -p "$audit_dir"
 export PYTHONDONTWRITEBYTECODE=1
 export LLVM_PROFILE_FILE="$audit_dir/process-%p.profraw"
-if [ -z "${DEVELOPER_DIR:-}" ] && [ -d /Applications/Xcode.app/Contents/Developer ]; then
+if [[ -z "${DEVELOPER_DIR:-}" ]] && [[ -d /Applications/Xcode.app/Contents/Developer ]]; then
     export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 fi
 results=()
@@ -18,7 +18,7 @@ run_check() {
     local result=$?
     results+=("$name:$result")
     printf '%s: exit %s (%s)\n' "$name" "$result" "$audit_dir/$name.log"
-    if [ "$result" -ne 0 ]; then failures=$((failures + 1)); fi
+    if [[ "$result" -ne 0 ]]; then failures=$((failures + 1)); fi
     return "$result"
 }
 run_check localization python3 scripts/check-localizations.py
@@ -32,7 +32,7 @@ test_binary="$binary_dir/${app_name}PackageTests.xctest/Contents/MacOS/${app_nam
 shopt -s nullglob
 profiles=("$binary_dir"/codecov/*.profraw)
 shopt -u nullglob
-if [ "${#profiles[@]}" -gt 0 ] && [ -f "$test_binary" ]; then
+if [[ "${#profiles[@]}" -gt 0 ]] && [[ -f "$test_binary" ]]; then
     if run_check coverage-merge xcrun llvm-profdata merge -sparse "${profiles[@]}" -o "$audit_dir/coverage.profdata"; then
         run_check coverage-core xcrun llvm-cov report "$test_binary" "-instr-profile=$audit_dir/coverage.profdata" Sources/TickRestCore/*.swift
         run_check coverage-app xcrun llvm-cov report "$test_binary" "-instr-profile=$audit_dir/coverage.profdata" Sources/TickRestApp/*.swift
@@ -41,7 +41,7 @@ else
     results+=("coverage:skipped"); failures=$((failures + 1))
 fi
 run_check build bash scripts/build-app.sh release
-if [ "${results[${#results[@]}-1]}" = "build:0" ]; then
+if [[ "${results[${#results[@]}-1]}" = "build:0" ]]; then
     run_check packaging python3 -m unittest discover -s Tests/PackagingTests -v
 else
     results+=("packaging:skipped"); failures=$((failures + 1))
@@ -66,4 +66,4 @@ summary = {"passed": all(value == "0" for value in checks.values()),
 (directory / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n")
 print(json.dumps(summary, ensure_ascii=False, indent=2))
 PY
-if [ "$failures" -gt 0 ]; then exit 1; fi
+if [[ "$failures" -gt 0 ]]; then exit 1; fi

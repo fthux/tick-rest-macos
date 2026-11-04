@@ -14,7 +14,7 @@ run_check() {
     "$@" 2>&1 | tee "$log_dir/$name.log"
     local result=${PIPESTATUS[0]}
     results+=("$name:$result")
-    if [ "$result" -ne 0 ]; then failures=$((failures + 1)); fi
+    if [[ "$result" -ne 0 ]]; then failures=$((failures + 1)); fi
     return "$result"
 }
 
@@ -28,7 +28,7 @@ test_binary="$binary_dir/${app_name}PackageTests.xctest/Contents/MacOS/${app_nam
 shopt -s nullglob
 raw_profiles=("$binary_dir"/codecov/*.profraw)
 shopt -u nullglob
-if [ "${#raw_profiles[@]}" -gt 0 ] && [ -f "$test_binary" ]; then
+if [[ "${#raw_profiles[@]}" -gt 0 ]] && [[ -f "$test_binary" ]]; then
     if run_check coverage-merge xcrun llvm-profdata merge -sparse "${raw_profiles[@]}" -o "$log_dir/coverage.profdata"; then
         run_check coverage xcrun llvm-cov report "$test_binary" "-instr-profile=$log_dir/coverage.profdata" Sources/TickRestCore/*.swift
         run_check coverage-app xcrun llvm-cov report "$test_binary" "-instr-profile=$log_dir/coverage.profdata" Sources/TickRestApp/*.swift
@@ -61,4 +61,4 @@ summary = {
 print(json.dumps(summary, ensure_ascii=False, indent=2))
 PY
 
-if [ "$failures" -gt 0 ]; then exit 1; fi
+if [[ "$failures" -gt 0 ]]; then exit 1; fi

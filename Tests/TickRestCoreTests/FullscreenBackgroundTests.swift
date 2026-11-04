@@ -60,8 +60,12 @@ struct FullscreenBackgroundTests {
     }
 
     @Test func defaultSettingsRemainEqualAcrossIndependentInitializations() {
-        #expect(Settings() == Settings())
-        #expect(OverlayBackground() == OverlayBackground())
+        let firstSettings = Settings()
+        let secondSettings = Settings()
+        #expect(firstSettings == secondSettings)
+        let firstBackground = OverlayBackground()
+        let secondBackground = OverlayBackground()
+        #expect(firstBackground == secondBackground)
     }
     @Test(arguments: [OverlayBackgroundKind.solid, .gradient, .wallpaper])
     func appearanceChangesPreserveWarningRestAndQueuedPlan(_ kind: OverlayBackgroundKind) throws {
