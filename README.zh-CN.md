@@ -18,7 +18,7 @@
   <a href="https://deepwiki.com/fthux/tick-rest-macos"><img src="brand-assets/deepwiki-badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
-  [English(README.md)] | 简体中文
+  [English](README.md) | 简体中文
 </div>
 
 <p align="center">
